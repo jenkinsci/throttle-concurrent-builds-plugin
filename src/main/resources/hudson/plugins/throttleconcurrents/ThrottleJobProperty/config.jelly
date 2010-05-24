@@ -1,0 +1,28 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project">
+  <f:section title="Throttle Concurrent Builds">
+    <f:entry field="throttleEnabled" title="${%Throttle this build?}">
+      <f:checkbox />
+      <f:entry title="${%Original Label}">
+        <select class="setting-input" name="baseLabel">
+          <j:forEach var="s" items="${app.labels}">
+            <j:if test="${s.isAssignable()}">
+              <f:option selected="${s==instance.baseLabel}" value="${s.name}"
+                        >${s.name} <j:if test="${!empty(s.description)}">(${s.description})</j:if></f:option>
+            </j:if>
+          </j:forEach>
+        </select>
+      </f:entry>
+      
+      <f:entry title="${%Maximum Concurrent Builds Per Node}"
+               field="maxConcurrent">
+        <f:textbox />
+      </f:entry>
+      <f:entry title="${%Dynamic Label (optional)}"
+               field="dynamicLabel">
+        <f:textbox />
+      </f:entry>
+    </f:entry>
+  </f:section>
+</j:jelly>
+    
+      
