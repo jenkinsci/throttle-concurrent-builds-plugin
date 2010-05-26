@@ -20,69 +20,38 @@ import java.util.HashMap;
 
 public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
 
-    private Boolean throttleEnabled;
+    private Integer maxConcurrentPerNode;
+    private Integer maxConcurrentTotal;
     
-    private Integer maxConcurrent;
-    
-    private String baseLabel;
-    
-    private String dynamicLabel;
-
-    public Map<Node,Integer> nodeRunCnt = new HashMap<Node,Integer>(); 
-
     @DataBoundConstructor
-    public ThrottleJobProperty(Integer maxConcurrent,
-                               String baseLabel,
-                               String dynamicLabel,
-                               Boolean throttleEnabled) {
-        this.throttleEnabled = throttleEnabled;
-        this.maxConcurrent = maxConcurrent;
-        this.baseLabel = baseLabel;
-        this.dynamicLabel = dynamicLabel;
+    public ThrottleJobProperty(Integer maxConcurrentPerNode,
+                               Integer maxConcurrentTotal) {
+        this.maxConcurrentPerNode = maxConcurrentPerNode;
+        this.maxConcurrentTotal = maxConcurrentTotal;
     }
+
 
     
     public boolean getThrottleEnabled() {
-        return (throttleEnabled != null) ? throttleEnabled : false;
+        if (((maxConcurrentPerNode != null) && (maxConcurrentPerNode.intValue() != 0))
+            || (maxConcurrentTotal != null) && (maxConcurrentTotal.intValue() != 0)) {
+            return true;
+        }
+        return false;
     }
     
-    public void setThrottleEnabled(Boolean throttleEnabled) {
-        this.throttleEnabled = throttleEnabled;
-    }
-    
-    public String getBaseLabel() {
-        return this.baseLabel;
-    }
-    
-    public void setBaseLabel(String baseLabel) {
-        this.baseLabel = baseLabel;
-    }
-    
-    public String getDynamicLabel() {
-        return this.dynamicLabel;
-    }
-    
-    public void setDynamicLabel(String dynamicLabel) {
-        this.dynamicLabel = dynamicLabel;
-    }
-    
-
-    /**
-     * Returns dynamicLabel if it's set and not empty, and the default permutation of the base label if
-     * it isn't set or is empty.
-     */
-    public String getDynamicLabelToUse() {
-        if (dynamicLabel==null || dynamicLabel.equals(""))
-            return baseLabel + "___not_throttled";
-        return dynamicLabel;
-    }
-    
-    
-    public Integer getMaxConcurrent() {
-        if (maxConcurrent == null)
-            maxConcurrent = 1;
+    public Integer getMaxConcurrentPerNode() {
+        if (maxConcurrentPerNode == null)
+            maxConcurrentPerNode = 0;
         
-        return maxConcurrent;
+        return maxConcurrentPerNode;
+    }
+
+    public Integer getMaxConcurrentTotal() {
+        if (maxConcurrentTotal == null)
+            maxConcurrentTotal = 0;
+        
+        return maxConcurrentTotal;
     }
 
     @Extension
@@ -103,10 +72,14 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             return AbstractProject.class.isAssignableFrom(jobType);
         }
 
-        public FormValidation doCheckMaxConcurrent(@QueryParameter String value) {
-            return FormValidation.validatePositiveInteger(value);
+        public FormValidation doCheckMaxConcurrentPerNode(@QueryParameter String value) {
+            return FormValidation.validateNonNegativeInteger(value);
         }
 
+        public FormValidation doCheckMaxConcurrentTotal(@QueryParameter String value) {
+            return FormValidation.validateNonNegativeInteger(value);
+        }
 
-    }         
+    }
+
 }
