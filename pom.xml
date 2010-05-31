@@ -99,8 +99,8 @@ THE SOFTWARE.
   </distributionManagement>
   
   <scm>
-    <connection>scm:git:git://github.com/hudson/hudson-throttle-concurrents-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:hudson/hudson-throttle-concurrents-plugin.git</developerConnection>
+    <connection>scm:git:git://github.com/hudson/hudson-throttle-concurrent-builds-plugin.git</connection>
+    <developerConnection>scm:git:git@github.com:hudson/hudson-throttle-concurrent-builds-plugin.git</developerConnection>
     <url>http://github.com/hudson/hudson-throttle-concurrents-plugin</url>
   </scm>
 
