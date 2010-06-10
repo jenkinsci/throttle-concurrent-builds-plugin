@@ -8,6 +8,12 @@
              field="maxConcurrentPerNode">
       <f:textbox />
     </f:entry>
+    <j:if test="${!empty(descriptor.categories)}">
+      <f:entry title="${%Multi-Project Throttle Category}"
+               field="category">
+        <f:select />
+      </f:entry>
+    </j:if>
   </f:optionalBlock>
 </j:jelly>
     
