@@ -1,19 +1,35 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:section title="Throttle Concurrent Builds">
-    <f:entry title="Multi-Project Throttle Categories"
-             help="plugin/throttle-concurrents/help-categories.html">
-      <f:repeatable var="category" varStatus="loopStatus" items="${descriptor.categories}" minimum="0">
+    <f:entry title="Multi-Project Throttle Categories" field="categories">
+      <f:repeatable field="categories" minimum="0">
+        <table width="100%">
+          <f:entry title="Category Name" field="categoryName">
+            <f:textbox />
+          </f:entry>
+          <f:entry title="${%Maximum Total Concurrent Builds}" field="maxConcurrentTotal"
+                   help="${descriptor.getHelpFile('maxConcurrentTotal')}">
+            <f:textbox />
+          </f:entry>
+          <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
+            <f:textbox />
+          </f:entry>
+        </table>
+        <div align="right">
+          <f:repeatableDeleteButton/>
+        </div>
+      </f:repeatable> 
+<!--      <f:repeatable var="category" varStatus="loopStatus" items="${descriptor.categories}" minimum="0">
         <table width="100%">
           <f:entry title="Category Name">
             <f:textbox name="throttle.categories.categoryName" value="${category.categoryName}"/>
           </f:entry>
-          <f:entry title="${%Maximum Total Concurrent Builds}">
+          <f:entry title="${%Maximum Total Concurrent Builds}" field="maxConcurrentTotal">
             <f:textbox name="throttle.categories.maxConcurrentTotal"
                        value="${category.maxConcurrentTotal}"
                        checkUrl="${descriptor.getCheckUrl('maxConcurrentTotal')}" />
           </f:entry>
-          <f:entry title="${%Maximum Concurrent Builds Per Node}">
+          <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
             <f:textbox name="throttle.categories.maxConcurrentPerNode"
                        value="${category.maxConcurrentPerNode}"
                        checkUrl="${descriptor.getCheckUrl('maxConcurrentPerNode')}" />
@@ -22,7 +38,7 @@
         <div align="right">
           <f:repeatableDeleteButton/>
         </div>
-      </f:repeatable>
+      </f:repeatable> -->
     </f:entry>
   </f:section>
 </j:jelly>

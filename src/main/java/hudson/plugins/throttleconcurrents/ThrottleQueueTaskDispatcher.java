@@ -14,6 +14,9 @@ import hudson.model.queue.QueueTaskDispatcher;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -25,6 +28,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             ThrottleJobProperty tjp = p.getProperty(ThrottleJobProperty.class);
 
             if (tjp!=null && tjp.getThrottleEnabled()) {
+                if (Hudson.getInstance().getQueue().isPending(task)) {
+                    return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                }
+                
                 List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(tjp);
                 
                 if (tjp.getMaxConcurrentPerNode().intValue() > 0) {
@@ -89,6 +96,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     
     private int buildsOfProjectOnNode(Node node, Task task) {
         int runCount = 0;
+        LOGGER.fine("Checking for builds of " + task.getName() + " on node " + node.getDisplayName());
         
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
         // a build right after it was launched, for some reason.
@@ -96,6 +104,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             if (e.getCurrentExecutable()!=null
                 && e.getCurrentExecutable().getParent() == task) {
                 // This means we've got a build of this project already running on this node.
+                LOGGER.fine("Found one");
                 runCount++;
             }
         }
@@ -135,6 +144,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         return categoryProjects;
     }
+
+    private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
+
 }
                 
                     

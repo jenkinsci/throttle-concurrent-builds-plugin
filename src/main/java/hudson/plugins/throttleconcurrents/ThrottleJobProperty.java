@@ -21,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
 
     private Integer maxConcurrentPerNode;
@@ -85,11 +88,22 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         }
 
         @Override
+        public String getHelpFile(final String fieldName) {
+            LOGGER.log(Level.WARNING, "getHelpFile for field " + fieldName);
+            String res = super.getHelpFile(fieldName);
+            LOGGER.log(Level.WARNING, "getHelpFile result: " + res);
+            return res;
+        }
+        
+        @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            req.bindParameters(this, "throttle.");
-            categories = req.bindParametersToList(ThrottleCategory.class, "throttle.categories.");
+            //            req.bindParameters(this, "throttle.");
+            //categories = req.bindParametersToList(ThrottleCategory.class, "throttle.categories.");
+            LOGGER.log(Level.WARNING, "formData: " + formData.toString());
+            req.bindJSON(this, formData);
             save();
-            return super.configure(req, formData);
+            return true;
+            //return super.configure(req, formData);
         }
 
         public FormValidation doCheckMaxConcurrentPerNode(@QueryParameter String value) {
@@ -167,4 +181,5 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         }
     }
 
+    private static Logger LOGGER =  Logger.getLogger(ThrottleJobProperty.class.getName());
 }
