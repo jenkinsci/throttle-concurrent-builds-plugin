@@ -29,25 +29,23 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
     private String category;
+    private boolean throttleEnabled;
     
     @DataBoundConstructor
     public ThrottleJobProperty(Integer maxConcurrentPerNode,
                                Integer maxConcurrentTotal,
-                               String category) {
+                               String category,
+                               boolean throttleEnabled) {
         this.maxConcurrentPerNode = maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal;
         this.category = category;
+        this.throttleEnabled = throttleEnabled;
     }
 
 
     
     public boolean getThrottleEnabled() {
-        if (((maxConcurrentPerNode != null) && (maxConcurrentPerNode.intValue() != 0))
-            || ((maxConcurrentTotal != null) && (maxConcurrentTotal.intValue() != 0))
-            || (category!=null) && (!category.equals(""))) {
-            return true;
-        }
-        return false;
+        return throttleEnabled;
     }
 
     public String getCategory() {
@@ -88,18 +86,9 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         }
 
         @Override
-        public String getHelpFile(final String fieldName) {
-            LOGGER.log(Level.WARNING, "getHelpFile for field " + fieldName);
-            String res = super.getHelpFile(fieldName);
-            LOGGER.log(Level.WARNING, "getHelpFile result: " + res);
-            return res;
-        }
-        
-        @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             //            req.bindParameters(this, "throttle.");
             //categories = req.bindParametersToList(ThrottleCategory.class, "throttle.categories.");
-            LOGGER.log(Level.WARNING, "formData: " + formData.toString());
             req.bindJSON(this, formData);
             save();
             return true;
