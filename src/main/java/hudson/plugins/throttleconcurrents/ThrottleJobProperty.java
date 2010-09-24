@@ -87,12 +87,9 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            //            req.bindParameters(this, "throttle.");
-            //categories = req.bindParametersToList(ThrottleCategory.class, "throttle.categories.");
             req.bindJSON(this, formData);
             save();
             return true;
-            //return super.configure(req, formData);
         }
 
         public FormValidation doCheckMaxConcurrentPerNode(@QueryParameter String value) {
@@ -115,6 +112,10 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             return category;
         }
 
+        public void setCategories(List<ThrottleCategory> categories) {
+            this.categories = categories;
+        }
+        
         public List<ThrottleCategory> getCategories() {
             if (categories == null) {
                 categories = new ArrayList<ThrottleCategory>();
