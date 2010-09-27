@@ -33,7 +33,7 @@ THE SOFTWARE.
   <artifactId>throttle-concurrents</artifactId>
   <packaging>hpi</packaging>
   <name>Hudson Throttle Concurrent Builds Plug-in</name>
-  <version>1.2-SNAPSHOT</version>
+  <version>1.2</version>
   <url>http://wiki.hudson-ci.org/display/HUDSON/Throttle+Concurrent+Builds+Plugin</url>
   <description>Plugin to throttle the number of concurrent builds of a single job per node.</description>
   
