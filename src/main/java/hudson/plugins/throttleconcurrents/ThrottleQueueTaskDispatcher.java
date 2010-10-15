@@ -13,7 +13,9 @@ import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -32,8 +34,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                 }
                 
-                List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(tjp);
-                
                 if (tjp.getMaxConcurrentPerNode().intValue() > 0) {
                     int maxConcurrentPerNode = tjp.getMaxConcurrentPerNode().intValue();
                     int runCount = buildsOfProjectOnNode(node, task);
@@ -51,40 +51,47 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
                     }
                 }
-                // If the project is in a category...
-                else if (!categoryProjects.isEmpty()) {
-                    ThrottleJobProperty.ThrottleCategory category =
-                        ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(tjp.getCategory());
+                // If the project is in one or more categories...
+                else if (tjp.getCategories() != null && !tjp.getCategories().isEmpty()) {
 
-                    // Double check category itself isn't null
-                    if (category != null) {
-                        // Max concurrent per node for category
-                        if (category.getMaxConcurrentPerNode().intValue() > 0) {
-                            int maxConcurrentPerNode = category.getMaxConcurrentPerNode().intValue();
-                            int runCount = 0;
-
-                            for (AbstractProject<?,?> catProj : categoryProjects) {
-                                runCount += buildsOfProjectOnNode(node, catProj);
-                            }
-                            // This would mean that there are as many or more builds currently running than are allowed.
-                            if (runCount >= maxConcurrentPerNode) {
-                                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
+                    for (String catNm : tjp.getCategories()) {
+                        // Quick check that catNm itself is a real string.
+                        if (catNm != null && !catNm.equals("")) {
+                            List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(catNm);
+                            
+                            ThrottleJobProperty.ThrottleCategory category =
+                                ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
+                            
+                            // Double check category itself isn't null
+                            if (category != null) {
+                                // Max concurrent per node for category
+                                if (category.getMaxConcurrentPerNode().intValue() > 0) {
+                                    int maxConcurrentPerNode = category.getMaxConcurrentPerNode().intValue();
+                                    int runCount = 0;
+                                    
+                                    for (AbstractProject<?,?> catProj : categoryProjects) {
+                                        runCount += buildsOfProjectOnNode(node, catProj);
+                                    }
+                                    // This would mean that there are as many or more builds currently running than are allowed.
+                                    if (runCount >= maxConcurrentPerNode) {
+                                        return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
+                                    }
+                                }
+                                else if (category.getMaxConcurrentTotal().intValue() > 0) {
+                                    int maxConcurrentTotal = category.getMaxConcurrentTotal().intValue();
+                                    int totalRunCount = 0;
+                                    
+                                    for (AbstractProject<?,?> catProj : categoryProjects) {
+                                        totalRunCount += buildsOfProjectOnAllNodes(catProj);
+                                    }
+                                    
+                                    if (totalRunCount >= maxConcurrentTotal) {
+                                        return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
+                                    }
+                                }
+                                
                             }
                         }
-                        else if (category.getMaxConcurrentTotal().intValue() > 0) {
-                            int maxConcurrentTotal = category.getMaxConcurrentTotal().intValue();
-                            int totalRunCount = 0;
-                            
-                            for (AbstractProject<?,?> catProj : categoryProjects) {
-                                totalRunCount += buildsOfProjectOnAllNodes(catProj);
-                            }
-
-                            if (totalRunCount >= maxConcurrentTotal) {
-                                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
-                            }
-                        }
-
-                            
                     }
                 }
             }
@@ -127,21 +134,21 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return totalRunCount;
     }
     
-    private List<AbstractProject<?,?>> getCategoryProjects(ThrottleJobProperty tjp) {
+    private List<AbstractProject<?,?>> getCategoryProjects(String category) {
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
 
-        if (tjp.getCategory()!=null && !tjp.getCategory().equals("")) {
+        if (category != null && !category.equals("")) {
             for (AbstractProject<?,?> p : Hudson.getInstance().getAllItems(AbstractProject.class)) {
                 ThrottleJobProperty t = p.getProperty(ThrottleJobProperty.class);
                 
                 if (t!=null && t.getThrottleEnabled()) {
-                    if (t.getCategory()!=null && t.getCategory().equals(tjp.getCategory())) {
+                    if (t.getCategories()!=null && t.getCategories().contains(category)) {
                         categoryProjects.add(p);
                     }
                 }
             }
         }
-
+        
         return categoryProjects;
     }
 

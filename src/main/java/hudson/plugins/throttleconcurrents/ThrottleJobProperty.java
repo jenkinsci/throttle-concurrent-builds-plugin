@@ -25,31 +25,45 @@ import java.util.logging.Logger;
 import java.util.logging.Level;
 
 public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
-
+    // Moving category to categories, to support, well, multiple categories per job.
+    @Deprecated transient String category;
+    
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
-    private String category;
+    private List<String> categories;
     private boolean throttleEnabled;
     
     @DataBoundConstructor
     public ThrottleJobProperty(Integer maxConcurrentPerNode,
                                Integer maxConcurrentTotal,
-                               String category,
+                               List<String> categories,
                                boolean throttleEnabled) {
         this.maxConcurrentPerNode = maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal;
-        this.category = category;
+        this.categories = categories;
         this.throttleEnabled = throttleEnabled;
     }
 
 
+    /**
+     * Migrates deprecated/obsolete data
+     */
+    public Object readResolve() {
+        if (category != null) {
+            categories = new ArrayList<String>();
+
+            categories.add(category);
+        }
+
+        return this;
+    }
     
     public boolean getThrottleEnabled() {
         return throttleEnabled;
     }
 
-    public String getCategory() {
-        return category;
+    public List<String> getCategories() {
+        return categories;
     }
     
     public Integer getMaxConcurrentPerNode() {
