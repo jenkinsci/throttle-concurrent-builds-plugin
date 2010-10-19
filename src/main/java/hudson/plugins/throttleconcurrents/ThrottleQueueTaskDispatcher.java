@@ -70,6 +70,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     int runCount = 0;
                                     
                                     for (AbstractProject<?,?> catProj : categoryProjects) {
+                                        if (Hudson.getInstance().getQueue().isPending(catProj)) {
+                                            return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                                        }
                                         runCount += buildsOfProjectOnNode(node, catProj);
                                     }
                                     // This would mean that there are as many or more builds currently running than are allowed.
@@ -82,6 +85,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     int totalRunCount = 0;
                                     
                                     for (AbstractProject<?,?> catProj : categoryProjects) {
+                                        if (Hudson.getInstance().getQueue().isPending(catProj)) {
+                                            return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                                        }
                                         totalRunCount += buildsOfProjectOnAllNodes(catProj);
                                     }
                                     
