@@ -1,6 +1,8 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
+import hudson.matrix.MatrixConfiguration;
+import hudson.matrix.MatrixProject;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Computer;
@@ -27,6 +29,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     public CauseOfBlockage canTake(Node node, Task task) {
         if (task instanceof AbstractProject) {
             AbstractProject<?,?> p = (AbstractProject<?,?>) task;
+            if (task instanceof MatrixConfiguration) {
+                p = (AbstractProject<?,?>)((MatrixConfiguration)task).getParent();
+            }
             ThrottleJobProperty tjp = p.getProperty(ThrottleJobProperty.class);
 
             if (tjp!=null && tjp.getThrottleEnabled()) {
@@ -53,7 +58,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 }
                 // If the project is in one or more categories...
                 else if (tjp.getCategories() != null && !tjp.getCategories().isEmpty()) {
-
                     for (String catNm : tjp.getCategories()) {
                         // Quick check that catNm itself is a real string.
                         if (catNm != null && !catNm.equals("")) {
@@ -150,6 +154,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (t!=null && t.getThrottleEnabled()) {
                     if (t.getCategories()!=null && t.getCategories().contains(category)) {
                         categoryProjects.add(p);
+                        if (p instanceof MatrixProject) {
+                            for (MatrixConfiguration mc : ((MatrixProject)p).getActiveConfigurations()) {
+                                categoryProjects.add((AbstractProject<?,?>)mc);
+                            }
+                        }
                     }
                 }
             }
