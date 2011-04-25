@@ -8,6 +8,7 @@ import hudson.model.JobPropertyDescriptor;
 import hudson.model.Node;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import hudson.Util;
 
 import java.util.regex.Pattern;
 
@@ -38,8 +39,8 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                Integer maxConcurrentTotal,
                                List<String> categories,
                                boolean throttleEnabled) {
-        this.maxConcurrentPerNode = maxConcurrentPerNode;
-        this.maxConcurrentTotal = maxConcurrentTotal;
+        this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
+        this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
         this.categories = categories;
         this.throttleEnabled = throttleEnabled;
     }
@@ -107,13 +108,24 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         }
 
         public FormValidation doCheckMaxConcurrentPerNode(@QueryParameter String value) {
-            return FormValidation.validateNonNegativeInteger(value);
+            return checkNullOrInt(value);
+        }
+        
+        private FormValidation checkNullOrInt(String value) {
+            // Allow nulls - we'll just translate those to 0s.
+            if (Util.fixEmptyAndTrim(value) != null) {
+                return FormValidation.validateNonNegativeInteger(value);
+            }
+            else {
+                return FormValidation.ok();
+            }
         }
 
         public FormValidation doCheckMaxConcurrentTotal(@QueryParameter String value) {
-            return FormValidation.validateNonNegativeInteger(value);
+            return checkNullOrInt(value);
         }
 
+        
         public ThrottleCategory getCategoryByName(String categoryName) {
             ThrottleCategory category = null;
             
@@ -161,8 +173,8 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         public ThrottleCategory(String categoryName,
                                 Integer maxConcurrentPerNode,
                                 Integer maxConcurrentTotal) {
-            this.maxConcurrentPerNode = maxConcurrentPerNode;
-            this.maxConcurrentTotal = maxConcurrentTotal;
+            this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
+            this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
             this.categoryName = categoryName;
         }
         
