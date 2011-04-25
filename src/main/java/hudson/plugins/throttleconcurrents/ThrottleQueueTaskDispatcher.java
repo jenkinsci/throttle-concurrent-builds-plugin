@@ -48,7 +48,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
                     }
                 }
-                else if (tjp.getMaxConcurrentTotal().intValue() > 0) {
+                if (tjp.getMaxConcurrentTotal().intValue() > 0) {
                     int maxConcurrentTotal = tjp.getMaxConcurrentTotal().intValue();
                     int totalRunCount = buildsOfProjectOnAllNodes(task);
 
@@ -57,7 +57,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     }
                 }
                 // If the project is in one or more categories...
-                else if (tjp.getCategories() != null && !tjp.getCategories().isEmpty()) {
+                if (tjp.getCategories() != null && !tjp.getCategories().isEmpty()) {
                     for (String catNm : tjp.getCategories()) {
                         // Quick check that catNm itself is a real string.
                         if (catNm != null && !catNm.equals("")) {
@@ -84,7 +84,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
                                     }
                                 }
-                                else if (category.getMaxConcurrentTotal().intValue() > 0) {
+                                if (category.getMaxConcurrentTotal().intValue() > 0) {
                                     int maxConcurrentTotal = category.getMaxConcurrentTotal().intValue();
                                     int totalRunCount = 0;
                                     
