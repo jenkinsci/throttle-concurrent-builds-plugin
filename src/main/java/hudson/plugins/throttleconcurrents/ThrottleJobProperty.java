@@ -33,16 +33,25 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private Integer maxConcurrentTotal;
     private List<String> categories;
     private boolean throttleEnabled;
+    private String throttleOption;
+
+    /**
+     * Store a config version so we're able to migrate config on various
+     * functionality upgrades.
+     */
+    private Long configVersion;
     
     @DataBoundConstructor
     public ThrottleJobProperty(Integer maxConcurrentPerNode,
                                Integer maxConcurrentTotal,
                                List<String> categories,
-                               boolean throttleEnabled) {
+                               boolean throttleEnabled,
+                               String throttleOption) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
         this.categories = categories;
         this.throttleEnabled = throttleEnabled;
+        this.throttleOption = throttleOption;
     }
 
 
@@ -50,12 +59,27 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
      * Migrates deprecated/obsolete data
      */
     public Object readResolve() {
+        if (configVersion == null) {
+            configVersion = 0L;
+        }
         if (category != null) {
             categories = new ArrayList<String>();
 
             categories.add(category);
         }
 
+        if (configVersion < 1 && throttleOption == null) {
+            if (categories.isEmpty()) {
+                throttleOption = "project";
+            }
+            else {
+                throttleOption = "category";
+                maxConcurrentPerNode = 0;
+                maxConcurrentTotal = 0;
+            }
+        }
+        configVersion = 1L;
+        
         return this;
     }
     
@@ -63,6 +87,10 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return throttleEnabled;
     }
 
+    public String getThrottleOption() {
+        return throttleOption;
+    }
+    
     public List<String> getCategories() {
         return categories;
     }
@@ -107,10 +135,18 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             return true;
         }
 
+        public FormValidation doCheckCategoryName(@QueryParameter String value) {
+            if (Util.fixEmptyAndTrim(value) == null) {
+                return FormValidation.error("Empty category names are not allowed.");
+            } else {
+                return FormValidation.ok();
+            }
+        }
+
         public FormValidation doCheckMaxConcurrentPerNode(@QueryParameter String value) {
             return checkNullOrInt(value);
         }
-        
+
         private FormValidation checkNullOrInt(String value) {
             // Allow nulls - we'll just translate those to 0s.
             if (Util.fixEmptyAndTrim(value) != null) {

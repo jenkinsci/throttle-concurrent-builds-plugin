@@ -3,6 +3,15 @@
                    title="${%Throttle Concurrent Builds}"
                    inline="true"
                    checked="${instance.throttleEnabled}">
+    <f:entry title="${%Throttle this project alone}">
+      <f:radio name="throttleOption" checked="${instance.throttleOption==null || instance.throttleOption=='project'}"
+              title="${%Throttle this project alone}" value="project"/>
+    </f:entry>
+    <f:entry title="${%Throttle this project as part of one or more categories}">
+      <f:radio name="throttleOption" checked="${instance.throttleOption=='category'}"
+              title="${%Throttle this project as part of one or more categories}" value="category"/>
+    </f:entry>
+
     <f:entry title="${%Maximum Total Concurrent Builds}"
              field="maxConcurrentTotal">
       <f:textbox />
