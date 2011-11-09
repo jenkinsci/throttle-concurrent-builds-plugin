@@ -62,10 +62,12 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         if (configVersion == null) {
             configVersion = 0L;
         }
-        if (category != null) {
+        if (categories == null) {
             categories = new ArrayList<String>();
-
+        }
+        if (category != null) {
             categories.add(category);
+            category = null;
         }
 
         if (configVersion < 1 && throttleOption == null) {
