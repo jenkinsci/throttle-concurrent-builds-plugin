@@ -27,7 +27,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
-
+        if (task instanceof MatrixConfiguration) {
+            return null;
+        }
+            
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
             CauseOfBlockage cause = canRun(task, tjp);
@@ -93,6 +96,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
+        if (task instanceof MatrixConfiguration) {
+            return null;
+        }
         if (Hudson.getInstance().getQueue().isPending(task)) {
             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
         }
@@ -164,14 +170,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
         // a build right after it was launched, for some reason.
         for (Executor e : node.toComputer().getExecutors()) {
-            if (e.getCurrentExecutable()!=null
-                && e.getCurrentExecutable().getParent() == task) {
-                // This means we've got a build of this project already running on this node.
-                LOGGER.fine("Found one");
-                runCount++;
+            runCount += buildsOnExecutor(task, e);
+        }
+        if (task instanceof MatrixProject) {
+            for (Executor e : node.toComputer().getOneOffExecutors()) {
+                runCount += buildsOnExecutor(task, e);
             }
         }
-
+        
         return runCount;
     }
 
@@ -180,16 +186,30 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         
         for (Computer c : Hudson.getInstance().getComputers()) {
             for (Executor e : c.getExecutors()) {
-                if (e.getCurrentExecutable() != null
-                    && e.getCurrentExecutable().getParent() == task) {
-                    totalRunCount++;
+                totalRunCount += buildsOnExecutor(task, e);
+            }
+            
+            if (task instanceof MatrixProject) {
+                for (Executor e : c.getOneOffExecutors()) {
+                    totalRunCount += buildsOnExecutor(task, e);
                 }
             }
         }
 
         return totalRunCount;
     }
-    
+
+    private int buildsOnExecutor(Task task, Executor exec) {
+        int runCount = 0;
+        if (exec.getCurrentExecutable() != null
+            && exec.getCurrentExecutable().getParent() == task) {
+            runCount++;
+        }
+
+        return runCount;
+    }
+        
+        
     private List<AbstractProject<?,?>> getCategoryProjects(String category) {
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
 
@@ -200,11 +220,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (t!=null && t.getThrottleEnabled()) {
                     if (t.getCategories()!=null && t.getCategories().contains(category)) {
                         categoryProjects.add(p);
-                        if (p instanceof MatrixProject) {
-                            for (MatrixConfiguration mc : ((MatrixProject)p).getActiveConfigurations()) {
-                                categoryProjects.add((AbstractProject<?,?>)mc);
-                            }
-                        }
                     }
                 }
             }
