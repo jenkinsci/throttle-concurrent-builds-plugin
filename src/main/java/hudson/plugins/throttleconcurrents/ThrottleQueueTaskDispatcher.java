@@ -3,22 +3,13 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.Computer;
-import hudson.model.Executor;
-import hudson.model.Hudson;
-import hudson.model.Node;
-import hudson.model.Queue;
+import hudson.model.*;
 import hudson.model.Queue.Task;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -196,7 +187,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
         if (exec.getCurrentExecutable() != null
-            && exec.getCurrentExecutable().getParent() == task) {
+            && exec.getCurrentExecutable().getParent() == task
+            && !((exec.getCurrentExecutable() instanceof Actionable)
+                && Actionable.class.cast(exec).getAction(ReleaseThrottleLockAction.class) != null)) {
             runCount++;
         }
 
