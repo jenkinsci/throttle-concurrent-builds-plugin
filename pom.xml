@@ -26,7 +26,7 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.399</version>
+    <version>1.477</version>
   </parent>
 
   <artifactId>throttle-concurrents</artifactId>
@@ -99,13 +99,11 @@ THE SOFTWARE.
     <developerConnection>scm:git:git@github.com:jenkinsci/throttle-concurrent-builds-plugin.git</developerConnection>
     <url>http://github.com/jenkinsci/throttle-concurrents-plugin</url>
   </scm>
-
-
     <pluginRepositories>
         <pluginRepository>
             <id>repo.jenkins-ci.org</id>
             <url>http://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
-</project>  
+</project>
 

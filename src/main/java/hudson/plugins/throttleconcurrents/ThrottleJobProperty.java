@@ -1,11 +1,7 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
-import hudson.model.AbstractProject;
-import hudson.model.Job;
-import hudson.model.JobProperty;
-import hudson.model.JobPropertyDescriptor;
-import hudson.model.Node;
+import hudson.model.*;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
@@ -28,30 +24,38 @@ import java.util.logging.Level;
 public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     // Moving category to categories, to support, well, multiple categories per job.
     @Deprecated transient String category;
+    // trottleOption replaced with flags throttleProjectAlone and throttleCategory
+    @Deprecated transient String throttleOption;
     
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
+    private Long interval;
     private List<String> categories;
     private boolean throttleEnabled;
-    private String throttleOption;
 
     /**
      * Store a config version so we're able to migrate config on various
      * functionality upgrades.
      */
     private Long configVersion;
-    
+    private boolean throttleProjectAlone;
+    private boolean throttleCategory;
+
     @DataBoundConstructor
     public ThrottleJobProperty(Integer maxConcurrentPerNode,
                                Integer maxConcurrentTotal,
+                               Long interval,
                                List<String> categories,
                                boolean throttleEnabled,
-                               String throttleOption) {
+                               boolean throttleProjectAlone,
+                               boolean throttleCategory) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
+        this.interval = interval == null ? 0 : interval;
         this.categories = categories;
         this.throttleEnabled = throttleEnabled;
-        this.throttleOption = throttleOption;
+        this.throttleProjectAlone = throttleProjectAlone;
+        this.throttleCategory = throttleCategory;
     }
 
 
@@ -70,17 +74,27 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             category = null;
         }
 
-        if (configVersion < 1 && throttleOption == null) {
+        if (configVersion < 1) {
             if (categories.isEmpty()) {
-                throttleOption = "project";
+                throttleProjectAlone = true;
             }
             else {
-                throttleOption = "category";
+                throttleCategory = true;
                 maxConcurrentPerNode = 0;
                 maxConcurrentTotal = 0;
+                interval = 0L;
             }
         }
-        configVersion = 1L;
+        else if(configVersion == 1){
+            if(throttleOption == "project"){
+                throttleProjectAlone = true;
+            }
+            if(throttleOption == "category"){
+                throttleCategory = true;
+            }
+        }
+
+        configVersion = 2L;
         
         return this;
     }
@@ -89,10 +103,6 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return throttleEnabled;
     }
 
-    public String getThrottleOption() {
-        return throttleOption;
-    }
-    
     public List<String> getCategories() {
         return categories;
     }
@@ -109,6 +119,21 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             maxConcurrentTotal = 0;
         
         return maxConcurrentTotal;
+    }
+
+    public Long getInterval() {
+        if (interval == null)
+            interval = 0L;
+
+        return interval;
+    }
+
+    public boolean getThrottleProjectAlone() {
+        return throttleProjectAlone;
+    }
+
+    public boolean getThrottleCategory() {
+        return throttleCategory;
     }
 
     @Extension
@@ -202,17 +227,25 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         
     }
 
-    public static final class ThrottleCategory {
+    public static final class ThrottleCategory extends AbstractDescribableImpl<ThrottleCategory> {
         private Integer maxConcurrentPerNode;
         private Integer maxConcurrentTotal;
         private String categoryName;
-        
+        private Long interval;
+
+        @Extension
+        public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
+            public String getDisplayName() { return ""; }
+        }
+
         @DataBoundConstructor
         public ThrottleCategory(String categoryName,
                                 Integer maxConcurrentPerNode,
-                                Integer maxConcurrentTotal) {
+                                Integer maxConcurrentTotal,
+                                Long interval) {
             this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
             this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
+            this.interval = interval == null ? 0 : interval;
             this.categoryName = categoryName;
         }
         
@@ -230,8 +263,29 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             return maxConcurrentTotal;
         }
 
+        public long getInterval() {
+            if (interval == null)
+                interval = 0L;
+
+            return interval;
+        }
+
         public String getCategoryName() {
             return categoryName;
+        }
+
+        public List<AbstractProject<?, ?>> getProjects() {
+            List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
+            for (AbstractProject<?,?> p : Hudson.getInstance().getAllItems(AbstractProject.class)) {
+                ThrottleJobProperty t = p.getProperty(ThrottleJobProperty.class);
+
+                if (t!=null && t.getThrottleEnabled() && t.getThrottleCategory()) {
+                    if (t.getCategories()!=null && t.getCategories().contains(categoryName)) {
+                        categoryProjects.add(p);
+                    }
+                }
+            }
+            return categoryProjects;
         }
     }
 

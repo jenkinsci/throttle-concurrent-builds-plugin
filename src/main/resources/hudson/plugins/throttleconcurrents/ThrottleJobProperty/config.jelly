@@ -3,32 +3,53 @@
                    title="${%Throttle Concurrent Builds}"
                    inline="true"
                    checked="${instance.throttleEnabled}">
-    <f:entry title="${%Throttle this project alone}">
-      <f:radio name="throttleOption" checked="${instance.throttleOption==null || instance.throttleOption=='project'}"
-              title="${%Throttle this project alone}" value="project"/>
-    </f:entry>
-    <f:entry title="${%Throttle this project as part of one or more categories}">
-      <f:radio name="throttleOption" checked="${instance.throttleOption=='category'}"
-              title="${%Throttle this project as part of one or more categories}" value="category"/>
-    </f:entry>
-
-    <f:entry title="${%Maximum Total Concurrent Builds}"
-             field="maxConcurrentTotal">
-      <f:textbox />
-    </f:entry>
-    <f:entry title="${%Maximum Concurrent Builds Per Node}"
-             field="maxConcurrentPerNode">
-      <f:textbox />
-    </f:entry>
-    <j:if test="${!empty(descriptor.categories)}">
-      <f:entry title="${%Multi-Project Throttle Category}">
-        <j:forEach var="cat" items="${descriptor.categories}">
-          <f:checkbox name="categories" json="${cat.categoryName}" checked="${instance.categories.contains(cat.categoryName)}" />
-          <label class="attach-previous">${cat.categoryName}</label>
-          <st:nbsp/>
-        </j:forEach>
-      </f:entry>
-    </j:if>
+      <f:block>
+        <table style="margin-left:50px;">
+          <f:optionalBlock name="throttleProjectAlone"
+                         title="${%Throttle this project alone}"
+                         inline="true"
+                         checked="${instance.throttleProjectAlone}">
+              <f:block>
+                  <table style="margin-left:50px;">
+                    <f:entry title="${%Maximum Total Concurrent Builds}" field="maxConcurrentTotal">
+                        <f:textbox />
+                    </f:entry>
+                    <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
+                        <f:textbox />
+                    </f:entry>
+                    <f:entry title="${%Builds interval}" field="interval">
+                        <f:textbox />
+                    </f:entry>
+                  </table>
+              </f:block>
+        </f:optionalBlock>
+        <br/>
+        <f:optionalBlock name="throttleCategory"
+                      title="${%Throttle this project as part of one or more categories}"
+                      inline="true"
+                      checked="${instance.throttleCategory}">
+            <f:block>
+                <table style="margin-left:50px;">
+                <j:if test="${!empty(descriptor.categories)}">
+                    <f:entry>
+                        <j:forEach var="cat" items="${descriptor.categories}">
+                            <f:checkbox name="categories" json="${cat.categoryName}" checked="${instance.categories.contains(cat.categoryName)}" />
+                            <label class="attach-previous">${cat.categoryName}</label>
+                            <st:nbsp/>
+                        </j:forEach>
+                    </f:entry>
+                </j:if>
+                <j:if test="${empty(descriptor.categories)}">
+                    <f:description>You must declare throttle categories in jenkins config</f:description>
+                </j:if>
+              </table>
+            </f:block>
+        </f:optionalBlock>
+      </table>
+    </f:block>
+    <f:invisibleEntry>
+      <j:set target="${instance}" property="configVersion" value="2" />
+    </f:invisibleEntry>
   </f:optionalBlock>
 </j:jelly>
     
