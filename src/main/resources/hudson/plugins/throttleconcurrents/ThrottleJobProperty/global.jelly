@@ -7,11 +7,13 @@
           <f:entry title="Category Name" field="categoryName">
             <f:textbox />
           </f:entry>
-          <f:entry title="${%Maximum Total Concurrent Builds}" field="maxConcurrentTotal"
-                   help="${descriptor.getHelpFile('maxConcurrentTotal')}">
+          <f:entry title="${%Maximum Total Concurrent Builds}" field="maxConcurrentTotal">
             <f:textbox />
           </f:entry>
           <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
+            <f:textbox />
+          </f:entry>
+          <f:entry title="${%Builds interval Per Node}" field="interval">
             <f:textbox />
           </f:entry>
         </table>
