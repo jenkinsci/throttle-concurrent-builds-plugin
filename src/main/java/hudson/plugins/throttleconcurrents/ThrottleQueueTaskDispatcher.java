@@ -5,14 +5,18 @@ import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.ParameterValue;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
+import hudson.model.queue.WorkUnit;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.model.Action;
+import hudson.model.ParametersAction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,7 +39,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (tjp!=null && tjp.getThrottleEnabled()) {
             CauseOfBlockage cause = canRun(task, tjp);
             if (cause != null) return cause;
-
             if (tjp.getThrottleOption().equals("project")) {
                 if (tjp.getMaxConcurrentPerNode().intValue() > 0) {
                     int maxConcurrentPerNode = tjp.getMaxConcurrentPerNode().intValue();
@@ -90,6 +93,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     public CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
+            if (tjp.getlimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
+                LOGGER.info("A build with matching parameters is already running.");
+                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
+            }
             return canRun(item.task, tjp);
         }
         return null;
@@ -148,6 +155,62 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         return null;
+    }
+
+
+    private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
+        if (isAnotherBuildWithSameParametersRunningOnNode(Hudson.getInstance(), item)) {
+            return true;
+        }
+
+        for (Node node : Hudson.getInstance().getNodes()) {
+            if (isAnotherBuildWithSameParametersRunningOnNode(node, item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
+        List<ParameterValue> itemParams = getParametersFromQueueItem(item);
+        Computer computer = node.toComputer();
+
+        if (computer != null) {
+            for (Executor exec : computer.getExecutors()) {
+                if (exec.getCurrentExecutable() != null && exec.getCurrentExecutable().getParent() == item.task) {
+                    List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+
+                    if (itemParams.equals(executingUnitParams)) {
+                        LOGGER.info("A build with identical parameters is already running.");
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public List<ParameterValue> getParametersFromWorkUnit(WorkUnit unit) {
+        List<ParameterValue> paramsList = new ArrayList<ParameterValue>();
+
+        List<Action> actions = unit.context.actions;
+        for (Action action : actions) {
+            if (action instanceof ParametersAction) {
+                ParametersAction params = (ParametersAction) action;
+                paramsList = params.getParameters();
+            }
+        }
+        return paramsList;
+    }
+
+    public List<ParameterValue> getParametersFromQueueItem(Queue.Item item) {
+        List<ParameterValue> paramsList = new ArrayList<ParameterValue>();
+
+        ParametersAction params = item.getAction(ParametersAction.class);
+        if (params != null) {
+            paramsList = params.getParameters();
+        }
+        return paramsList;
     }
 
 
