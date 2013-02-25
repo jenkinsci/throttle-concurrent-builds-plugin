@@ -34,6 +34,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private List<String> categories;
     private boolean throttleEnabled;
     private String throttleOption;
+    private boolean limitOneJobWithMatchingParams;
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -46,12 +47,14 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                Integer maxConcurrentTotal,
                                List<String> categories,
                                boolean throttleEnabled,
-                               String throttleOption) {
+                               String throttleOption,
+                               boolean limitOneJobWithMatchingParams) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
         this.categories = categories;
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
+        this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
     }
 
 
@@ -87,6 +90,10 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     
     public boolean getThrottleEnabled() {
         return throttleEnabled;
+    }
+
+    public boolean getlimitOneJobWithMatchingParams() {
+        return limitOneJobWithMatchingParams;
     }
 
     public String getThrottleOption() {
