@@ -18,6 +18,7 @@ import hudson.model.queue.QueueTaskDispatcher;
 import hudson.model.Action;
 import hudson.model.ParametersAction;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -172,22 +173,50 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
-        List<ParameterValue> itemParams = getParametersFromQueueItem(item);
+        ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         Computer computer = node.toComputer();
+        List<String> paramsToCompare = new ArrayList<String>();
+        List<ParameterValue> itemParams = getParametersFromQueueItem(item);
+
+        if (tjp.getLimitOneJobByParams().length() > 0) {
+            paramsToCompare = Arrays.asList(tjp.getLimitOneJobByParams().split(","));
+            itemParams = doFilterParams(paramsToCompare, itemParams);
+        }
+        LOGGER.fine("Checking parameters: " + itemParams + " of new queue item: " + item + " against running executors.");
 
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
                 if (exec.getCurrentExecutable() != null && exec.getCurrentExecutable().getParent() == item.task) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+                    executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
-                    if (itemParams.equals(executingUnitParams)) {
-                        LOGGER.info("A build with identical parameters is already running.");
+                    if (executingUnitParams.containsAll(itemParams)) {
+                        LOGGER.info("build (" + exec.getCurrentWorkUnit() + ") with identical parameters (" +
+                                    executingUnitParams + ") is already running.");
                         return true;
                     }
                 }
             }
         }
         return false;
+    }
+
+    // takes a String array containing a list of params, a List of ParameterValue objects
+    // and returns a new List<ParameterValue> with only the desired params in the list.
+    private List<ParameterValue> doFilterParams(List<String> params, List<ParameterValue> OriginalParams) {
+        if (params.isEmpty()) {
+            return OriginalParams;
+        }
+
+        List<ParameterValue> newParams = new ArrayList<ParameterValue>();
+
+        for (ParameterValue p : OriginalParams) {
+            if (params.contains(p.getName())) {
+                newParams.add(p);
+            }
+        }
+        LOGGER.fine("returning filtered list: " + newParams);
+        return newParams;
     }
 
     public List<ParameterValue> getParametersFromWorkUnit(WorkUnit unit) {
