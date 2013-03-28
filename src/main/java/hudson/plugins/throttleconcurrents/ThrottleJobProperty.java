@@ -5,12 +5,12 @@ import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
-import hudson.model.Node;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
 
-import java.util.regex.Pattern;
+import hudson.model.AbstractDescribableImpl;
+import hudson.model.Descriptor;
 
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -19,11 +19,6 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-
-import java.util.logging.Logger;
-import java.util.logging.Level;
 
 public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     // Moving category to categories, to support, well, multiple categories per job.
@@ -202,7 +197,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         
     }
 
-    public static final class ThrottleCategory {
+    public static final class ThrottleCategory extends AbstractDescribableImpl<ThrottleCategory> {
         private Integer maxConcurrentPerNode;
         private Integer maxConcurrentTotal;
         private String categoryName;
@@ -233,7 +228,13 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         public String getCategoryName() {
             return categoryName;
         }
+
+        @Extension public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
+            @Override public String getDisplayName() {
+                return "";
+            }
+        }
+
     }
 
-    private static Logger LOGGER =  Logger.getLogger(ThrottleJobProperty.class.getName());
 }
