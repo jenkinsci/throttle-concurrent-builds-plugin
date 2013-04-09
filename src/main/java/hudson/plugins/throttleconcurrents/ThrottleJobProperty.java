@@ -1,6 +1,8 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
+import hudson.matrix.MatrixConfiguration;
+import hudson.matrix.MatrixProject;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
@@ -37,6 +39,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private List<String> categories;
     private boolean throttleEnabled;
     private String throttleOption;
+    private boolean throttleConfiguration;
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -49,7 +52,8 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                Integer maxConcurrentTotal,
                                List<String> categories,
                                boolean throttleEnabled,
-                               String throttleOption) {
+                               String throttleOption,
+                               boolean throttleConfiguration) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
         this.categories = categories;
@@ -131,6 +135,10 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return maxConcurrentTotal;
     }
 
+    public boolean getThrottleConfiguration() {
+        return throttleConfiguration;
+    }
+
     static List<AbstractProject<?,?>> getCategoryProjects(String category) {
         assert category != null && !category.equals("");
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?, ?>>();
@@ -146,6 +154,11 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                     AbstractProject<?,?> p = t.owner;
                     if (/* not deleted */getItem(p.getParent(), p.getName()) == p && /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
                         categoryProjects.add(p);
+                        if (p instanceof MatrixProject && t.getThrottleConfiguration()) {
+                            for (MatrixConfiguration mc : ((MatrixProject)p).getActiveConfigurations()) {
+                                categoryProjects.add((AbstractProject<?,?>)mc);
+                            }
+                        }
                     }
                 }
             }
