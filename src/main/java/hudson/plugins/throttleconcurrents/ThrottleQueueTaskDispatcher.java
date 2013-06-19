@@ -182,7 +182,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             paramsToCompare = Arrays.asList(tjp.getLimitOneJobByParams().split(","));
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
-        LOGGER.fine("Checking parameters: " + itemParams + " of new queue item: " + item + " against running executors.");
 
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
@@ -215,7 +214,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 newParams.add(p);
             }
         }
-        LOGGER.fine("returning filtered list: " + newParams);
         return newParams;
     }
 
