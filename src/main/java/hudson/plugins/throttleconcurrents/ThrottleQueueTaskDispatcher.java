@@ -211,6 +211,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private List<AbstractProject<?,?>> getCategoryProjects(String category) {
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
 
+        //TODO: Caching of jobs by categories?
         if (category != null && !category.equals("")) {                 
             for (Map.Entry<String, TopLevelItem> item : Hudson.getInstance().getItemMap().entrySet()) {
                 if (AbstractProject.class.isInstance(item.getValue())) {
@@ -222,6 +223,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     
                     ThrottleJobProperty t = (ThrottleJobProperty)prop;
                     if (t.getThrottleEnabled()) {
+                        //TODO: switch List to Set in order to improve performance
                         if (t.getCategories()!=null && t.getCategories().contains(category)) {
                             categoryProjects.add(p);
                         }
