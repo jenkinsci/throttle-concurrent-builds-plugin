@@ -1,7 +1,9 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
+import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
+import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -9,16 +11,14 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
 
-import hudson.model.AbstractDescribableImpl;
-import hudson.model.Descriptor;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     // Moving category to categories, to support, well, multiple categories per job.
@@ -121,6 +121,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         }
         
         @Override
+        @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends Job> jobType) {
             return AbstractProject.class.isAssignableFrom(jobType);
         }
@@ -201,14 +202,18 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         private Integer maxConcurrentPerNode;
         private Integer maxConcurrentTotal;
         private String categoryName;
-        
+        private List<NodeLabeledPair> nodeLabeledPairs;
+
         @DataBoundConstructor
         public ThrottleCategory(String categoryName,
                                 Integer maxConcurrentPerNode,
-                                Integer maxConcurrentTotal) {
+                                Integer maxConcurrentTotal,
+                                List<NodeLabeledPair> nodeLabeledPairs) {
             this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
             this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
             this.categoryName = categoryName;
+            this.nodeLabeledPairs =
+                 nodeLabeledPairs == null ? new ArrayList<NodeLabeledPair>() : nodeLabeledPairs;
         }
         
         public Integer getMaxConcurrentPerNode() {
@@ -229,12 +234,57 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             return categoryName;
         }
 
-        @Extension public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
-            @Override public String getDisplayName() {
+        public List<NodeLabeledPair> getNodeLabeledPairs() {
+            if (nodeLabeledPairs == null)
+                nodeLabeledPairs = new ArrayList<NodeLabeledPair>();
+
+            return nodeLabeledPairs;
+        }
+
+        @Extension
+        public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
+            @Override
+            public String getDisplayName() {
                 return "";
             }
         }
-
     }
 
+    /**
+     * @author marco.miller@ericsson.com
+     */
+    public static final class NodeLabeledPair extends AbstractDescribableImpl<NodeLabeledPair> {
+        private String throttledNodeLabel;
+        private Integer maxConcurrentPerNodeLabeled;
+
+        @DataBoundConstructor
+        public NodeLabeledPair(String throttledNodeLabel,
+                               Integer maxConcurrentPerNodeLabeled) {
+            this.throttledNodeLabel = throttledNodeLabel == null ? new String() : throttledNodeLabel;
+            this.maxConcurrentPerNodeLabeled =
+                 maxConcurrentPerNodeLabeled == null ? new Integer(0) : maxConcurrentPerNodeLabeled;
+        }
+
+        public String getThrottledNodeLabel() {
+            if(throttledNodeLabel == null) {
+                throttledNodeLabel = new String();
+            }
+            return throttledNodeLabel;
+        }
+
+        public Integer getMaxConcurrentPerNodeLabeled() {
+            if(maxConcurrentPerNodeLabeled == null) {
+                maxConcurrentPerNodeLabeled = new Integer(0);
+            }
+            return maxConcurrentPerNodeLabeled;
+        }
+
+        @Extension
+        public static class DescriptorImpl extends Descriptor<NodeLabeledPair> {
+            @Override
+            public String getDisplayName() {
+                return "";
+            }
+        }
+    }
 }
