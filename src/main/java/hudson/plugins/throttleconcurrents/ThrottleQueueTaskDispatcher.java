@@ -3,7 +3,6 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Computer;
 import hudson.model.Executor;
@@ -13,16 +12,14 @@ import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
 import hudson.model.TopLevelItem;
+import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
+import java.util.Set;
 import java.util.logging.Logger;
-
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -63,10 +60,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                             // Double check category itself isn't null
                             if (category != null) {
                                 // Max concurrent per node for category
-                                if (category.getMaxConcurrentPerNode().intValue() > 0) {
-                                    int maxConcurrentPerNode = category.getMaxConcurrentPerNode().intValue();
+                                int maxConcurrentPerNode = getMaxConcurrentPerNodeBasedOnMatchingLabels(
+                                    node, category, category.getMaxConcurrentPerNode().intValue());
+                                if (maxConcurrentPerNode > 0) {
                                     int runCount = 0;
-
                                     for (AbstractProject<?,?> catProj : categoryProjects) {
                                         if (Hudson.getInstance().getQueue().isPending(catProj)) {
                                             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
@@ -152,7 +149,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
-
     private ThrottleJobProperty getThrottleJobProperty(Task task) {
         if (task instanceof AbstractProject) {
             AbstractProject<?,?> p = (AbstractProject<?,?>) task;
@@ -207,7 +203,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
-
     private List<AbstractProject<?,?>> getCategoryProjects(String category) {
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
 
@@ -235,6 +230,41 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return categoryProjects;
     }
 
-    private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
+    /**
+     * @param node to compare labels with.
+     * @param category to compare labels with.
+     * @param maxConcurrentPerNode to return if node labels mismatch.
+     * @return maximum concurrent number of builds per node based on matching labels, as an int.
+     * @author marco.miller@ericsson.com
+     */
+    private int getMaxConcurrentPerNodeBasedOnMatchingLabels(
+        Node node, ThrottleJobProperty.ThrottleCategory category, int maxConcurrentPerNode)
+    {
+        List<ThrottleJobProperty.NodeLabeledPair> nodeLabeledPairs = category.getNodeLabeledPairs();
+        int maxConcurrentPerNodeLabeledIfMatch = maxConcurrentPerNode;
+        boolean nodeLabelsMatch = false;
+        Set<LabelAtom> nodeLabels = node.getAssignedLabels();
 
+        for(ThrottleJobProperty.NodeLabeledPair nodeLabeledPair: nodeLabeledPairs) {
+            String throttledNodeLabel = nodeLabeledPair.getThrottledNodeLabel();
+            if(!nodeLabelsMatch && !throttledNodeLabel.isEmpty()) {
+                for(LabelAtom aNodeLabel: nodeLabels) {
+                    String nodeLabel = aNodeLabel.getDisplayName();
+                    if(nodeLabel.equals(throttledNodeLabel)) {
+                        maxConcurrentPerNodeLabeledIfMatch = nodeLabeledPair.getMaxConcurrentPerNodeLabeled().intValue();
+                        LOGGER.fine("node labels match");
+                        LOGGER.fine("=> maxConcurrentPerNode' = "+maxConcurrentPerNodeLabeledIfMatch);
+                        nodeLabelsMatch = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if(!nodeLabelsMatch) {
+            LOGGER.fine("node labels mismatch");
+        }
+        return maxConcurrentPerNodeLabeledIfMatch;
+    }
+
+    private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
 }
