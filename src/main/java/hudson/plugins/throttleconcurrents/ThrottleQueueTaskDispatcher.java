@@ -7,16 +7,20 @@ import hudson.model.AbstractProject;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Hudson;
+import hudson.model.JobProperty;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
+import hudson.model.TopLevelItem;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Extension
@@ -161,8 +165,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOfProjectOnNode(Node node, Task task) {
         int runCount = 0;
-        LOGGER.fine("Checking for builds of " + task.getName() + " on node " + node.getDisplayName());
-
+        if (LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.fine("Checking for builds of " + task.getName() + " on node " + node.getDisplayName());
+        }
+        
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
@@ -202,13 +208,22 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private List<AbstractProject<?,?>> getCategoryProjects(String category) {
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
 
-        if (category != null && !category.equals("")) {
-            for (AbstractProject<?,?> p : Hudson.getInstance().getAllItems(AbstractProject.class)) {
-                ThrottleJobProperty t = p.getProperty(ThrottleJobProperty.class);
-
-                if (t!=null && t.getThrottleEnabled()) {
-                    if (t.getCategories()!=null && t.getCategories().contains(category)) {
-                        categoryProjects.add(p);
+        //TODO: Caching of jobs by categories?
+        if (category != null && !category.equals("")) {                 
+            for (Map.Entry<String, TopLevelItem> item : Hudson.getInstance().getItemMap().entrySet()) {
+                if (AbstractProject.class.isInstance(item.getValue())) {
+                    AbstractProject p = AbstractProject.class.cast(item.getValue());  
+                    JobProperty prop = p.getProperty(ThrottleJobProperty.class);
+                    if (prop == null) {
+                        continue;
+                    }
+                    
+                    ThrottleJobProperty t = (ThrottleJobProperty)prop;
+                    if (t.getThrottleEnabled()) {
+                        //TODO: switch List to Set in order to improve performance
+                        if (t.getCategories()!=null && t.getCategories().contains(category)) {
+                            categoryProjects.add(p);
+                        }
                     }
                 }
             }
