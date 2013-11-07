@@ -4,6 +4,8 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
+import hudson.model.Item;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -142,13 +144,20 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             if (t.getThrottleEnabled()) {
                 if (t.getCategories() != null && t.getCategories().contains(category)) {
                     AbstractProject<?,?> p = t.owner;
-                    if (/* not deleted */p.getParent().getItem(p.getName()) == p && /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
+                    if (/* not deleted */getItem(p.getParent(), p.getName()) == p && /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
                         categoryProjects.add(p);
                     }
                 }
             }
         }
         return categoryProjects;
+    }
+    private static Item getItem(ItemGroup group, String name) {
+        if (group instanceof Jenkins) {
+            return ((Jenkins) group).getItemMap().get(name);
+        } else {
+            return group.getItem(name);
+        }
     }
     
     @Extension

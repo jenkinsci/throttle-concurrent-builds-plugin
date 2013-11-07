@@ -41,15 +41,15 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertProjects(beta, p3b);
     }
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
-        jenkins.setAuthorizationStrategy(new RejectP1P2AuthorizationStrategy());
+        jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
             assertEquals(new HashSet<AbstractProject<?,?>>(Arrays.asList(projects)), new HashSet<AbstractProject<?,?>>(ThrottleJobProperty.getCategoryProjects(category)));
         } finally {
             jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete
         }
     }
-    private static class RejectP1P2AuthorizationStrategy extends AuthorizationStrategy {
-        RejectP1P2AuthorizationStrategy() {}
+    private static class RejectAllAuthorizationStrategy extends AuthorizationStrategy {
+        RejectAllAuthorizationStrategy() {}
         @Override public ACL getRootACL() {
             return new AuthorizationStrategy.Unsecured().getRootACL();
         }
@@ -57,7 +57,7 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
             return Collections.emptySet();
         }
         @Override public ACL getACL(Job<?,?> project) {
-            assertFalse("not even supposed to be looking at " + project, project.getFullName().matches("p1|p2"));
+            fail("not even supposed to be looking at " + project);
             return super.getACL(project);
         }
     }
