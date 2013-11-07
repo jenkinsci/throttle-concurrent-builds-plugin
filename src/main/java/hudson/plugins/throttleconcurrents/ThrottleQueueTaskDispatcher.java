@@ -14,7 +14,6 @@ import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -50,7 +49,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     for (String catNm : tjp.getCategories()) {
                         // Quick check that catNm itself is a real string.
                         if (catNm != null && !catNm.equals("")) {
-                            List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(catNm);
+                            List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
 
                             ThrottleJobProperty.ThrottleCategory category =
                                 ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -115,7 +114,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 for (String catNm : tjp.getCategories()) {
                     // Quick check that catNm itself is a real string.
                     if (catNm != null && !catNm.equals("")) {
-                        List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(catNm);
+                        List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
 
                         ThrottleJobProperty.ThrottleCategory category =
                             ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -197,24 +196,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         return runCount;
-    }
-
-    private List<AbstractProject<?,?>> getCategoryProjects(String category) {
-        List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
-
-        if (category != null && !category.equals("")) {
-            for (AbstractProject<?,?> p : Hudson.getInstance().getAllItems(AbstractProject.class)) {
-                ThrottleJobProperty t = p.getProperty(ThrottleJobProperty.class);
-
-                if (t!=null && t.getThrottleEnabled()) {
-                    if (t.getCategories()!=null && t.getCategories().contains(category)) {
-                        categoryProjects.add(p);
-                    }
-                }
-            }
-        }
-
-        return categoryProjects;
     }
 
     /**

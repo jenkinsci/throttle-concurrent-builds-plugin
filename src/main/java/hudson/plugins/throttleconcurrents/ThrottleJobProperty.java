@@ -13,6 +13,7 @@ import hudson.Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
 
@@ -106,6 +107,20 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return maxConcurrentTotal;
     }
 
+    static List<AbstractProject<?,?>> getCategoryProjects(String category) {
+        assert category != null && !category.equals("");
+        List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?, ?>>();
+        for (AbstractProject<?,?> p : Jenkins.getInstance().getAllItems(AbstractProject.class)) {
+            ThrottleJobProperty t = p.getProperty(ThrottleJobProperty.class);
+            if (t != null && t.getThrottleEnabled()) {
+                if (t.getCategories() != null && t.getCategories().contains(category)) {
+                    categoryProjects.add(p);
+                }
+            }
+        }
+        return categoryProjects;
+    }
+    
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         private List<ThrottleCategory> categories;
