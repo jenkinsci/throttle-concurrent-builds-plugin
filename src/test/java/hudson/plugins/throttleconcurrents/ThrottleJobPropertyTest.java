@@ -37,6 +37,8 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertProjects(gamma);
         AbstractProject<?,?> p3b = jenkins.<AbstractProject<?,?>>copy(p3, "p3b");
         assertProjects(beta, p3, p3b);
+        p3.removeProperty(ThrottleJobProperty.class);
+        assertProjects(beta, p3b);
     }
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
         jenkins.setAuthorizationStrategy(new RejectP1P2AuthorizationStrategy());
