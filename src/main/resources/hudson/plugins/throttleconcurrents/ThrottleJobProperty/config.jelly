@@ -29,7 +29,8 @@
         </j:forEach>
       </f:entry>
     </j:if>
+    <f:entry title="${%Throttle the configurations of this Matrix Project instead of the Parent Project}">
+        <f:checkbox name="selected" checked="${instance.throttleConfiguration}"/>
+    </f:entry>
   </f:optionalBlock>
 </j:jelly>
-    
-      

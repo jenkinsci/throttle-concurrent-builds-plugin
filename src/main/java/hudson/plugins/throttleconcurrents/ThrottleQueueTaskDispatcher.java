@@ -27,9 +27,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
-        if (task instanceof MatrixConfiguration) {
-            return null;
-        }
 
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
@@ -96,9 +93,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
-        if (task instanceof MatrixConfiguration) {
-            return null;
-        }
         if (Hudson.getInstance().getQueue().isPending(task)) {
             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
         }
@@ -174,11 +168,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             for (Executor e : computer.getExecutors()) {
                 runCount += buildsOnExecutor(task, e);
             }
-            if (task instanceof MatrixProject) {
-                for (Executor e : computer.getOneOffExecutors()) {
-                    runCount += buildsOnExecutor(task, e);
-                }
-            }
         }
 
         return runCount;
@@ -214,6 +203,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (t!=null && t.getThrottleEnabled()) {
                     if (t.getCategories()!=null && t.getCategories().contains(category)) {
                         categoryProjects.add(p);
+                        if (p instanceof MatrixProject) {
+                            for (MatrixConfiguration mc : ((MatrixProject)p).getActiveConfigurations()) {
+                                categoryProjects.add((AbstractProject<?,?>)mc);
+                            }
+                        }
                     }
                 }
             }
