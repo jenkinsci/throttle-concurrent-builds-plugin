@@ -4,6 +4,8 @@ import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
+import hudson.model.Item;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
@@ -12,7 +14,13 @@ import hudson.util.ListBoxModel;
 import hudson.Util;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
+import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
 
@@ -79,7 +87,24 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         
         return this;
     }
-    
+
+    @Override protected void setOwner(AbstractProject<?,?> owner) {
+        super.setOwner(owner);
+        if (throttleEnabled && categories != null) {
+            Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = ((DescriptorImpl) getDescriptor()).propertiesByCategory;
+            synchronized (propertiesByCategory) {
+                for (String c : categories) {
+                    Map<ThrottleJobProperty,Void> properties = propertiesByCategory.get(c);
+                    if (properties == null) {
+                        properties = new WeakHashMap<ThrottleJobProperty,Void>();
+                        propertiesByCategory.put(c, properties);
+                    }
+                    properties.put(this, null);
+                }
+            }
+        }
+    }
+
     public boolean getThrottleEnabled() {
         return throttleEnabled;
     }
@@ -106,9 +131,41 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return maxConcurrentTotal;
     }
 
+    static List<AbstractProject<?,?>> getCategoryProjects(String category) {
+        assert category != null && !category.equals("");
+        List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?, ?>>();
+        Collection<ThrottleJobProperty> properties;
+        Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class).propertiesByCategory;
+        synchronized (propertiesByCategory) {
+            Map<ThrottleJobProperty,Void> _properties = propertiesByCategory.get(category);
+            properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.<ThrottleJobProperty>emptySet();
+        }
+        for (ThrottleJobProperty t : properties) {
+            if (t.getThrottleEnabled()) {
+                if (t.getCategories() != null && t.getCategories().contains(category)) {
+                    AbstractProject<?,?> p = t.owner;
+                    if (/* not deleted */getItem(p.getParent(), p.getName()) == p && /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
+                        categoryProjects.add(p);
+                    }
+                }
+            }
+        }
+        return categoryProjects;
+    }
+    private static Item getItem(ItemGroup group, String name) {
+        if (group instanceof Jenkins) {
+            return ((Jenkins) group).getItemMap().get(name);
+        } else {
+            return group.getItem(name);
+        }
+    }
+    
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         private List<ThrottleCategory> categories;
+        
+        /** Map from category names, to properties including that category. */
+        private Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
         
         public DescriptorImpl() {
             super(ThrottleJobProperty.class);

@@ -14,9 +14,9 @@ import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Extension
@@ -50,7 +50,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     for (String catNm : tjp.getCategories()) {
                         // Quick check that catNm itself is a real string.
                         if (catNm != null && !catNm.equals("")) {
-                            List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(catNm);
+                            List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
 
                             ThrottleJobProperty.ThrottleCategory category =
                                 ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -115,7 +115,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 for (String catNm : tjp.getCategories()) {
                     // Quick check that catNm itself is a real string.
                     if (catNm != null && !catNm.equals("")) {
-                        List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(catNm);
+                        List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
 
                         ThrottleJobProperty.ThrottleCategory category =
                             ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -161,7 +161,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOfProjectOnNode(Node node, Task task) {
         int runCount = 0;
-        LOGGER.fine("Checking for builds of " + task.getName() + " on node " + node.getDisplayName());
+        LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
         // a build right after it was launched, for some reason.
@@ -199,24 +199,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
-    private List<AbstractProject<?,?>> getCategoryProjects(String category) {
-        List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
-
-        if (category != null && !category.equals("")) {
-            for (AbstractProject<?,?> p : Hudson.getInstance().getAllItems(AbstractProject.class)) {
-                ThrottleJobProperty t = p.getProperty(ThrottleJobProperty.class);
-
-                if (t!=null && t.getThrottleEnabled()) {
-                    if (t.getCategories()!=null && t.getCategories().contains(category)) {
-                        categoryProjects.add(p);
-                    }
-                }
-            }
-        }
-
-        return categoryProjects;
-    }
-
     /**
      * @param node to compare labels with.
      * @param category to compare labels with.
@@ -239,8 +221,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     String nodeLabel = aNodeLabel.getDisplayName();
                     if(nodeLabel.equals(throttledNodeLabel)) {
                         maxConcurrentPerNodeLabeledIfMatch = nodeLabeledPair.getMaxConcurrentPerNodeLabeled().intValue();
-                        LOGGER.fine("node labels match");
-                        LOGGER.fine("=> maxConcurrentPerNode' = "+maxConcurrentPerNodeLabeledIfMatch);
+                        LOGGER.log(Level.FINE, "node labels match; => maxConcurrentPerNode'' = {0}", maxConcurrentPerNodeLabeledIfMatch);
                         nodeLabelsMatch = true;
                         break;
                     }
