@@ -1,6 +1,8 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
+import hudson.matrix.MatrixConfiguration;
+import hudson.matrix.MatrixProject;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
@@ -153,6 +155,11 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                     AbstractProject<?,?> p = t.owner;
                     if (/* not deleted */getItem(p.getParent(), p.getName()) == p && /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
                         categoryProjects.add(p);
+                        if (p instanceof MatrixProject && t.getThrottleConfiguration()) {
+                            for (MatrixConfiguration mc : ((MatrixProject)p).getActiveConfigurations()) {
+                                categoryProjects.add((AbstractProject<?,?>)mc);
+                            }
+                        }
                     }
                 }
             }

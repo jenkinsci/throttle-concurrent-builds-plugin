@@ -26,6 +26,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     public CauseOfBlockage canTake(Node node, Task task) {
 
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
+
+        if (task instanceof MatrixConfiguration &&  !tjp.getThrottleConfiguration()){
+            return null;
+        }
+
         if (tjp!=null && tjp.getThrottleEnabled()) {
             CauseOfBlockage cause = canRun(task, tjp);
             if (cause != null) return cause;
@@ -90,6 +95,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
+        if (task instanceof MatrixConfiguration &&  !tjp.getThrottleConfiguration()){
+            return null;
+        }
         if (Hudson.getInstance().getQueue().isPending(task)) {
             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
         }
@@ -163,6 +171,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
             for (Executor e : computer.getExecutors()) {
                 runCount += buildsOnExecutor(task, e);
+            }
+            ThrottleJobProperty tjp = getThrottleJobProperty(task);
+            if (task instanceof MatrixConfiguration &&  !tjp.getThrottleConfiguration()){
+                for (Executor e : computer.getOneOffExecutors()) {
+                    runCount += buildsOnExecutor(task, e);
+                }
             }
         }
 
