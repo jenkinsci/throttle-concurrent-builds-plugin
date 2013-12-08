@@ -3,3 +3,8 @@
 *.iws
 target
 work
+# eclipse =>
+.classpath
+.project
+.settings
+bin
