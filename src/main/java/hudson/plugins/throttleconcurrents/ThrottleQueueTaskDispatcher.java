@@ -222,7 +222,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         for (Action action : actions) {
             if (action instanceof ParametersAction) {
                 ParametersAction params = (ParametersAction) action;
-                paramsList = params.getParameters();
+                if (params != null) {
+                    paramsList = params.getParameters();
+                }
             }
         }
         return paramsList;
