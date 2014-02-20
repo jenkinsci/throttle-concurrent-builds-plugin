@@ -20,6 +20,12 @@
              field="maxConcurrentPerNode">
       <f:textbox />
     </f:entry>
+    <j:if test="${descriptor.isParameterizedProject(it)}">
+      <f:entry title="${%Only account builds that match these parameters}"
+             field="combinationFilter">
+        <f:textbox />
+      </f:entry>
+    </j:if>
     <j:if test="${!empty(descriptor.categories)}">
       <f:entry title="${%Multi-Project Throttle Category}">
         <j:forEach var="cat" items="${descriptor.categories}">
