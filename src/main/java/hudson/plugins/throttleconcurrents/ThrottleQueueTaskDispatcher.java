@@ -3,7 +3,6 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
-import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.ParameterValue;
 import hudson.model.Computer;
@@ -13,6 +12,7 @@ import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
 import hudson.model.queue.WorkUnit;
+import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 import hudson.model.Action;
@@ -22,10 +22,9 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -57,7 +56,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     for (String catNm : tjp.getCategories()) {
                         // Quick check that catNm itself is a real string.
                         if (catNm != null && !catNm.equals("")) {
-                            List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(catNm);
+                            List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
 
                             ThrottleJobProperty.ThrottleCategory category =
                                 ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -65,10 +64,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                             // Double check category itself isn't null
                             if (category != null) {
                                 // Max concurrent per node for category
-                                if (category.getMaxConcurrentPerNode().intValue() > 0) {
-                                    int maxConcurrentPerNode = category.getMaxConcurrentPerNode().intValue();
+                                int maxConcurrentPerNode = getMaxConcurrentPerNodeBasedOnMatchingLabels(
+                                    node, category, category.getMaxConcurrentPerNode().intValue());
+                                if (maxConcurrentPerNode > 0) {
                                     int runCount = 0;
-
                                     for (AbstractProject<?,?> catProj : categoryProjects) {
                                         if (Hudson.getInstance().getQueue().isPending(catProj)) {
                                             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
@@ -126,7 +125,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 for (String catNm : tjp.getCategories()) {
                     // Quick check that catNm itself is a real string.
                     if (catNm != null && !catNm.equals("")) {
-                        List<AbstractProject<?,?>> categoryProjects = getCategoryProjects(catNm);
+                        List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
 
                         ThrottleJobProperty.ThrottleCategory category =
                             ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -157,7 +156,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         return null;
     }
-
 
     private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
         if (isAnotherBuildWithSameParametersRunningOnNode(Hudson.getInstance(), item)) {
@@ -224,7 +222,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         for (Action action : actions) {
             if (action instanceof ParametersAction) {
                 ParametersAction params = (ParametersAction) action;
-                paramsList = params.getParameters();
+                if (params != null) {
+                    paramsList = params.getParameters();
+                }
             }
         }
         return paramsList;
@@ -255,7 +255,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOfProjectOnNode(Node node, Task task) {
         int runCount = 0;
-        LOGGER.fine("Checking for builds of " + task.getName() + " on node " + node.getDisplayName());
+        LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
         // a build right after it was launched, for some reason.
@@ -293,25 +293,40 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
+    /**
+     * @param node to compare labels with.
+     * @param category to compare labels with.
+     * @param maxConcurrentPerNode to return if node labels mismatch.
+     * @return maximum concurrent number of builds per node based on matching labels, as an int.
+     * @author marco.miller@ericsson.com
+     */
+    private int getMaxConcurrentPerNodeBasedOnMatchingLabels(
+        Node node, ThrottleJobProperty.ThrottleCategory category, int maxConcurrentPerNode)
+    {
+        List<ThrottleJobProperty.NodeLabeledPair> nodeLabeledPairs = category.getNodeLabeledPairs();
+        int maxConcurrentPerNodeLabeledIfMatch = maxConcurrentPerNode;
+        boolean nodeLabelsMatch = false;
+        Set<LabelAtom> nodeLabels = node.getAssignedLabels();
 
-    private List<AbstractProject<?,?>> getCategoryProjects(String category) {
-        List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?,?>>();
-
-        if (category != null && !category.equals("")) {
-            for (AbstractProject<?,?> p : Hudson.getInstance().getAllItems(AbstractProject.class)) {
-                ThrottleJobProperty t = p.getProperty(ThrottleJobProperty.class);
-
-                if (t!=null && t.getThrottleEnabled()) {
-                    if (t.getCategories()!=null && t.getCategories().contains(category)) {
-                        categoryProjects.add(p);
+        for(ThrottleJobProperty.NodeLabeledPair nodeLabeledPair: nodeLabeledPairs) {
+            String throttledNodeLabel = nodeLabeledPair.getThrottledNodeLabel();
+            if(!nodeLabelsMatch && !throttledNodeLabel.isEmpty()) {
+                for(LabelAtom aNodeLabel: nodeLabels) {
+                    String nodeLabel = aNodeLabel.getDisplayName();
+                    if(nodeLabel.equals(throttledNodeLabel)) {
+                        maxConcurrentPerNodeLabeledIfMatch = nodeLabeledPair.getMaxConcurrentPerNodeLabeled().intValue();
+                        LOGGER.log(Level.FINE, "node labels match; => maxConcurrentPerNode'' = {0}", maxConcurrentPerNodeLabeledIfMatch);
+                        nodeLabelsMatch = true;
+                        break;
                     }
                 }
             }
         }
-
-        return categoryProjects;
+        if(!nodeLabelsMatch) {
+            LOGGER.fine("node labels mismatch");
+        }
+        return maxConcurrentPerNodeLabeledIfMatch;
     }
 
     private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
-
 }
