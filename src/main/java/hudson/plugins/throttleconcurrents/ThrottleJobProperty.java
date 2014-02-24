@@ -174,9 +174,12 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             super(ThrottleJobProperty.class);
             synchronized(propertiesByCategoryLock) {
                 load();
-                // Explictly drop queue items loaded from 1.8.1 version
-                if (!propertiesByCategory.isEmpty()) {
+                // Explictly handle the persisted data from the version 1.8.1
+                if (propertiesByCategory == null) {
                     propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+                }
+                if (!propertiesByCategory.isEmpty()) {
+                    propertiesByCategory.clear();
                     save(); // Save the configuration to remove obsolete data
                 }
             }
