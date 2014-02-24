@@ -184,6 +184,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
                 if (item != null && item.task != null) {
+                    // TODO: refactor into a nameEquals helper method
                     if (exec.getCurrentExecutable() != null &&
                         exec.getCurrentExecutable().getParent() != null &&
                         exec.getCurrentExecutable().getParent().getOwnerTask() != null &&
