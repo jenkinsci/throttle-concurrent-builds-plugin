@@ -183,14 +183,20 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
-                if (exec.getCurrentExecutable() != null && exec.getCurrentExecutable().getParent().getOwnerTask().getName() == item.task.getName()) {
-                    List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
-                    executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+                if (item != null && item.task != null) {
+                    // TODO: refactor into a nameEquals helper method
+                    if (exec.getCurrentExecutable() != null &&
+                        exec.getCurrentExecutable().getParent() != null &&
+                        exec.getCurrentExecutable().getParent().getOwnerTask() != null &&
+                        exec.getCurrentExecutable().getParent().getOwnerTask().getName() == item.task.getName()) {
+                        List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+                        executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
-                    if (executingUnitParams.containsAll(itemParams)) {
-                        LOGGER.info("build (" + exec.getCurrentWorkUnit() + ") with identical parameters (" +
-                                    executingUnitParams + ") is already running.");
-                        return true;
+                        if (executingUnitParams.containsAll(itemParams)) {
+                            LOGGER.info("build (" + exec.getCurrentWorkUnit() + ") with identical parameters (" +
+                                        executingUnitParams + ") is already running.");
+                            return true;
+                        }
                     }
                 }
             }
@@ -218,12 +224,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     public List<ParameterValue> getParametersFromWorkUnit(WorkUnit unit) {
         List<ParameterValue> paramsList = new ArrayList<ParameterValue>();
 
-        List<Action> actions = unit.context.actions;
-        for (Action action : actions) {
-            if (action instanceof ParametersAction) {
-                ParametersAction params = (ParametersAction) action;
-                if (params != null) {
-                    paramsList = params.getParameters();
+        if (unit != null && unit.context != null && unit.context.actions != null) {
+            List<Action> actions = unit.context.actions;
+            for (Action action : actions) {
+                if (action instanceof ParametersAction) {
+                    ParametersAction params = (ParametersAction) action;
+                    if (params != null) {
+                        paramsList = params.getParameters();
+                    }
                 }
             }
         }
