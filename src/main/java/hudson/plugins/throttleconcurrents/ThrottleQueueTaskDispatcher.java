@@ -24,11 +24,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
-        if (task instanceof MatrixConfiguration) {
+        
+        ThrottleJobProperty tjp = getThrottleJobProperty(task);
+        
+        // Handle multi-configuration filters
+        if (!shouldBeThrottled(task, tjp)) {
             return null;
         }
-
-        ThrottleJobProperty tjp = getThrottleJobProperty(task);
+ 
         if (tjp!=null && tjp.getThrottleEnabled()) {
             CauseOfBlockage cause = canRun(task, tjp);
             if (cause != null) return cause;
@@ -91,9 +94,27 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         return null;
     }
+    
+    private boolean shouldBeThrottled(Task task, ThrottleJobProperty tjp) {
+       if (tjp == null) return false;
+       if (!tjp.getThrottleEnabled()) return false;
+       
+       // Handle matrix options
+       ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
+       if (matrixOptions == null) matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
+       if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
+            return false;
+       } 
+       if (!matrixOptions.isThrottleMatrixBuilds()&& task instanceof MatrixProject) {
+            return false;
+       }
+       
+       // Allow throttling by default
+       return true;
+    }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
-        if (task instanceof MatrixConfiguration) {
+        if (!shouldBeThrottled(task, tjp)) {
             return null;
         }
         if (Hudson.getInstance().getQueue().isPending(task)) {
