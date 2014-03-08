@@ -78,5 +78,9 @@ public class ThrottleMatrixProjectOptions implements Describable<ThrottleMatrixP
         public String getDisplayName() {
             return Messages.ThrottleMatrixProjectOptions_DisplayName();
         }
+        
+        public ThrottleMatrixProjectOptions getDefaults() {
+            return ThrottleMatrixProjectOptions.DEFAULT;
+        }
     }
 }
