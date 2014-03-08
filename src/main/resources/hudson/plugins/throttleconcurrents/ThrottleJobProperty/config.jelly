@@ -29,6 +29,12 @@
         </j:forEach>
       </f:entry>
     </j:if>
+    <!--Specific options for Matrix projects-->
+    <j:if test="${descriptor.isMatrixProject(it)}">
+        <f:entry>
+            <f:property field="matrixOptions"/>
+        </f:entry>
+    </j:if>
   </f:optionalBlock>
 </j:jelly>
     
