@@ -98,13 +98,13 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     @Override protected void setOwner(AbstractProject<?,?> owner) {
         super.setOwner(owner);
         if (throttleEnabled && categories != null) {
-            Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = ((DescriptorImpl) getDescriptor()).propertiesByCategory;
-            synchronized (propertiesByCategory) {
+            DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();    
+            synchronized (descriptor.propertiesByCategoryLock) {
                 for (String c : categories) {
-                    Map<ThrottleJobProperty,Void> properties = propertiesByCategory.get(c);
+                    Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(c);
                     if (properties == null) {
                         properties = new WeakHashMap<ThrottleJobProperty,Void>();
-                        propertiesByCategory.put(c, properties);
+                        descriptor.propertiesByCategory.put(c, properties);
                     }
                     properties.put(this, null);
                 }
@@ -150,9 +150,9 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         assert category != null && !category.equals("");
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?, ?>>();
         Collection<ThrottleJobProperty> properties;
-        Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class).propertiesByCategory;
-        synchronized (propertiesByCategory) {
-            Map<ThrottleJobProperty,Void> _properties = propertiesByCategory.get(category);
+        DescriptorImpl descriptor = Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class);    
+        synchronized (descriptor.propertiesByCategoryLock) {
+            Map<ThrottleJobProperty,Void> _properties = descriptor.propertiesByCategory.get(category);
             properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.<ThrottleJobProperty>emptySet();
         }
         for (ThrottleJobProperty t : properties) {
@@ -180,13 +180,26 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         private List<ThrottleCategory> categories;
         
         /** Map from category names, to properties including that category. */
-        private Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+        private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory 
+                 = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+        /** A sync object for {@link #propertiesByCategory} */
+        private final transient Object propertiesByCategoryLock = new Object();
         
         public DescriptorImpl() {
             super(ThrottleJobProperty.class);
-            load();
+            synchronized(propertiesByCategoryLock) {
+                load();
+                // Explictly handle the persisted data from the version 1.8.1
+                if (propertiesByCategory == null) {
+                    propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+                }
+                if (!propertiesByCategory.isEmpty()) {
+                    propertiesByCategory.clear();
+                    save(); // Save the configuration to remove obsolete data
+                }
+            }
         }
-        
+     
         @Override
         public String getDisplayName() {
             return "Throttle Concurrent Builds";
