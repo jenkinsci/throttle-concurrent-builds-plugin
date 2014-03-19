@@ -30,7 +30,8 @@ import java.util.logging.Logger;
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
-    public CauseOfBlockage canTake(Node node, Task task) {
+    public CauseOfBlockage canTake(Node node, Queue.BuildableItem item) {
+        Task task = item.task;
         if (task instanceof MatrixConfiguration) {
             return null;
         }
@@ -188,7 +189,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     if (exec.getCurrentExecutable() != null &&
                         exec.getCurrentExecutable().getParent() != null &&
                         exec.getCurrentExecutable().getParent().getOwnerTask() != null &&
-                        exec.getCurrentExecutable().getParent().getOwnerTask().getName() == item.task.getName()) {
+                        exec.getCurrentExecutable().getParent().getOwnerTask().getName().equals(item.task.getName())) {
                         List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
