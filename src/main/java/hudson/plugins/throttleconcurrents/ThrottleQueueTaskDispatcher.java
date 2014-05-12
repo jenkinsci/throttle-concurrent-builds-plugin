@@ -95,6 +95,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
     
+    private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
+        ThrottleJobProperty tjp = getThrottleJobProperty(task);
+        if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
+        ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
+        return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
+    }
+    
     private boolean shouldBeThrottled(Task task, ThrottleJobProperty tjp) {
        if (tjp == null) return false;
        if (!tjp.getThrottleEnabled()) return false;
@@ -191,8 +198,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             for (Executor e : computer.getExecutors()) {
                 runCount += buildsOnExecutor(task, e);
             }
-            ThrottleJobProperty tjp = getThrottleJobProperty(task);
-            if (task instanceof MatrixConfiguration &&  !tjp.getThrottleConfiguration()){
+            
+            ThrottleMatrixProjectOptions matrixOptions = getMatrixOptions(task);
+            if ( matrixOptions.isThrottleMatrixBuilds() && task instanceof MatrixProject) {
+                for (Executor e : computer.getOneOffExecutors()) {
+                    runCount += buildsOnExecutor(task, e);
+                }
+            }
+            if ( matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
                 for (Executor e : computer.getOneOffExecutors()) {
                     runCount += buildsOnExecutor(task, e);
                 }
