@@ -29,8 +29,11 @@
         </j:forEach>
       </f:entry>
     </j:if>
-    <f:entry title="${%Throttle the configurations of this Matrix Project instead of the Parent Project}" field="throttleConfiguration" >
-        <f:checkbox/>
-    </f:entry>
+    <!--Specific options for Matrix projects-->
+    <j:if test="${descriptor.isMatrixProject(it)}">
+        <f:entry>
+            <f:property field="matrixOptions"/>
+        </f:entry>
+    </j:if>
   </f:optionalBlock>
 </j:jelly>

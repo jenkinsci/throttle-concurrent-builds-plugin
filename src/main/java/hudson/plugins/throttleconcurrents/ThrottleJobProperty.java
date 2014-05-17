@@ -14,6 +14,7 @@ import hudson.model.JobPropertyDescriptor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
+import hudson.matrix.MatrixProject;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +40,8 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private List<String> categories;
     private boolean throttleEnabled;
     private String throttleOption;
-    private boolean throttleConfiguration;
+    private transient boolean throttleConfiguration;
+    private final ThrottleMatrixProjectOptions matrixOptions;
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -53,12 +55,14 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                List<String> categories,
                                boolean throttleEnabled,
                                String throttleOption,
-                               boolean throttleConfiguration) {
+                               ThrottleMatrixProjectOptions matrixOptions
+                               ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
         this.categories = categories;
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
+        this.matrixOptions = matrixOptions;
     }
 
 
@@ -135,8 +139,8 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return maxConcurrentTotal;
     }
 
-    public boolean getThrottleConfiguration() {
-        return throttleConfiguration;
+    public ThrottleMatrixProjectOptions getMatrixOptions() {
+        return matrixOptions;
     }
 
     static List<AbstractProject<?,?>> getCategoryProjects(String category) {
@@ -182,7 +186,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                  = new HashMap<String,Map<ThrottleJobProperty,Void>>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
-        
+         
         public DescriptorImpl() {
             super(ThrottleJobProperty.class);
             synchronized(propertiesByCategoryLock) {
@@ -207,6 +211,10 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends Job> jobType) {
             return AbstractProject.class.isAssignableFrom(jobType);
+        }
+             
+        public boolean isMatrixProject(Job job) {
+            return job instanceof MatrixProject;
         }
 
         @Override
@@ -323,7 +331,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
 
             return nodeLabeledPairs;
         }
-
+        
         @Extension
         public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
             @Override
