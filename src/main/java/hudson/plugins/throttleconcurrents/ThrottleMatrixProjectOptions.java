@@ -29,6 +29,7 @@ import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixConfiguration;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
+import javax.annotation.Nonnull;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -79,6 +80,7 @@ public class ThrottleMatrixProjectOptions implements Describable<ThrottleMatrixP
             return Messages.ThrottleMatrixProjectOptions_DisplayName();
         }
         
+        @Nonnull
         public ThrottleMatrixProjectOptions getDefaults() {
             return ThrottleMatrixProjectOptions.DEFAULT;
         }

@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
@@ -41,7 +43,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private boolean throttleEnabled;
     private String throttleOption;
     private transient boolean throttleConfiguration;
-    private ThrottleMatrixProjectOptions matrixOptions;
+    private @CheckForNull ThrottleMatrixProjectOptions matrixOptions;
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -55,7 +57,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                List<String> categories,
                                boolean throttleEnabled,
                                String throttleOption,
-                               ThrottleMatrixProjectOptions matrixOptions
+                               @CheckForNull ThrottleMatrixProjectOptions matrixOptions
                                ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
@@ -144,6 +146,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return maxConcurrentTotal;
     }
 
+    @CheckForNull
     public ThrottleMatrixProjectOptions getMatrixOptions() {
         return matrixOptions;
     }

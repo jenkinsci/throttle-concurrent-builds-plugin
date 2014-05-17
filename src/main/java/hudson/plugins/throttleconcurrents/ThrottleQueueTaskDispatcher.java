@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -95,6 +97,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
     
+    @Nonnull
     private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
@@ -102,7 +105,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
     
-    private boolean shouldBeThrottled(Task task, ThrottleJobProperty tjp) {
+    private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
        if (tjp == null) return false;
        if (!tjp.getThrottleEnabled()) return false;
        
@@ -175,6 +178,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
+    @CheckForNull
     private ThrottleJobProperty getThrottleJobProperty(Task task) {
         if (task instanceof AbstractProject) {
             AbstractProject<?,?> p = (AbstractProject<?,?>) task;

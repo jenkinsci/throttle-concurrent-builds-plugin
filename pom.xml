@@ -100,5 +100,13 @@ THE SOFTWARE.
             <url>http://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
+    <dependencies>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>2.0.1</version>
+            <type>jar</type>
+        </dependency>
+    </dependencies>
 </project>  
 
