@@ -1,6 +1,7 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
+import hudson.matrix.MatrixConfiguration;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
@@ -12,6 +13,8 @@ import hudson.model.JobPropertyDescriptor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
+import hudson.matrix.MatrixBuild;
+import hudson.matrix.MatrixProject;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
@@ -37,6 +42,8 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private List<String> categories;
     private boolean throttleEnabled;
     private String throttleOption;
+    private transient boolean throttleConfiguration;
+    private @CheckForNull ThrottleMatrixProjectOptions matrixOptions;
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -49,12 +56,15 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                Integer maxConcurrentTotal,
                                List<String> categories,
                                boolean throttleEnabled,
-                               String throttleOption) {
+                               String throttleOption,
+                               @CheckForNull ThrottleMatrixProjectOptions matrixOptions
+                               ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
         this.categories = categories;
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
+        this.matrixOptions = matrixOptions;
     }
 
 
@@ -84,6 +94,11 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             }
         }
         configVersion = 1L;
+        
+        // Handle the throttleConfiguration in custom builds (not released)
+        if (throttleConfiguration && matrixOptions == null) {
+            matrixOptions = new ThrottleMatrixProjectOptions(false, true);
+        }
         
         return this;
     }
@@ -131,6 +146,29 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return maxConcurrentTotal;
     }
 
+    @CheckForNull
+    public ThrottleMatrixProjectOptions getMatrixOptions() {
+        return matrixOptions;
+    }
+        
+    /**
+     * Check if the build throttles {@link MatrixBuild}s.
+     */
+    public boolean isThrottleMatrixBuilds() {
+        return matrixOptions != null 
+                ? matrixOptions.isThrottleMatrixBuilds() 
+                : ThrottleMatrixProjectOptions.DEFAULT.isThrottleMatrixBuilds();
+    }
+    
+    /**
+     * Check if the build throttles {@link MatrixConfiguration}s.
+     */
+    public boolean isThrottleMatrixConfigurations() {
+        return matrixOptions != null 
+                ? matrixOptions.isThrottleMatrixConfigurations() 
+                : ThrottleMatrixProjectOptions.DEFAULT.isThrottleMatrixConfigurations();
+    }
+
     static List<AbstractProject<?,?>> getCategoryProjects(String category) {
         assert category != null && !category.equals("");
         List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?, ?>>();
@@ -146,6 +184,11 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                     AbstractProject<?,?> p = t.owner;
                     if (/* not deleted */getItem(p.getParent(), p.getName()) == p && /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
                         categoryProjects.add(p);
+                        if (p instanceof MatrixProject && t.isThrottleMatrixConfigurations()) {
+                            for (MatrixConfiguration mc : ((MatrixProject)p).getActiveConfigurations()) {
+                                categoryProjects.add((AbstractProject<?,?>)mc);
+                            }
+                        }
                     }
                 }
             }
@@ -169,7 +212,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                  = new HashMap<String,Map<ThrottleJobProperty,Void>>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
-        
+         
         public DescriptorImpl() {
             super(ThrottleJobProperty.class);
             synchronized(propertiesByCategoryLock) {
@@ -194,6 +237,10 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends Job> jobType) {
             return AbstractProject.class.isAssignableFrom(jobType);
+        }
+             
+        public boolean isMatrixProject(Job job) {
+            return job instanceof MatrixProject;
         }
 
         @Override
@@ -310,7 +357,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
 
             return nodeLabeledPairs;
         }
-
+        
         @Extension
         public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
             @Override
