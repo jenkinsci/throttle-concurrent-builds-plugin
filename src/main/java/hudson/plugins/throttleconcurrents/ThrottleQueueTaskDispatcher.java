@@ -13,6 +13,7 @@ import hudson.model.Queue.Task;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.model.queue.SubTask;
 
 import java.util.List;
 import java.util.Set;
@@ -230,11 +231,20 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
-        if (exec.getCurrentExecutable() != null
-            && exec.getCurrentExecutable().getParent() == task) {
-            runCount++;
-        }
+        if (exec.getCurrentExecutable() != null){
+        	SubTask taskRunning = exec.getCurrentExecutable().getParent();
+        	if (task instanceof MatrixConfiguration && taskRunning instanceof MatrixConfiguration){
+                ThrottleJobProperty tjp = getThrottleJobProperty(task);
+                if (tjp.getThrottleOption().equals("project")){
+                	task = ((MatrixConfiguration)task).getRootProject();
+                	taskRunning = ((MatrixConfiguration)taskRunning).getRootProject();
+                }
+            }
+            if (taskRunning == task) {
+                    runCount++;
+            }
 
+        }
         return runCount;
     }
 
