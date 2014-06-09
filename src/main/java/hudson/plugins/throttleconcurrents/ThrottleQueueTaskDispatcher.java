@@ -8,6 +8,7 @@ import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Hudson;
 import hudson.model.Node;
+import hudson.model.Run;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
 import hudson.model.labels.LabelAtom;
@@ -137,6 +138,26 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
                 if (totalRunCount >= maxConcurrentTotal) {
                     return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
+                }
+            }
+            
+            // check start interval between runs
+            if (tjp.getStartInterval().longValue() > 0) {        
+                if (task instanceof AbstractProject) {
+                    AbstractProject<?,?> p = (AbstractProject<?,?>) task;
+                    Run<?,?> lastBuild = p.getLastBuild();
+                    if (null != lastBuild && lastBuild.isBuilding()) {
+
+                        // Probably better to use lastBuild.getStartTimeInMillis() which was introduced in Jenkins 1.494.
+                        // We are building against 1.424 so getTimeInMillis() is an OK approximation
+                        long timeSinceLastBuildStartedInSeconds = (System.currentTimeMillis() - lastBuild.getTimeInMillis()) / 1000;
+                        long remainingIntervalSeconds = tjp.getStartInterval().longValue() - timeSinceLastBuildStartedInSeconds;
+                        if(remainingIntervalSeconds > 0) {
+                            long minutes = remainingIntervalSeconds / 60;
+                            long seconds = remainingIntervalSeconds % 60;
+                            return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_StartIntervalLimit(minutes, seconds));
+                        }
+                    }
                 }
             }
         }

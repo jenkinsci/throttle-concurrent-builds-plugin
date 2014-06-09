@@ -21,11 +21,11 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         String alpha = "alpha", beta = "beta", gamma = "gamma"; // category names
         FreeStyleProject p1 = createFreeStyleProject("p1");
         FreeStyleProject p2 = createFreeStyleProject("p2");
-        p2.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(alpha), false, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT));
+        p2.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(alpha), false, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT, 0L));
         FreeStyleProject p3 = createFreeStyleProject("p3");
-        p3.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(alpha, beta), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT));
+        p3.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(alpha, beta), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT, 0L));
         FreeStyleProject p4 = createFreeStyleProject("p4");
-        p4.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(beta, gamma), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT));
+        p4.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(beta, gamma), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT, 0L));
         // TODO when core dep ≥1.480.3, add cloudbees-folder as a test dependency so we can check jobs inside folders
         assertProjects(alpha, p3);
         assertProjects(beta, p3, p4);

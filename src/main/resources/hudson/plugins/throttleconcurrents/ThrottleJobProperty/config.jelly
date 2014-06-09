@@ -20,6 +20,10 @@
              field="maxConcurrentPerNode">
       <f:textbox />
     </f:entry>
+    <f:entry title="${%Minimum Start Interval between Builds in seconds}"
+             field="startInterval">
+      <f:textbox />
+    </f:entry>
     <j:if test="${!empty(descriptor.categories)}">
       <f:entry title="${%Multi-Project Throttle Category}">
         <j:forEach var="cat" items="${descriptor.categories}">
