@@ -192,6 +192,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int buildsOfProjectOnNode(Node node, Task task) {
+        if (!shouldBeThrottled(task, getThrottleJobProperty(task))) {
+            return 0;
+        }
+
         int runCount = 0;
         LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
@@ -202,17 +206,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             for (Executor e : computer.getExecutors()) {
                 runCount += buildsOnExecutor(task, e);
             }
-            
-            ThrottleMatrixProjectOptions matrixOptions = getMatrixOptions(task);
-            if ( matrixOptions.isThrottleMatrixBuilds() && task instanceof MatrixProject) {
-                for (Executor e : computer.getOneOffExecutors()) {
-                    runCount += buildsOnExecutor(task, e);
-                }
-            }
-            if ( matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
-                for (Executor e : computer.getOneOffExecutors()) {
-                    runCount += buildsOnExecutor(task, e);
-                }
+
+            for (Executor e : computer.getOneOffExecutors()) {
+                runCount += buildsOnExecutor(task, e);
             }
         }
 
