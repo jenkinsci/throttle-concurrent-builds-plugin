@@ -199,6 +199,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
         if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
+            // Count flyweight tasks that might not consume an actual executor.
+            for (Executor e : computer.getOneOffExecutors()) {
+                runCount += buildsOnExecutor(task, e);
+            }
+
             for (Executor e : computer.getExecutors()) {
                 runCount += buildsOnExecutor(task, e);
             }
