@@ -39,6 +39,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
+    private Long startInterval;
     private List<String> categories;
     private boolean throttleEnabled;
     private String throttleOption;
@@ -57,10 +58,12 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                List<String> categories,
                                boolean throttleEnabled,
                                String throttleOption,
-                               @CheckForNull ThrottleMatrixProjectOptions matrixOptions
+                               @CheckForNull ThrottleMatrixProjectOptions matrixOptions,
+                               Long startInterval
                                ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
+        this.startInterval = startInterval == null ? 0L : startInterval;
         this.categories = categories;
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
@@ -100,6 +103,10 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             matrixOptions = new ThrottleMatrixProjectOptions(false, true);
         }
         
+        if (startInterval == null) {
+            startInterval = 0L;
+        }
+          
         return this;
     }
 
@@ -144,6 +151,13 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             maxConcurrentTotal = 0;
         
         return maxConcurrentTotal;
+    }
+
+    public Long getStartInterval() {
+        if (startInterval == null) 
+            startInterval = 0L;
+
+        return startInterval;
     }
 
     @CheckForNull
@@ -276,6 +290,9 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             return checkNullOrInt(value);
         }
 
+        public FormValidation doCheckStartInterval(@QueryParameter String value) {
+            return checkNullOrInt(value);
+        }
         
         public ThrottleCategory getCategoryByName(String categoryName) {
             ThrottleCategory category = null;
