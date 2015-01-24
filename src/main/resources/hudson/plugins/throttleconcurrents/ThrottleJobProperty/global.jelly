@@ -13,6 +13,9 @@
           <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
             <f:textbox />
           </f:entry>
+          <f:entry title="${%Blocking Categories}" field="blockingCategories">
+            <f:textbox />
+          </f:entry>
         </table>
         <f:repeatable field="nodeLabeledPairs" add="${%Add Maximum Per Labeled Node}" minimum="0" header="${%Maximum Per Labeled Node}">
           <table width="100%">
