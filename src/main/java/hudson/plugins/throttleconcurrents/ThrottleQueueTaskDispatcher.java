@@ -204,7 +204,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         int runCount = 0;
-        LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
+        LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task, node.getNodeName()});
 
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
         // a build right after it was launched, for some reason.
