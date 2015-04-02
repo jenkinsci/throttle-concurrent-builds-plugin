@@ -92,21 +92,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
-    // @Override on jenkins 4.127+ , but still compatible with 1.399
+    // TODO @Override on 1.427+
     public CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
             return canRun(item.task, tjp);
         }
         return null;
-    }
-    
-    @Nonnull
-    private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
-        ThrottleJobProperty tjp = getThrottleJobProperty(task);
-        if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
-        ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
-        return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
     
     private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
@@ -127,7 +119,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
        return true;
     }
 
-    public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
+    private CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
         HashSet<Queue.BuildableItem> pendingItems = new HashSet<Queue.BuildableItem>(
                 Hudson.getInstance().getQueue().getPendingItems());
 
