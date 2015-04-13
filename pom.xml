@@ -32,7 +32,7 @@ THE SOFTWARE.
   <artifactId>throttle-concurrents</artifactId>
   <packaging>hpi</packaging>
   <name>Jenkins Throttle Concurrent Builds Plug-in</name>
-  <version>1.8.3-SNAPSHOT</version>
+  <version>1.8.5-SNAPSHOT</version>
   <url>http://wiki.jenkins-ci.org/display/JENKINS/Throttle+Concurrent+Builds+Plugin</url>
   <description>Plugin to throttle the number of concurrent builds of a single job per node.</description>
   
@@ -77,6 +77,12 @@ THE SOFTWARE.
       <name>Andrew Bayer</name>
       <email>andrew.bayer@gmail.com</email>
       <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>oleg_nenashev</id>
+      <name>Oleg Nenashev</name>
+      <email>o.v.nenashev@gmail.com</email>
+      <timezone>+3</timezone>
     </developer>
   </developers>
 

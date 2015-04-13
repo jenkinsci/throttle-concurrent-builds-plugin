@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
@@ -61,7 +62,9 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
-        this.categories = categories;
+        this.categories = categories == null ?
+                new CopyOnWriteArrayList<String>() :
+                new CopyOnWriteArrayList<String>(categories);
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
         this.matrixOptions = matrixOptions;
@@ -76,7 +79,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             configVersion = 0L;
         }
         if (categories == null) {
-            categories = new ArrayList<String>();
+            categories = new CopyOnWriteArrayList<String>();
         }
         if (category != null) {
             categories.add(category);
@@ -212,7 +215,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                  = new HashMap<String,Map<ThrottleJobProperty,Void>>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
-         
+
         public DescriptorImpl() {
             super(ThrottleJobProperty.class);
             synchronized(propertiesByCategoryLock) {
@@ -227,7 +230,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                 }
             }
         }
-     
+
         @Override
         public String getDisplayName() {
             return "Throttle Concurrent Builds";
@@ -290,12 +293,12 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         }
 
         public void setCategories(List<ThrottleCategory> categories) {
-            this.categories = categories;
+            this.categories = new CopyOnWriteArrayList<ThrottleCategory>(categories);
         }
         
         public List<ThrottleCategory> getCategories() {
             if (categories == null) {
-                categories = new ArrayList<ThrottleCategory>();
+                categories = new CopyOnWriteArrayList<ThrottleCategory>();
             }
 
             return categories;

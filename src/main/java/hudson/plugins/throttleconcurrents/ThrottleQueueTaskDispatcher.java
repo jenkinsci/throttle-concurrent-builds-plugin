@@ -193,6 +193,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int buildsOfProjectOnNode(Node node, Task task) {
+        if (!shouldBeThrottled(task, getThrottleJobProperty(task))) {
+            return 0;
+        }
+
         int runCount = 0;
         LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
@@ -200,20 +204,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
         if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
-            for (Executor e : computer.getExecutors()) {
+            // Count flyweight tasks that might not consume an actual executor.
+            for (Executor e : computer.getOneOffExecutors()) {
                 runCount += buildsOnExecutor(task, e);
             }
-            
-            ThrottleMatrixProjectOptions matrixOptions = getMatrixOptions(task);
-            if ( matrixOptions.isThrottleMatrixBuilds() && task instanceof MatrixProject) {
-                for (Executor e : computer.getOneOffExecutors()) {
-                    runCount += buildsOnExecutor(task, e);
-                }
-            }
-            if ( matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
-                for (Executor e : computer.getOneOffExecutors()) {
-                    runCount += buildsOnExecutor(task, e);
-                }
+
+            for (Executor e : computer.getExecutors()) {
+                runCount += buildsOnExecutor(task, e);
             }
         }
 
