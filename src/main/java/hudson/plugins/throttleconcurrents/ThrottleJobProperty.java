@@ -249,6 +249,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             req.bindJSON(this, formData);
+            ThrottleCategoriesCountersCache.getInstance().refreshCategoriesCache();
             save();
             return true;
         }

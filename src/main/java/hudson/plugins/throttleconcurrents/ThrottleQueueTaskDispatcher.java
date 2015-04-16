@@ -24,6 +24,58 @@ import javax.annotation.Nonnull;
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
+    /**
+     * Fast and unreliable implementation of can take.
+     * It's designed to be a first-stage check in 
+     * {@link ThrottleQueueTaskDispatcher#canTake(hudson.model.Node, hudson.model.Queue.Task)}.
+     * @param node 
+     * @param task
+     * @param tjp Non-null job property of the task
+     * @return {@link CauseOfBlockage} if Jenkins cannot take the fob. 
+     *         null means that Jenkins <b>may</b> be able to take the job, but
+     *         a full check is required.
+     */
+    private @CheckForNull CauseOfBlockage fastCanTake(Node node, AbstractProject prj, ThrottleJobProperty tjp) {
+        // We presume that the throttling eligibility has been checked before
+        // The only supported type is AbstractProject
+        
+        if (tjp.getThrottleOption().equals("category")) {
+            final CauseOfBlockage categoriesCheckResult = 
+                    ThrottleCategoriesCountersCache.getInstance().canTake(
+                            tjp.getCategories(), node.getNodeName());
+            if (categoriesCheckResult != null) {
+                return categoriesCheckResult;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Fast and unreliable implementation of canRun.
+     * It's designed to be a first-stage check in 
+     * {@link ThrottleQueueTaskDispatcher#canTake(hudson.model.Node, hudson.model.Queue.Task)}.
+     * @param node 
+     * @param task
+     * @param tjp Non-null job property of the task
+     * @return {@link CauseOfBlockage} if Jenkins cannot take the fob. 
+     *         null means that Jenkins <b>may</b> be able to take the job, but
+     *         a full check is required.
+     */
+    private @CheckForNull CauseOfBlockage fastCanRun(AbstractProject prj, ThrottleJobProperty tjp) {
+        // We presume that the throttling eligibility has been checked before
+        // The only supported type is AbstractProject      
+        if (tjp.getThrottleOption().equals("category")) {
+            final CauseOfBlockage categoriesCheckResult = 
+                    ThrottleCategoriesCountersCache.getInstance().canRun(tjp.getCategories());
+            if (categoriesCheckResult != null) {
+                return categoriesCheckResult;
+            }
+        }
+        
+        return null;
+    }
+    
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
         
@@ -34,8 +86,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return null;
         }
 
+        // Perform fast inaccurate check and exit if it vetoes the task
+        final CauseOfBlockage fastCheckResult = fastCanTake(node, (AbstractProject) task, tjp);
+        if (fastCheckResult != null) {
+            return fastCheckResult;
+        }
+        
         if (tjp!=null && tjp.getThrottleEnabled()) {
-            CauseOfBlockage cause = canRun(task, tjp);
+            CauseOfBlockage cause = canRun(task, tjp, false); // isPending() is not required for canTake()
             if (cause != null) return cause;
 
             if (tjp.getThrottleOption().equals("project")) {
@@ -91,9 +149,23 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     // @Override on jenkins 4.127+ , but still compatible with 1.399
     public CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
-        if (tjp!=null && tjp.getThrottleEnabled()) {
-            return canRun(item.task, tjp);
+        if (!shouldBeThrottled(item.task, tjp)) {
+            return null;
         }
+        
+        // Perform fast inaccurate check and exit if it vetoes the task
+        final CauseOfBlockage fastCheckResult = fastCanRun((AbstractProject)item.task, tjp);
+        if (fastCheckResult != null) {
+            return fastCheckResult;
+        }
+        
+        // TODO: fast check of nodes
+        
+        // We do not check everything else and rely on CanTake
+        // It has been done to make canRun as a spot-check only
+        /**if (tjp!=null && tjp.getThrottleEnabled()) {
+            return canRun(item.task, tjp);
+        } */
         return null;
     }
     
@@ -123,10 +195,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
        return true;
     }
 
+    @Deprecated
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
-        if (!shouldBeThrottled(task, tjp)) {
-            return null;
-        }
+        return canRun(task, tjp, true);
+    }
+    
+    public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, boolean checkPending) {
+        
         if (Hudson.getInstance().getQueue().isPending(task)) {
             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
         }
@@ -158,7 +233,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 int totalRunCount = 0;
 
                                 for (AbstractProject<?,?> catProj : categoryProjects) {
-                                    if (Hudson.getInstance().getQueue().isPending(catProj)) {
+                                    if (checkPending && Hudson.getInstance().getQueue().isPending(catProj)) {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                     }
                                     totalRunCount += buildsOfProjectOnAllNodes(catProj);
