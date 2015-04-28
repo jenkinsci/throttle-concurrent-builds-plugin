@@ -11,9 +11,12 @@ import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
 import hudson.model.labels.LabelAtom;
+import hudson.model.queue.AbstractQueueSorterImpl;
 import hudson.model.queue.CauseOfBlockage;
+import hudson.model.queue.QueueSorter;
 import hudson.model.queue.QueueTaskDispatcher;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -23,6 +26,8 @@ import javax.annotation.Nonnull;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
+
+    private static final QueueSorter fallbackSorter = new AbstractQueueSorterImpl() {};
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
@@ -66,16 +71,53 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 int maxConcurrentPerNode = getMaxConcurrentPerNodeBasedOnMatchingLabels(
                                     node, category, category.getMaxConcurrentPerNode().intValue());
                                 if (maxConcurrentPerNode > 0) {
+                                    List<Queue.BuildableItem> categoryBuildableItems = new ArrayList<Queue.BuildableItem>();
+
                                     int runCount = 0;
                                     for (AbstractProject<?,?> catProj : categoryProjects) {
                                         if (Hudson.getInstance().getQueue().isPending(catProj)) {
                                             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                         }
                                         runCount += buildsOfProjectOnNode(node, catProj);
+
+                                        List<Queue.BuildableItem> buildableItems =
+                                                Hudson.getInstance().getQueue().getBuildableItems();
+
+                                        for (Queue.BuildableItem buildableItem : buildableItems) {
+                                            if (buildableItem.task.equals(catProj)) {
+                                                categoryBuildableItems.add(buildableItem);
+                                            }
+                                        }
                                     }
                                     // This would mean that there are as many or more builds currently running than are allowed.
                                     if (runCount >= maxConcurrentPerNode) {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
+                                    }
+
+                                    /*
+                                     * Normally at this point we'd return null since this build is eligible
+                                     * to take an executor, but there's potentially others also eligible that
+                                     * might consume more executors than the defined max for the category.
+                                     *
+                                     * To fix this we sort all queue items that are in the category and block
+                                     * the task if it is not in the top of the queue.  This ensures that only
+                                     * one item takes an available executor at a time.
+                                     *
+                                     * Sort our list of items since it is newly built and unsorted by the current
+                                     * QueueSorter.
+                                     */
+                                    QueueSorter sorter = Hudson.getInstance().getQueue().getSorter();
+                                    if (sorter == null) {
+                                        sorter = fallbackSorter;
+                                    }
+                                    sorter.sortBuildableItems(categoryBuildableItems);
+
+                                    /*
+                                     * An IndexOutOfBoundsException here means we screwed up royally.  At the very
+                                     * least, the current task should be part of the categoryBuildableItems list.
+                                     */
+                                    if (!task.equals(categoryBuildableItems.get(0).task)) {
+                                        return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_SchedulingAnotherBuild());
                                     }
                                 }
                             }
