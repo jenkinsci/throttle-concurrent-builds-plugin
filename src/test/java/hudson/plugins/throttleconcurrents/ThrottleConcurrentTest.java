@@ -114,7 +114,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         public GivenStage $_executors(int i) {
-
+            numExecutorsPerNode = i;
             return self();
         }
 
