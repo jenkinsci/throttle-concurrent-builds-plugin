@@ -40,7 +40,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                 .and()
                 .a_category().with().maxConcurrentPerNode(maxPerNode)
                 .and()
-                .$_projects_having_this_category(maxPerNode * nodeNumber + 1);
+                .$_projects_having_this_category(maxPerNode * nodeNumber + 5);
 
         when()
                 .each_project_is_built_$_times(3);
