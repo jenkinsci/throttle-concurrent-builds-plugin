@@ -1,5 +1,6 @@
 package hudson.plugins.throttleconcurrents;
 
+
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
@@ -13,13 +14,17 @@ import hudson.model.Queue.Task;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.plugins.throttleconcurrents.ThrottleJobProperty.ThrottleCategory;
 
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+
+import org.apache.commons.lang.StringUtils;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -153,6 +158,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
                         // Double check category itself isn't null
                         if (category != null) {
+                            // Check if this job is blocked by category
+                            if (isBlockedByCategories(category.getBlockingCategoriesList())) {
+                                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BlockedByCategory());
+                            }
+
                             if (category.getMaxConcurrentTotal().intValue() > 0) {
                                 int maxConcurrentTotal = category.getMaxConcurrentTotal().intValue();
                                 int totalRunCount = 0;
@@ -176,6 +186,32 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         return null;
+    }
+
+    private boolean isBlockedByCategories(List<String> categoryNames) {
+        for (String catName : categoryNames) {
+            if (areProjectsInCategoryBuilding(catName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean areProjectsInCategoryBuilding(String categoryName) {
+        List<AbstractProject<?, ?>> projectsInCategory = ThrottleJobProperty.getCategoryProjects(categoryName);
+        for (AbstractProject<?, ?> project : projectsInCategory) {
+            if (isProjectBuilding(project)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isProjectBuilding(AbstractProject<?, ?> project) {
+        if (project.isBuilding() || project.isInQueue()) {
+            return true;
+        }
+        return false;
     }
 
     @CheckForNull

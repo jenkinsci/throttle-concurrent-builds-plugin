@@ -33,11 +33,13 @@ public class ThrottleCategoryTest
     private static final String testCategoryName = "aCategory";
 
     @Test
-    public void shouldGetEmptyNodeLabeledPairsListUponInitialNull()
+    public void shouldGetEmptyValuesUponInitialNull()
     {
         ThrottleJobProperty.ThrottleCategory category =
-            new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null);
+            new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null, null);
         assertTrue("nodeLabeledPairs shall be empty", category.getNodeLabeledPairs().isEmpty());
+        assertTrue("blockingCategories shall be empty", category.getBlockingCategoriesList().isEmpty());
+        assertNull("blockingCategories shall be empty", category.getBlockingCategories());
     }
 
     @Test
@@ -47,7 +49,7 @@ public class ThrottleCategoryTest
         Integer expectedMax = new Integer(1);
 
         ThrottleJobProperty.ThrottleCategory category =
-            new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null);
+            new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, "", null);
         List<ThrottleJobProperty.NodeLabeledPair> nodeLabeledPairs = category.getNodeLabeledPairs();
         nodeLabeledPairs.add(new ThrottleJobProperty.NodeLabeledPair(expectedLabel, expectedMax));
 
@@ -58,5 +60,27 @@ public class ThrottleCategoryTest
             expectedLabel, actualLabel);
         assertEquals("maxConcurrentPerNodeLabeled "+actualMax+" does not match expected "+expectedMax,
             expectedMax, actualMax);
+    }
+
+    @Test
+    public void shouldGetNonEmptyBlockCategoriesListThatWasCreated()
+    {
+        ThrottleJobProperty.ThrottleCategory categoryOne = new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, "catA", null);
+        assertEquals("blockingCategories should have one entry", 1, categoryOne.getBlockingCategoriesList().size());
+        assertEquals("blockingCategory name should match", categoryOne.getBlockingCategoriesList().get(0), "catA");
+
+        ThrottleJobProperty.ThrottleCategory categoryTwo = new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, "catA, ", null);
+        assertEquals("blockingCategories should have one entry", 1, categoryTwo.getBlockingCategoriesList().size());
+        assertEquals("blockingCategory name should match", categoryTwo.getBlockingCategoriesList().get(0), "catA");
+
+        ThrottleJobProperty.ThrottleCategory categoryThree = new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, "catA,catB", null);
+        assertEquals("blockingCategories should not be empty", 2, categoryThree.getBlockingCategoriesList().size());
+        assertEquals("blockingCategory name should match", categoryThree.getBlockingCategoriesList().get(0), "catA");
+        assertEquals("blockingCategory name should match", categoryThree.getBlockingCategoriesList().get(1), "catB");
+
+        ThrottleJobProperty.ThrottleCategory categoryFour = new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, "catA, catB,", null);
+        assertEquals("blockingCategories should not be empty", 2, categoryFour.getBlockingCategoriesList().size());
+        assertEquals("blockingCategory name should match", categoryFour.getBlockingCategoriesList().get(0), "catA");
+        assertEquals("blockingCategory name should match", categoryFour.getBlockingCategoriesList().get(1), "catB");
     }
 }
