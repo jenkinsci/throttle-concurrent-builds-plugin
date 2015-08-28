@@ -14,6 +14,7 @@ import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -50,6 +51,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 }
             }
             else if (tjp.getThrottleOption().equals("category")) {
+                HashSet<Queue.BuildableItem> pendingItems = new HashSet<Queue.BuildableItem>(
+                        Hudson.getInstance().getQueue().getPendingItems());
+
                 // If the project is in one or more categories...
                 if (tjp.getCategories() != null && !tjp.getCategories().isEmpty()) {
                     for (String catNm : tjp.getCategories()) {
@@ -68,7 +72,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 if (maxConcurrentPerNode > 0) {
                                     int runCount = 0;
                                     for (AbstractProject<?,?> catProj : categoryProjects) {
-                                        if (Hudson.getInstance().getQueue().isPending(catProj)) {
+                                        if (pendingItems.contains(catProj)) {
                                             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                         }
                                         runCount += buildsOfProjectOnNode(node, catProj);
@@ -124,10 +128,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
+        HashSet<Queue.BuildableItem> pendingItems = new HashSet<Queue.BuildableItem>(
+                Hudson.getInstance().getQueue().getPendingItems());
+
         if (!shouldBeThrottled(task, tjp)) {
             return null;
         }
-        if (Hudson.getInstance().getQueue().isPending(task)) {
+        if (pendingItems.contains(task)) {
             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
         }
         if (tjp.getThrottleOption().equals("project")) {
@@ -158,7 +165,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 int totalRunCount = 0;
 
                                 for (AbstractProject<?,?> catProj : categoryProjects) {
-                                    if (Hudson.getInstance().getQueue().isPending(catProj)) {
+                                    if (pendingItems.contains(catProj)) {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                     }
                                     totalRunCount += buildsOfProjectOnAllNodes(catProj);
