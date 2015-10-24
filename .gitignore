@@ -1,7 +1,7 @@
 *.iml
 *.ipr
 *.iws
-.idea
+.idea/
 target
 work
 # eclipse =>

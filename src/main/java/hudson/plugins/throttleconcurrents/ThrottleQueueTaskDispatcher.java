@@ -250,6 +250,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
 
+    @CheckForNull
     private ThrottleJobProperty getThrottleJobProperty(Task task) {
         if (task instanceof AbstractProject) {
             AbstractProject<?,?> p = (AbstractProject<?,?>) task;
