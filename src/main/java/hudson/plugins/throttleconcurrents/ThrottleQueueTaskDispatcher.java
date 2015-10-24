@@ -94,7 +94,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     public CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
-            if (tjp.getlimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
+            if (tjp.isLimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
                 LOGGER.info("A build with matching parameters is already running.");
                 return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
             }
@@ -189,13 +189,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     if (exec.getCurrentExecutable() != null &&
                         exec.getCurrentExecutable().getParent() != null &&
                         exec.getCurrentExecutable().getParent().getOwnerTask() != null &&
-                        exec.getCurrentExecutable().getParent().getOwnerTask().getName().equals(item.task.getName())) {
+                        exec.getCurrentExecutable().getParent().getOwnerTask().getName().equals(item.task.getDisplayName())) {
                         List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
                         if (executingUnitParams.containsAll(itemParams)) {
-                            LOGGER.info("build (" + exec.getCurrentWorkUnit() + ") with identical parameters (" +
-                                        executingUnitParams + ") is already running.");
+                            LOGGER.debug("build (" + exec.getCurrentWorkUnit() + ") with identical parameters (" +
+                                         executingUnitParams + ") is already running.");
                             return true;
                         }
                     }
@@ -240,11 +240,15 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public List<ParameterValue> getParametersFromQueueItem(Queue.Item item) {
-        List<ParameterValue> paramsList = new ArrayList<ParameterValue>();
+        List<ParameterValue> paramsList;
 
         ParametersAction params = item.getAction(ParametersAction.class);
         if (params != null) {
             paramsList = params.getParameters();
+        }
+        else
+        {
+        	paramsList  = new ArrayList<ParameterValue>();
         }
         return paramsList;
     }
