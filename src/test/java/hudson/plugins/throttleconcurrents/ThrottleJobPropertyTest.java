@@ -1,6 +1,8 @@
 package hudson.plugins.throttleconcurrents;
 
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.FreeStyleProject;
+import hudson.model.Job;
 import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;

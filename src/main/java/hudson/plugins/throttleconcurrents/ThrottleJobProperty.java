@@ -1,10 +1,7 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
-import hudson.Util;
-import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixConfiguration;
-import hudson.matrix.MatrixProject;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.Item;
@@ -15,13 +12,10 @@ import hudson.model.JobPropertyDescriptor;
 import hudson.model.Queue;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import hudson.Util;
+import hudson.matrix.MatrixBuild;
+import hudson.matrix.MatrixProject;
 
-import javax.annotation.CheckForNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,11 +24,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import javax.annotation.CheckForNull;
+import jenkins.model.Jenkins;
+
+import net.sf.json.JSONObject;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // Moving category to categories, to support, well, multiple categories per job.
     @Deprecated transient String category;
-
+    
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
     private List<String> categories;
@@ -48,7 +50,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      * functionality upgrades.
      */
     private Long configVersion;
-
+    
     @DataBoundConstructor
     public ThrottleJobProperty(Integer maxConcurrentPerNode,
                                Integer maxConcurrentTotal,
@@ -94,19 +96,19 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
         configVersion = 1L;
-
+        
         // Handle the throttleConfiguration in custom builds (not released)
         if (throttleConfiguration && matrixOptions == null) {
             matrixOptions = new ThrottleMatrixProjectOptions(false, true);
         }
-
+        
         return this;
     }
 
     @Override protected void setOwner(Job<?,?> owner) {
         super.setOwner(owner);
         if (throttleEnabled && categories != null) {
-            DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();
+            DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();    
             synchronized (descriptor.propertiesByCategoryLock) {
                 for (String c : categories) {
                     Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(c);
@@ -127,22 +129,22 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     public String getThrottleOption() {
         return throttleOption;
     }
-
+    
     public List<String> getCategories() {
         return categories;
     }
-
+    
     public Integer getMaxConcurrentPerNode() {
         if (maxConcurrentPerNode == null)
             maxConcurrentPerNode = 0;
-
+        
         return maxConcurrentPerNode;
     }
 
     public Integer getMaxConcurrentTotal() {
         if (maxConcurrentTotal == null)
             maxConcurrentTotal = 0;
-
+        
         return maxConcurrentTotal;
     }
 
@@ -150,22 +152,22 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     public ThrottleMatrixProjectOptions getMatrixOptions() {
         return matrixOptions;
     }
-
+        
     /**
      * Check if the build throttles {@link MatrixBuild}s.
      */
     public boolean isThrottleMatrixBuilds() {
-        return matrixOptions != null
-                ? matrixOptions.isThrottleMatrixBuilds()
+        return matrixOptions != null 
+                ? matrixOptions.isThrottleMatrixBuilds() 
                 : ThrottleMatrixProjectOptions.DEFAULT.isThrottleMatrixBuilds();
     }
-
+    
     /**
      * Check if the build throttles {@link MatrixConfiguration}s.
      */
     public boolean isThrottleMatrixConfigurations() {
-        return matrixOptions != null
-                ? matrixOptions.isThrottleMatrixConfigurations()
+        return matrixOptions != null 
+                ? matrixOptions.isThrottleMatrixConfigurations() 
                 : ThrottleMatrixProjectOptions.DEFAULT.isThrottleMatrixConfigurations();
     }
 
@@ -173,7 +175,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         assert category != null && !category.equals("");
         List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
         Collection<ThrottleJobProperty> properties;
-        DescriptorImpl descriptor = Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class);
+        DescriptorImpl descriptor = Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class);    
         synchronized (descriptor.propertiesByCategoryLock) {
             Map<ThrottleJobProperty,Void> _properties = descriptor.propertiesByCategory.get(category);
             properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.<ThrottleJobProperty>emptySet();
@@ -203,13 +205,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return group.getItem(name);
         }
     }
-
+    
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         private List<ThrottleCategory> categories;
-
+        
         /** Map from category names, to properties including that category. */
-        private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory
+        private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory 
                  = new HashMap<String,Map<ThrottleJobProperty,Void>>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
@@ -233,13 +235,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         public String getDisplayName() {
             return "Throttle Concurrent Builds";
         }
-
+        
         @Override
         @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends Job> jobType) {
             return Job.class.isAssignableFrom(jobType) && Queue.Task.class.isAssignableFrom(jobType);
         }
-
+             
         public boolean isMatrixProject(Job job) {
             return job instanceof MatrixProject;
         }
@@ -277,10 +279,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return checkNullOrInt(value);
         }
 
-
+        
         public ThrottleCategory getCategoryByName(String categoryName) {
             ThrottleCategory category = null;
-
+            
             for (ThrottleCategory tc : categories) {
                 if (tc.getCategoryName().equals(categoryName)) {
                     category = tc;
@@ -293,7 +295,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         public void setCategories(List<ThrottleCategory> categories) {
             this.categories = new CopyOnWriteArrayList<ThrottleCategory>(categories);
         }
-
+        
         public List<ThrottleCategory> getCategories() {
             if (categories == null) {
                 categories = new CopyOnWriteArrayList<ThrottleCategory>();
@@ -306,14 +308,14 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             ListBoxModel m = new ListBoxModel();
 
             m.add("(none)", "");
-
+            
             for (ThrottleCategory tc : getCategories()) {
                 m.add(tc.getCategoryName());
             }
 
             return m;
         }
-
+        
     }
 
     public static final class ThrottleCategory extends AbstractDescribableImpl<ThrottleCategory> {
@@ -333,18 +335,18 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             this.nodeLabeledPairs =
                  nodeLabeledPairs == null ? new ArrayList<NodeLabeledPair>() : nodeLabeledPairs;
         }
-
+        
         public Integer getMaxConcurrentPerNode() {
             if (maxConcurrentPerNode == null)
                 maxConcurrentPerNode = 0;
-
+            
             return maxConcurrentPerNode;
         }
-
+        
         public Integer getMaxConcurrentTotal() {
             if (maxConcurrentTotal == null)
                 maxConcurrentTotal = 0;
-
+            
             return maxConcurrentTotal;
         }
 
@@ -358,7 +360,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
             return nodeLabeledPairs;
         }
-
+        
         @Extension
         public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
             @Override
