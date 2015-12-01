@@ -3,10 +3,10 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
-import hudson.model.AbstractProject;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Hudson;
+import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
@@ -55,7 +55,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     for (String catNm : tjp.getCategories()) {
                         // Quick check that catNm itself is a real string.
                         if (catNm != null && !catNm.equals("")) {
-                            List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
+                            List<Task> categoryTasks = ThrottleJobProperty.getCategoryTasks(catNm);
 
                             ThrottleJobProperty.ThrottleCategory category =
                                 ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -67,11 +67,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     node, category, category.getMaxConcurrentPerNode().intValue());
                                 if (maxConcurrentPerNode > 0) {
                                     int runCount = 0;
-                                    for (AbstractProject<?,?> catProj : categoryProjects) {
-                                        if (Hudson.getInstance().getQueue().isPending(catProj)) {
+                                    for (Task catTask : categoryTasks) {
+                                        if (Hudson.getInstance().getQueue().isPending(catTask)) {
                                             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                         }
-                                        runCount += buildsOfProjectOnNode(node, catProj);
+                                        runCount += buildsOfProjectOnNode(node, catTask);
                                     }
                                     // This would mean that there are as many or more builds currently running than are allowed.
                                     if (runCount >= maxConcurrentPerNode) {
@@ -146,7 +146,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 for (String catNm : tjp.getCategories()) {
                     // Quick check that catNm itself is a real string.
                     if (catNm != null && !catNm.equals("")) {
-                        List<AbstractProject<?,?>> categoryProjects = ThrottleJobProperty.getCategoryProjects(catNm);
+                        List<Task> categoryTasks = ThrottleJobProperty.getCategoryTasks(catNm);
 
                         ThrottleJobProperty.ThrottleCategory category =
                             ((ThrottleJobProperty.DescriptorImpl)tjp.getDescriptor()).getCategoryByName(catNm);
@@ -157,11 +157,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 int maxConcurrentTotal = category.getMaxConcurrentTotal().intValue();
                                 int totalRunCount = 0;
 
-                                for (AbstractProject<?,?> catProj : categoryProjects) {
-                                    if (Hudson.getInstance().getQueue().isPending(catProj)) {
+                                for (Task catTask : categoryTasks) {
+                                    if (Hudson.getInstance().getQueue().isPending(catTask)) {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                     }
-                                    totalRunCount += buildsOfProjectOnAllNodes(catProj);
+                                    totalRunCount += buildsOfProjectOnAllNodes(catTask);
                                 }
 
                                 if (totalRunCount >= maxConcurrentTotal) {
@@ -180,10 +180,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @CheckForNull
     private ThrottleJobProperty getThrottleJobProperty(Task task) {
-        if (task instanceof AbstractProject) {
-            AbstractProject<?,?> p = (AbstractProject<?,?>) task;
+        if (task instanceof Job) {
+            Job<?,?> p = (Job<?,?>) task;
             if (task instanceof MatrixConfiguration) {
-                p = (AbstractProject<?,?>)((MatrixConfiguration)task).getParent();
+                p = ((MatrixConfiguration)task).getParent();
             }
             ThrottleJobProperty tjp = p.getProperty(ThrottleJobProperty.class);
             return tjp;
@@ -228,7 +228,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
         if (exec.getCurrentExecutable() != null
-            && exec.getCurrentExecutable().getParent() == task) {
+            && task.equals(exec.getCurrentExecutable().getParent())) {
             runCount++;
         }
 
