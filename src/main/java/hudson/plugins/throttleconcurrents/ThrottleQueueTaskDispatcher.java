@@ -14,12 +14,12 @@ import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -98,14 +98,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
     
     @Nonnull
-    private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
+    static ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
         ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
-    
-    private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
+
+    static boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
        if (tjp == null) return false;
        if (!tjp.getThrottleEnabled()) return false;
        
@@ -179,7 +179,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     @CheckForNull
-    private ThrottleJobProperty getThrottleJobProperty(Task task) {
+    static ThrottleJobProperty getThrottleJobProperty(Task task) {
         if (task instanceof Job) {
             Job<?,?> p = (Job<?,?>) task;
             if (task instanceof MatrixConfiguration) {
@@ -191,7 +191,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
-    private int buildsOfProjectOnNode(Node node, Task task) {
+    static int buildsOfProjectOnNode(Node node, Task task) {
         if (!shouldBeThrottled(task, getThrottleJobProperty(task))) {
             return 0;
         }
@@ -216,7 +216,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
-    private int buildsOfProjectOnAllNodes(Task task) {
+    static int buildsOfProjectOnAllNodes(Task task) {
         int totalRunCount = buildsOfProjectOnNode(Hudson.getInstance(), task);
 
         for (Node node : Hudson.getInstance().getNodes()) {
@@ -225,7 +225,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return totalRunCount;
     }
 
-    private int buildsOnExecutor(Task task, Executor exec) {
+    static int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
         if (exec.getCurrentExecutable() != null
             && task.equals(exec.getCurrentExecutable().getParent())) {
@@ -242,7 +242,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
      * @return maximum concurrent number of builds per node based on matching labels, as an int.
      * @author marco.miller@ericsson.com
      */
-    private int getMaxConcurrentPerNodeBasedOnMatchingLabels(
+    static int getMaxConcurrentPerNodeBasedOnMatchingLabels(
         Node node, ThrottleJobProperty.ThrottleCategory category, int maxConcurrentPerNode)
     {
         List<ThrottleJobProperty.NodeLabeledPair> nodeLabeledPairs = category.getNodeLabeledPairs();
