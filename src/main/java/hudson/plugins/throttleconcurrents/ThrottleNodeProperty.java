@@ -1,7 +1,6 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
-import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.queue.CauseOfBlockage;
@@ -16,6 +15,7 @@ import java.util.logging.Logger;
 public class ThrottleNodeProperty extends NodeProperty<Node> {
 
     private static final Logger LOGGER = Logger.getLogger(ThrottleNodeProperty.class.getName());
+    private static final Object SYNC = new Object();
 
     @DataBoundConstructor
     public ThrottleNodeProperty() {
@@ -82,11 +82,11 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
             return null;
         }
 
-        if (tjp != null && tjp.getThrottleEnabled()) {
+        synchronized (SYNC) {
             if (tjp.getThrottleOption().equals("project")) {
                 try {
-                    if (tjp.getMaxConcurrentPerNode().intValue() > 0) {
-                        int maxConcurrentPerNode = tjp.getMaxConcurrentPerNode().intValue();
+                    if (tjp.getMaxConcurrentPerNode() > 0) {
+                        int maxConcurrentPerNode = tjp.getMaxConcurrentPerNode();
                         int runCount = ThrottleQueueTaskDispatcher.buildsOfProjectOnNode(node, task);
                         LOGGER.warning("NP runCount: " + runCount + ", max: " + maxConcurrentPerNode);
 
@@ -115,11 +115,11 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
                                 // Max concurrent per node for category
                                 int maxConcurrentPerNode = ThrottleQueueTaskDispatcher
                                         .getMaxConcurrentPerNodeBasedOnMatchingLabels(node, category,
-                                                category.getMaxConcurrentPerNode().intValue());
+                                                category.getMaxConcurrentPerNode());
                                 if (maxConcurrentPerNode > 0) {
                                     int runCount = 0;
                                     for (Queue.Task catTask : categoryTasks) {
-                                        if (Hudson.getInstance().getQueue().isPending(catTask)) {
+                                        if (Jenkins.getInstance().getQueue().isPending(catTask)) {
                                             return CauseOfBlockage
                                                     .fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                         }
