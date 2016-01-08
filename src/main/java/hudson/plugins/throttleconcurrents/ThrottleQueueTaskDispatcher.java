@@ -174,11 +174,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         Computer computer = node.toComputer();
-        List<String> paramsToCompare = new ArrayList<String>();
+        List<String> paramsToCompare = tjp.getParamsToCompare();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
         if (tjp.getLimitOneJobByParams().length() > 0) {
-            paramsToCompare = Arrays.asList(tjp.getLimitOneJobByParams().split(","));
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
 

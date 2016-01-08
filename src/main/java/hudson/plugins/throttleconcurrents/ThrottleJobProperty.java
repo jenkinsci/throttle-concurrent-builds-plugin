@@ -42,6 +42,8 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private transient boolean throttleConfiguration;
     private @CheckForNull ThrottleMatrixProjectOptions matrixOptions;
 
+    private transient List<String> paramsToCompare;
+
     /**
      * Store a config version so we're able to migrate config on various
      * functionality upgrades.
@@ -66,6 +68,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.limitOneJobByParams = limitOneJobByParams;
         this.matrixOptions = matrixOptions;
+        this.paramToCompare = new ArrayList<String>();
     }
 
 
@@ -173,6 +176,11 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         }
         return categoryProjects;
     }
+
+    public List<String> getParamsToCompare() {
+        return paramsToCompare;
+    }
+
     private static Item getItem(ItemGroup group, String name) {
         if (group instanceof Jenkins) {
             return ((Jenkins) group).getItemMap().get(name);
@@ -209,6 +217,22 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
             req.bindJSON(this, formData);
             save();
             return true;
+        }
+
+        @Override
+        public protected void load() {
+            super.load();
+            if (limitOneJobByParams.length() > 0) {
+                paramsToCompare = Arrays.asList(limitOneJobByParams.split(","));
+            }
+        }
+
+        @Override
+        public protected void save() {
+            super.save();
+            if (limitOneJobByParams.length() > 0) {
+                paramsToCompare = Arrays.asList(limitOneJobByParams.split(","));
+            }
         }
 
         public FormValidation doCheckCategoryName(@QueryParameter String value) {
