@@ -177,15 +177,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         List<String> paramsToCompare = tjp.getParamsToCompare();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
-        LOGGER.log(Level.INFO, "all params to compare: " +
-                paramsToCompare);
-
         if (paramsToCompare.size() > 0) {
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
-
-        LOGGER.log(Level.INFO, "queued job params to compare: " +
-                paramsToCompare);
 
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
