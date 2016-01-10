@@ -177,7 +177,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         List<String> paramsToCompare = tjp.getParamsToCompare();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
-        if (tjp.getLimitOneJobByParams().length() > 0) {
+        if (paramsToCompare.length() > 0) {
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
 
@@ -204,8 +204,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return false;
     }
 
-    // takes a String array containing a list of params, a List of ParameterValue objects
-    // and returns a new List<ParameterValue> with only the desired params in the list.
+    /**
+     * Filter job parameters to only include parameters used for throttling
+     * @param String array containing a list of params to be used for throttling.
+     * @param List of ParameterValue objects of the job.
+     * @return List<ParameterValue> with only the desired params in the list.
+     */
     private List<ParameterValue> doFilterParams(List<String> params, List<ParameterValue> OriginalParams) {
         if (params.isEmpty()) {
             return OriginalParams;

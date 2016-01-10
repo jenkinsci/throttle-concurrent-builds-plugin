@@ -38,7 +38,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
     private boolean throttleEnabled;
     private String throttleOption;
     private boolean limitOneJobWithMatchingParams;
-    private String limitOneJobByParams;
+    private String paramsToUseForLimit;
     private transient boolean throttleConfiguration;
     private @CheckForNull ThrottleMatrixProjectOptions matrixOptions;
 
@@ -57,7 +57,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
                                boolean throttleEnabled,
                                String throttleOption,
                                boolean limitOneJobWithMatchingParams,
-                               String limitOneJobByParams,
+                               String paramsToUseForLimit,
                                @CheckForNull ThrottleMatrixProjectOptions matrixOptions
                                ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
@@ -66,7 +66,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
-        this.limitOneJobByParams = limitOneJobByParams;
+        this.paramsToUseForLimit = paramsToUseForLimit;
         this.matrixOptions = matrixOptions;
         this.paramToCompare = new ArrayList<String>();
     }
@@ -126,11 +126,6 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
 
     public boolean isLimitOneJobWithMatchingParams() {
         return limitOneJobWithMatchingParams;
-    }
-
-
-    public String getLimitOneJobByParams() {
-        return limitOneJobByParams;
     }
 
     public String getThrottleOption() {
@@ -222,16 +217,16 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         @Override
         public protected void load() {
             super.load();
-            if (limitOneJobByParams.length() > 0) {
-                paramsToCompare = Arrays.asList(limitOneJobByParams.split(","));
+            if (paramsToUseForLimit.length() > 0) {
+                paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
             }
         }
 
         @Override
         public protected void save() {
             super.save();
-            if (limitOneJobByParams.length() > 0) {
-                paramsToCompare = Arrays.asList(limitOneJobByParams.split(","));
+            if (paramsToUseForLimit.length() > 0) {
+                paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
             }
         }
 
