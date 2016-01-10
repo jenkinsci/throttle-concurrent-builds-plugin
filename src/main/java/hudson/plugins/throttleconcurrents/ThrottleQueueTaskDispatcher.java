@@ -96,7 +96,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
             if (tjp.isLimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
-                LOGGER.info("A build with matching parameters is already running.");
                 return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
             }
             return canRun(item.task, tjp);
