@@ -199,7 +199,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
                         if (executingUnitParams.containsAll(itemParams)) {
-                            LOGGER.log(Level.INFO, "build (" + exec.getCurrentWorkUnit() +
+                            LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
                                        ") with identical parameters (" +
                                        executingUnitParams + ") is already running.");
                             return true;

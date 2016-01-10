@@ -74,18 +74,15 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.matrixOptions = matrixOptions;
         this.paramsToUseForLimit = paramsToUseForLimit;
-        LOGGER.log(Level.INFO, "ThrottleJobProperty");
-        LOGGER.log(Level.INFO, paramsToUseForLimit);
-
         if ((this.paramsToUseForLimit != null)) {
-            LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
             if ((this.paramsToUseForLimit.length() > 0)) {
-                LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
                 this.paramsToCompare = Arrays.asList(this.paramsToUseForLimit.split(","));
+            }
+            else {
+                this.paramsToCompare = new ArrayList<String>();
             }
         }
         else {
-            LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
             this.paramsToCompare = new ArrayList<String>();
         }
 
@@ -169,17 +166,21 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return maxConcurrentTotal;
     }
 
+    public String getParamsToUseForLimit() {
+        return paramsToUseForLimit;
+    }
+
     public List<String> getParamsToCompare() {
         if (paramsToCompare == null) {
             if ((paramsToUseForLimit != null)) {
-                LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
                 if ((paramsToUseForLimit.length() > 0)) {
-                    LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
                     paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
+                }
+                else {
+                    paramsToCompare = new ArrayList<String>();
                 }
             }
             else {
-                LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
                 paramsToCompare = new ArrayList<String>();
             }
         }
@@ -220,9 +221,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         private List<ThrottleCategory> categories;
-//        private transient List<String> paramsToCompare;
-//        private String paramsToUseForLimit;
-
 
         /** Map from category names, to properties including that category. */
         private Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
@@ -244,46 +242,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return Job.class.isAssignableFrom(jobType) && Queue.Task.class.isAssignableFrom(jobType);
         }
 
-//        @Override
-//        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-//            req.bindJSON(this, formData);
-//            save();
-//            return true;
-//        }
-
-//        @Override
-//        public void load() {
-//            super.load();
-//            LOGGER.log(Level.INFO, "load(): ");
-//            if ((paramsToUseForLimit != null)) {
-//                LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
-//                if ((paramsToUseForLimit.length() > 0)) {
-//                    LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
-//                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-//                }
-//            }
-//            else {
-//                LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
-//                paramsToCompare = new ArrayList<String>();
-//            }
-//        }
-//
-//        @Override
-//        public void save() {
-//            super.save();
-//            LOGGER.log(Level.INFO, "save(): ");
-//            if ((paramsToUseForLimit != null)) {
-//                LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
-//                if ((paramsToUseForLimit.length() > 0)) {
-//                    LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
-//                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-//                }
-//            }
-//            else {
-//                LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
-//                paramsToCompare = new ArrayList<String>();
-//            }
-//        }
+        @Override
+        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+            req.bindJSON(this, formData);
+            save();
+            return true;
+        }
 
         public FormValidation doCheckCategoryName(@QueryParameter String value) {
             if (Util.fixEmptyAndTrim(value) == null) {
@@ -311,7 +275,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return checkNullOrInt(value);
         }
 
-
         public ThrottleCategory getCategoryByName(String categoryName) {
             ThrottleCategory category = null;
 
@@ -323,10 +286,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
             return category;
         }
-
-//        public List<String> getParamsToCompare() {
-//            return paramsToCompare;
-//        }
 
         public void setCategories(List<ThrottleCategory> categories) {
             this.categories = categories;
