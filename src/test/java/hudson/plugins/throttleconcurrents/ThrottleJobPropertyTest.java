@@ -3,6 +3,7 @@ package hudson.plugins.throttleconcurrents;
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
 import hudson.model.Job;
+import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
 import java.util.Arrays;
@@ -43,7 +44,8 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
         jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
-            assertEquals(new HashSet<AbstractProject<?,?>>(Arrays.asList(projects)), new HashSet<AbstractProject<?,?>>(ThrottleJobProperty.getCategoryProjects(category)));
+            assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<Queue.Task>
+                    (ThrottleJobProperty.getCategoryTasks(category)));
         } finally {
             jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete
         }

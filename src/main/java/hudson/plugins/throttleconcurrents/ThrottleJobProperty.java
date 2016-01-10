@@ -2,13 +2,13 @@ package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
 import hudson.model.AbstractDescribableImpl;
-import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
+import hudson.model.Queue;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
@@ -28,7 +30,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
+public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // Moving category to categories, to support, well, multiple categories per job.
     @Deprecated transient String category;
 
@@ -103,7 +105,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return this;
     }
 
-    @Override protected void setOwner(AbstractProject<?,?> owner) {
+    @Override protected void setOwner(Job<?,?> owner) {
         super.setOwner(owner);
         if (throttleEnabled && categories != null) {
             Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = ((DescriptorImpl) getDescriptor()).propertiesByCategory;
@@ -150,9 +152,9 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         return maxConcurrentTotal;
     }
 
-    static List<AbstractProject<?,?>> getCategoryProjects(String category) {
+    static List<Queue.Task> getCategoryTasks(String category) {
         assert category != null && !category.equals("");
-        List<AbstractProject<?,?>> categoryProjects = new ArrayList<AbstractProject<?, ?>>();
+        List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
         Collection<ThrottleJobProperty> properties;
         Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class).propertiesByCategory;
         synchronized (propertiesByCategory) {
@@ -162,14 +164,15 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         for (ThrottleJobProperty t : properties) {
             if (t.getThrottleEnabled()) {
                 if (t.getCategories() != null && t.getCategories().contains(category)) {
-                    AbstractProject<?,?> p = t.owner;
-                    if (/* not deleted */getItem(p.getParent(), p.getName()) == p && /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
-                        categoryProjects.add(p);
+                    Job<?,?> p = t.owner;
+                    if (/*is a task*/ p instanceof Queue.Task && /* not deleted */getItem(p.getParent(), p.getName()) == p &&
+                        /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
+                        categoryTasks.add((Queue.Task) p);
                     }
                 }
             }
         }
-        return categoryProjects;
+        return categoryTasks;
     }
 
     public List<String> getParamsToCompare() {
@@ -204,7 +207,7 @@ public class ThrottleJobProperty extends JobProperty<AbstractProject<?,?>> {
         @Override
         @SuppressWarnings("rawtypes")
         public boolean isApplicable(Class<? extends Job> jobType) {
-            return AbstractProject.class.isAssignableFrom(jobType);
+            return Job.class.isAssignableFrom(jobType) && Queue.Task.class.isAssignableFrom(jobType);
         }
 
         @Override
