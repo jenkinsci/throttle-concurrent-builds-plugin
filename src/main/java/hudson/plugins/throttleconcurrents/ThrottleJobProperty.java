@@ -13,6 +13,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,6 +24,9 @@ import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.sf.json.JSONObject;
 
@@ -40,10 +44,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     private boolean throttleEnabled;
     private String throttleOption;
     private boolean limitOneJobWithMatchingParams;
-    private String paramsToUseForLimit;
     private transient boolean throttleConfiguration;
     private @CheckForNull ThrottleMatrixProjectOptions matrixOptions;
 
+    private String paramsToUseForLimit;
     private transient List<String> paramsToCompare;
 
     /**
@@ -68,11 +72,24 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
-        this.paramsToUseForLimit = paramsToUseForLimit;
         this.matrixOptions = matrixOptions;
-        this.paramToCompare = new ArrayList<String>();
-    }
+        this.paramsToUseForLimit = paramsToUseForLimit;
+        LOGGER.log(Level.INFO, "ThrottleJobProperty");
+        LOGGER.log(Level.INFO, paramsToUseForLimit);
 
+        if ((this.paramsToUseForLimit != null)) {
+            LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
+            if ((this.paramsToUseForLimit.length() > 0)) {
+                LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
+                this.paramsToCompare = Arrays.asList(this.paramsToUseForLimit.split(","));
+            }
+        }
+        else {
+            LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
+            this.paramsToCompare = new ArrayList<String>();
+        }
+
+    }
 
     /**
      * Migrates deprecated/obsolete data
@@ -152,6 +169,23 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return maxConcurrentTotal;
     }
 
+    public List<String> getParamsToCompare() {
+        if (paramsToCompare == null) {
+            if ((paramsToUseForLimit != null)) {
+                LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
+                if ((paramsToUseForLimit.length() > 0)) {
+                    LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
+                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
+                }
+            }
+            else {
+                LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
+                paramsToCompare = new ArrayList<String>();
+            }
+        }
+        return paramsToCompare;
+    }
+
     static List<Queue.Task> getCategoryTasks(String category) {
         assert category != null && !category.equals("");
         List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
@@ -175,10 +209,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return categoryTasks;
     }
 
-    public List<String> getParamsToCompare() {
-        return paramsToCompare;
-    }
-
     private static Item getItem(ItemGroup group, String name) {
         if (group instanceof Jenkins) {
             return ((Jenkins) group).getItemMap().get(name);
@@ -190,12 +220,16 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         private List<ThrottleCategory> categories;
+//        private transient List<String> paramsToCompare;
+//        private String paramsToUseForLimit;
+
 
         /** Map from category names, to properties including that category. */
         private Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
 
         public DescriptorImpl() {
             super(ThrottleJobProperty.class);
+            LOGGER.log(Level.INFO, "DescriptorImpl(): ");
             load();
         }
 
@@ -210,28 +244,46 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return Job.class.isAssignableFrom(jobType) && Queue.Task.class.isAssignableFrom(jobType);
         }
 
-        @Override
-        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            req.bindJSON(this, formData);
-            save();
-            return true;
-        }
+//        @Override
+//        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+//            req.bindJSON(this, formData);
+//            save();
+//            return true;
+//        }
 
-        @Override
-        public protected void load() {
-            super.load();
-            if (paramsToUseForLimit.length() > 0) {
-                paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-            }
-        }
-
-        @Override
-        public protected void save() {
-            super.save();
-            if (paramsToUseForLimit.length() > 0) {
-                paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-            }
-        }
+//        @Override
+//        public void load() {
+//            super.load();
+//            LOGGER.log(Level.INFO, "load(): ");
+//            if ((paramsToUseForLimit != null)) {
+//                LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
+//                if ((paramsToUseForLimit.length() > 0)) {
+//                    LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
+//                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
+//                }
+//            }
+//            else {
+//                LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
+//                paramsToCompare = new ArrayList<String>();
+//            }
+//        }
+//
+//        @Override
+//        public void save() {
+//            super.save();
+//            LOGGER.log(Level.INFO, "save(): ");
+//            if ((paramsToUseForLimit != null)) {
+//                LOGGER.log(Level.INFO, "paramsToUseForLimit != null");
+//                if ((paramsToUseForLimit.length() > 0)) {
+//                    LOGGER.log(Level.INFO, "paramsToUseForLimit.length() > 0");
+//                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
+//                }
+//            }
+//            else {
+//                LOGGER.log(Level.INFO, "paramsToUseForLimit == null");
+//                paramsToCompare = new ArrayList<String>();
+//            }
+//        }
 
         public FormValidation doCheckCategoryName(@QueryParameter String value) {
             if (Util.fixEmptyAndTrim(value) == null) {
@@ -271,6 +323,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
             return category;
         }
+
+//        public List<String> getParamsToCompare() {
+//            return paramsToCompare;
+//        }
 
         public void setCategories(List<ThrottleCategory> categories) {
             this.categories = categories;
@@ -387,4 +443,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
     }
+
+    private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
 }

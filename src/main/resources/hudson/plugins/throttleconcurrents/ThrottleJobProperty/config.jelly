@@ -26,7 +26,7 @@
                      inline="true"
                      checked="${instance.limitOneJobWithMatchingParams}">
       <f:entry title="${%List of parameters to check (comma-separated)}"
-               field="limitOneJobByParams"
+               field="paramsToUseForLimit"
                help="${descriptor.getHelpFile('limitOneJobWithMatchingParams')}">
         <f:textbox />
       </f:entry>

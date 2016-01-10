@@ -19,13 +19,13 @@ import hudson.model.queue.QueueTaskDispatcher;
 import hudson.model.Action;
 import hudson.model.ParametersAction;
 
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.CheckForNull;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -177,9 +177,15 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         List<String> paramsToCompare = tjp.getParamsToCompare();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
-        if (paramsToCompare.length() > 0) {
+        LOGGER.log(Level.INFO, "all params to compare: " +
+                paramsToCompare);
+
+        if (paramsToCompare.size() > 0) {
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
+
+        LOGGER.log(Level.INFO, "queued job params to compare: " +
+                paramsToCompare);
 
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
@@ -193,8 +199,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
                         if (executingUnitParams.containsAll(itemParams)) {
-                            LOGGER.debug("build (" + exec.getCurrentWorkUnit() + ") with identical parameters (" +
-                                         executingUnitParams + ") is already running.");
+                            LOGGER.log(Level.INFO, "build (" + exec.getCurrentWorkUnit() +
+                                       ") with identical parameters (" +
+                                       executingUnitParams + ") is already running.");
                             return true;
                         }
                     }
@@ -345,5 +352,5 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return maxConcurrentPerNodeLabeledIfMatch;
     }
 
-    private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ThrottleJobProperty.class.getName());
 }
