@@ -358,7 +358,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
                     input.setValueAttribute(logger);
                 }
                 HtmlSelect select = form.getSelectByName("level");
-                HtmlOption option = select.getOptionByValue("FINE");
+                HtmlOption option = select.getOptionByValue("fine");
                 select.setSelectedAttribute(option, true);
                 break;
             }

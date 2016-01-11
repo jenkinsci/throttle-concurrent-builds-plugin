@@ -26,18 +26,21 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
-    public CauseOfBlockage canTake(Node node, Queue.BuildableItem item) {
-        Task task = item.task;
-        if (task instanceof MatrixConfiguration) {
+    public CauseOfBlockage canTake(Node node, Task task) {
+        
+        ThrottleJobProperty tjp = getThrottleJobProperty(task);
+        
+        // Handle multi-configuration filters
+        if (!shouldBeThrottled(task, tjp)) {
             return null;
         }
 
-        ThrottleJobProperty tjp = getThrottleJobProperty(task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
             CauseOfBlockage cause = canRun(task, tjp);
             if (cause != null) return cause;
@@ -91,7 +94,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
-    // @Override on jenkins 1.427+ , but still compatible with 1.399
+    // @Override on jenkins 4.127+ , but still compatible with 1.399
     public CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
@@ -103,8 +106,34 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
+    @Nonnull
+    private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
+        ThrottleJobProperty tjp = getThrottleJobProperty(task);
+        if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
+        ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
+        return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
+    }
+    
+    private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
+       if (tjp == null) return false;
+       if (!tjp.getThrottleEnabled()) return false;
+       
+       // Handle matrix options
+       ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
+       if (matrixOptions == null) matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
+       if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
+            return false;
+       } 
+       if (!matrixOptions.isThrottleMatrixBuilds()&& task instanceof MatrixProject) {
+            return false;
+       }
+       
+       // Allow throttling by default
+       return true;
+    }
+
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
-        if (task instanceof MatrixConfiguration) {
+        if (!shouldBeThrottled(task, tjp)) {
             return null;
         }
         if (Hudson.getInstance().getQueue().isPending(task)) {
@@ -272,6 +301,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int buildsOfProjectOnNode(Node node, Task task) {
+        if (!shouldBeThrottled(task, getThrottleJobProperty(task))) {
+            return 0;
+        }
+
         int runCount = 0;
         LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
@@ -279,13 +312,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
         if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
-            for (Executor e : computer.getExecutors()) {
-                runCount += buildsOnExecutor(task, e);
-            }
-            if (task instanceof MatrixProject) {
+            // Count flyweight tasks that might not consume an actual executor.
                 for (Executor e : computer.getOneOffExecutors()) {
                     runCount += buildsOnExecutor(task, e);
                 }
+
+            for (Executor e : computer.getExecutors()) {
+                runCount += buildsOnExecutor(task, e);
             }
         }
 
@@ -346,5 +379,5 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return maxConcurrentPerNodeLabeledIfMatch;
     }
 
-    private static final Logger LOGGER = Logger.getLogger(ThrottleJobProperty.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
 }
