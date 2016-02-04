@@ -251,7 +251,7 @@ public final class Throttler {
         return runCount;
     }
 
-    private static final Logger LOGGER = Logger.getLogger(Throttler.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
 
     private Throttler() {
     }
