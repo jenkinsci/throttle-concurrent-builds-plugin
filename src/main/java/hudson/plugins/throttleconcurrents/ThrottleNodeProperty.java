@@ -9,7 +9,6 @@ import hudson.slaves.NodePropertyDescriptor;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ThrottleNodeProperty extends NodeProperty<Node> {
@@ -39,7 +38,7 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
         }
     }
 
-    static void onTaskLeft(Queue.Item item) {
+    static void onTaskLeftQueue(Queue.Item item) {
         FLYWEIGHT_TASK_IN_QUEUE.compareAndSet(item.getId(), NO_TASK);
     }
 
@@ -78,10 +77,9 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
             return null;
         }
 
-        ThrottleJobProperty tjp = ThrottleQueueTaskDispatcher.getThrottleJobProperty(task);
+        ThrottleJobProperty tjp = Throttler.getThrottleJobProperty(task);
 
-        // Handle multi-configuration filters
-        if (!ThrottleQueueTaskDispatcher.shouldBeThrottled(task, tjp)) {
+        if (!Throttler.shouldBeThrottled(task, tjp)) {
             return null;
         }
 
@@ -90,63 +88,11 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
             return new CauseOfBlockage() {
                 @Override
                 public String getShortDescription() {
-                    return "Temporary scheduling conflict";
+                    return "Scheduling conflict, waiting";
                 }
             };
         }
 
-        if (tjp.getThrottleOption().equals("project")) {
-            try {
-                if (tjp.getMaxConcurrentPerNode() > 0) {
-                    int maxConcurrentPerNode = tjp.getMaxConcurrentPerNode();
-                    int runCount = ThrottleQueueTaskDispatcher.buildsOfProjectOnNode(node, task);
-
-                    // This would mean that there are as many or more builds currently running than are allowed.
-                    if (runCount >= maxConcurrentPerNode) {
-                        return CauseOfBlockage
-                                .fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else if (tjp.getThrottleOption().equals("category")) {
-            // If the project is in one or more categories...
-            if (tjp.getCategories() != null && !tjp.getCategories().isEmpty()) {
-                for (String catNm : tjp.getCategories()) {
-                    // Quick check that catNm itself is a real string.
-                    if (catNm != null && !catNm.equals("")) {
-                        List<Queue.Task> categoryTasks = ThrottleJobProperty.getCategoryTasks(catNm);
-
-                        ThrottleJobProperty.ThrottleCategory category =
-                                ((ThrottleJobProperty.DescriptorImpl) tjp.getDescriptor()).getCategoryByName(catNm);
-
-                        // Double check category itself isn't null
-                        if (category != null) {
-                            // Max concurrent per node for category
-                            int maxConcurrentPerNode = ThrottleQueueTaskDispatcher
-                                    .getMaxConcurrentPerNodeBasedOnMatchingLabels(node, category,
-                                            category.getMaxConcurrentPerNode());
-                            if (maxConcurrentPerNode > 0) {
-                                int runCount = 0;
-                                for (Queue.Task catTask : categoryTasks) {
-                                    if (Jenkins.getInstance().getQueue().isPending(catTask)) {
-                                        return CauseOfBlockage
-                                                .fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
-                                    }
-                                    runCount += ThrottleQueueTaskDispatcher.buildsOfProjectOnNode(node, catTask);
-                                }
-                                // This would mean that there are as many or more builds currently running than are allowed.
-                                if (runCount >= maxConcurrentPerNode) {
-                                    return CauseOfBlockage.fromMessage(
-                                            Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return null;
+        return Throttler.throttleOnNode(node, task, tjp);
     }
 }
