@@ -38,8 +38,17 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
         }
     }
 
-    static void onTaskLeftQueue(Queue.Item item) {
+    private static boolean acquireLock(Queue.Item item) {
+        final long key = item.getId();
+        return !(key != FLYWEIGHT_TASK_IN_QUEUE.get() && !FLYWEIGHT_TASK_IN_QUEUE.compareAndSet(NO_TASK, key));
+    }
+
+    private static void releaseLock(Queue.Item item) {
         FLYWEIGHT_TASK_IN_QUEUE.compareAndSet(item.getId(), NO_TASK);
+    }
+
+    static void onTaskLeftQueue(Queue.Item item) {
+        releaseLock(item);
     }
 
     private boolean containsThisProperty(Node node) {
@@ -83,8 +92,7 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
             return null;
         }
 
-        final long key = item.getId();
-        if (key != FLYWEIGHT_TASK_IN_QUEUE.get() && !FLYWEIGHT_TASK_IN_QUEUE.compareAndSet(NO_TASK, key)) {
+        if (!acquireLock(item)) {
             return new CauseOfBlockage() {
                 @Override
                 public String getShortDescription() {
@@ -93,6 +101,16 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
             };
         }
 
-        return Throttler.throttleOnNode(node, task, tjp);
+        try {
+            CauseOfBlockage ret = Throttler.throttleOnNode(node, task, tjp);
+            if (null != ret) {
+                releaseLock(item);
+            }
+            return ret;
+        } catch (RuntimeException e) {
+            releaseLock(item);
+            throw e;
+        }
+
     }
 }
