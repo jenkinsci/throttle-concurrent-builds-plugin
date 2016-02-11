@@ -116,7 +116,8 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
         }
 
         if (!acquireLock(item)) {
-            // Failed to get the lock -> another flyweight job's scheduling process is not finished. Need to wait.
+            // Failed to get the lock -> the process of searching an executor for another flyweight job is not
+            // finished. Need to wait.
             return new ScheduleConflict();
         }
 
