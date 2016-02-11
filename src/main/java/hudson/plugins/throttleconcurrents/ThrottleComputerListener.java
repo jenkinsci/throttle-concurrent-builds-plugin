@@ -8,8 +8,12 @@ import hudson.slaves.NodePropertyDescriptor;
 import hudson.util.DescribableList;
 import jenkins.model.Jenkins;
 
+/**
+ * This listener makes sure each node has the instance of {@link ThrottleNodeProperty}. This is necessary for
+ * throttling flyweights.
+ */
 @Extension
-public class ComputerChangeListener extends ComputerListener {
+public class ThrottleComputerListener extends ComputerListener {
 
     private static void ensureNodeProperty(Node node) {
         DescribableList<NodeProperty<?>, NodePropertyDescriptor> props = node.getNodeProperties();
