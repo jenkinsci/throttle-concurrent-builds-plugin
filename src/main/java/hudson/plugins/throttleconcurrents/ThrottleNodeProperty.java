@@ -22,7 +22,7 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
     private static final long NO_ITEM = -1;
 
     /**
-     * The ID of an item being scheduled right now. We schedule one flyweight task at a time.
+     * The ID of an item being analysed right now. We analyse one flyweight task at a time.
      */
     private static final AtomicLong FLYWEIGHT_ITEM_IN_QUEUE = new AtomicLong(NO_ITEM);
 
@@ -118,7 +118,7 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
         if (!acquireLock(item)) {
             // Failed to get the lock -> the process of searching an executor for another flyweight job is not
             // finished. Need to wait.
-            return new ScheduleConflict();
+            return new ThrottleConflict();
         }
 
         try {
@@ -133,10 +133,10 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
         }
     }
 
-    private static final class ScheduleConflict extends CauseOfBlockage {
+    private static final class ThrottleConflict extends CauseOfBlockage {
         @Override
         public String getShortDescription() {
-            return "Scheduling conflict, waiting";
+            return "Throttle concurrency conflict, waiting";
         }
     }
 }
