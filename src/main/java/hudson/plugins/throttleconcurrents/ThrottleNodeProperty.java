@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * {@link hudson.model.queue.QueueTaskDispatcher} is not called for flyweights, so we can't use it for throttling.
  * Instead, we provide a hidden property (this one) for each node, and use
- * {@link NodeProperty#canTake(Queue.BuildableItem)} throttling flyweights.
+ * {@link NodeProperty#canTake(Queue.BuildableItem)} for throttling flyweights.
  */
 public class ThrottleNodeProperty extends NodeProperty<Node> {
 
