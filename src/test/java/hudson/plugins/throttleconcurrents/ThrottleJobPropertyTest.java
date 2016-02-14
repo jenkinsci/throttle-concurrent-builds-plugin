@@ -12,7 +12,9 @@ import org.acegisecurity.context.SecurityContextHolder;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.HudsonTestCase;
 
+/*
 import com.cloudbees.hudson.plugins.folder.Folder;
+*/
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -48,6 +50,7 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertProjects(beta, p3b);
     }
 
+    /*
     // Requires Jenkins >= 1.480.3 and cloudbees-folder-plugin
     @Bug(25326)
     public void testGetCategoryProjectsInFolder() throws Exception {
@@ -56,6 +59,7 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         p.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList("category"), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT));
         assertProjects("category", p);
     }
+    */
 
 
 
