@@ -113,6 +113,20 @@ THE SOFTWARE.
             <version>2.0.1</version>
             <type>jar</type>
         </dependency>
+        <!-- Requires core 1.480.3
+        <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>cloudbees-folder</artifactId>
+          <version>4.0</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>credentials</artifactId>
+          <version>1.8.3</version>
+          <scope>test</scope>
+        </dependency>
+        -->
     </dependencies>
 </project>  
 

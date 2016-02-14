@@ -2,15 +2,24 @@ package hudson.plugins.throttleconcurrents;
 
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
-import hudson.model.Job;
 import hudson.model.Queue;
-import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
+import hudson.security.NotSerilizableSecurityContext;
+import hudson.security.GlobalMatrixAuthorizationStrategy;
+
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.HudsonTestCase;
 
+/*
+import com.cloudbees.hudson.plugins.folder.Folder;
+*/
+
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import jenkins.model.Jenkins;
 
 public class ThrottleJobPropertyTest extends HudsonTestCase {
 
@@ -27,7 +36,6 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         p3.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(alpha, beta), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT));
         FreeStyleProject p4 = createFreeStyleProject("p4");
         p4.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(beta, gamma), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT));
-        // TODO when core dep ≥1.480.3, add cloudbees-folder as a test dependency so we can check jobs inside folders
         assertProjects(alpha, p3);
         assertProjects(beta, p3, p4);
         assertProjects(gamma, p4);
@@ -41,6 +49,17 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         p3.removeProperty(ThrottleJobProperty.class);
         assertProjects(beta, p3b);
     }
+
+    /*
+    // Requires Jenkins >= 1.480.3 and cloudbees-folder-plugin
+    @Bug(25326)
+    public void testGetCategoryProjectsInFolder() throws Exception {
+        Folder f = jenkins.createProject(Folder.class, "folder");
+        FreeStyleProject p = f.createProject(FreeStyleProject.class, "p");
+        p.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList("category"), true, THROTTLE_OPTION_CATEGORY, ThrottleMatrixProjectOptions.DEFAULT));
+        assertProjects("category", p);
+    }
+    */
 
 
 
@@ -124,25 +143,19 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
 
 
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
-        jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
+        // Queue runs as ANONYMOUS.
+        // Ensure throttle-concurrent-builds works even without any permissions for ANONYMOUS.
+        jenkins.setAuthorizationStrategy(new GlobalMatrixAuthorizationStrategy());
+        SecurityContext orig = SecurityContextHolder.getContext();
+        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
+        auth.setAuthentication(Jenkins.ANONYMOUS);
+        SecurityContextHolder.setContext(auth);
         try {
             assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<Queue.Task>
                     (ThrottleJobProperty.getCategoryTasks(category)));
         } finally {
+            SecurityContextHolder.setContext(orig);
             jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete
-        }
-    }
-    private static class RejectAllAuthorizationStrategy extends AuthorizationStrategy {
-        RejectAllAuthorizationStrategy() {}
-        @Override public ACL getRootACL() {
-            return new AuthorizationStrategy.Unsecured().getRootACL();
-        }
-        @Override public Collection<String> getGroups() {
-            return Collections.emptySet();
-        }
-        @Override public ACL getACL(Job<?,?> project) {
-            fail("not even supposed to be looking at " + project);
-            return super.getACL(project);
         }
     }
 

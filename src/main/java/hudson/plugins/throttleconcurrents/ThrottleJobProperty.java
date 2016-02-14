@@ -10,6 +10,8 @@ import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
 import hudson.model.Queue;
+import hudson.security.ACL;
+import hudson.security.NotSerilizableSecurityContext;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
@@ -29,6 +31,8 @@ import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
 
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -199,10 +203,14 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return categoryTasks;
     }
     private static Item getItem(ItemGroup group, String name) {
-        if (group instanceof Jenkins) {
-            return ((Jenkins) group).getItemMap().get(name);
-        } else {
+        SecurityContext orig = SecurityContextHolder.getContext();
+        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
+        auth.setAuthentication(ACL.SYSTEM);
+        SecurityContextHolder.setContext(auth);
+        try {
             return group.getItem(name);
+        } finally {
+            SecurityContextHolder.setContext(orig);
         }
     }
     
