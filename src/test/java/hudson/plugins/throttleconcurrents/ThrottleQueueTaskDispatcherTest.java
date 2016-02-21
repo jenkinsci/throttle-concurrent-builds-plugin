@@ -16,6 +16,7 @@
  */
 package hudson.plugins.throttleconcurrents;
 
+import com.gargoylesoftware.htmlunit.ElementNotFoundException;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlElement;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
@@ -358,7 +359,13 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
                     input.setValueAttribute(logger);
                 }
                 HtmlSelect select = form.getSelectByName("level");
-                HtmlOption option = select.getOptionByValue("fine");
+                HtmlOption option;
+                try {
+                    option = select.getOptionByValue("fine");
+                } catch (ElementNotFoundException e) {
+                    // gets upper case since Jenkins 1.519
+                    option = select.getOptionByValue("FINE");
+                }
                 select.setSelectedAttribute(option, true);
                 break;
             }

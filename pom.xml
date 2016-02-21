@@ -26,7 +26,7 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.424</version>
+    <version>1.554</version>
   </parent>
 
   <artifactId>throttle-concurrents</artifactId>
@@ -112,6 +112,19 @@ THE SOFTWARE.
             <artifactId>jsr305</artifactId>
             <version>2.0.1</version>
             <type>jar</type>
+        </dependency>
+        <!-- Requires core 1.480.3 -->
+        <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>cloudbees-folder</artifactId>
+          <version>4.0</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>credentials</artifactId>
+          <version>1.9.4</version>
+          <scope>test</scope>
         </dependency>
     </dependencies>
 </project>  
