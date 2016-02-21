@@ -42,7 +42,9 @@ import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.SleepBuilder;
 
+/*
 import com.cloudbees.hudson.plugins.folder.Folder;
+*/
 
 /**
  * Tests that {@link ThrottleJobProperty} actually works for builds.
@@ -164,6 +166,8 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
     
+    /*
+    // Requires Jenkins >= 1.480.3 and cloudbees-folder-plugin
     @Bug(25326)
     public void testThrottlingWithCategoryInFolder() throws Exception {
         setupSlave();
@@ -215,4 +219,5 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
+    */
 }
