@@ -123,6 +123,8 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 Arrays.asList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
+                false,
+                null,
                 ThrottleMatrixProjectOptions.DEFAULT
         ));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
@@ -135,6 +137,8 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 Arrays.asList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
+                false,
+                null,
                 ThrottleMatrixProjectOptions.DEFAULT
         ));
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
