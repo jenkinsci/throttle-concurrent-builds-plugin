@@ -24,8 +24,8 @@ import com.gargoylesoftware.htmlunit.html.HtmlOption;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlRadioButtonInput;
 import com.gargoylesoftware.htmlunit.html.HtmlSelect;
+
 import hudson.model.FreeStyleProject;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -33,6 +33,8 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+
+import org.jvnet.hudson.test.HudsonTestCase;
 
 /**
  * This class initiates the testing of {@link hudson.plugins.throttleconcurrents.ThrottleQueueTaskDispatcher}.<br>
