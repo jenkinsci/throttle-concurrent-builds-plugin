@@ -33,11 +33,12 @@ import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
-import org.jvnet.hudson.test.HudsonTestCase;
-import org.jvnet.hudson.test.SleepBuilder;
 
 import java.util.Arrays;
 import java.util.Collections;
+
+import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.SleepBuilder;
 
 /**
  * Tests that {@link ThrottleJobProperty} actually works for builds.
