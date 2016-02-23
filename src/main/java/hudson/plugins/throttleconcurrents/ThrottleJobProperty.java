@@ -1,5 +1,5 @@
 package hudson.plugins.throttleconcurrents;
-
+// @formatter:off
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.model.AbstractDescribableImpl;
@@ -65,7 +65,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                boolean limitOneJobWithMatchingParams,
                                String paramsToUseForLimit,
                                @CheckForNull ThrottleMatrixProjectOptions matrixOptions
-    ) {
+                               ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
         this.categories = categories == null ?
@@ -87,8 +87,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         else {
             this.paramsToCompare = new ArrayList<String>();
         }
-
     }
+
 
     /**
      * Migrates deprecated/obsolete data
@@ -115,7 +115,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 maxConcurrentTotal = 0;
             }
         }
-
         configVersion = 1L;
 
         // Handle the throttleConfiguration in custom builds (not released)
@@ -244,7 +243,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         }
         return categoryTasks;
     }
-
     private static Item getItem(ItemGroup group, String name) {
         if (group instanceof Jenkins) {
             return ((Jenkins) group).getItemMap().get(name);
@@ -259,7 +257,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
         /** Map from category names, to properties including that category. */
         private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory
-                = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+                 = new HashMap<String,Map<ThrottleJobProperty,Void>>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
 
@@ -326,6 +324,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return checkNullOrInt(value);
         }
 
+
         public ThrottleCategory getCategoryByName(String categoryName) {
             ThrottleCategory category = null;
 
@@ -379,7 +378,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
             this.categoryName = categoryName;
             this.nodeLabeledPairs =
-                    nodeLabeledPairs == null ? new ArrayList<NodeLabeledPair>() : nodeLabeledPairs;
+                 nodeLabeledPairs == null ? new ArrayList<NodeLabeledPair>() : nodeLabeledPairs;
         }
 
         public Integer getMaxConcurrentPerNode() {
@@ -428,7 +427,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                Integer maxConcurrentPerNodeLabeled) {
             this.throttledNodeLabel = throttledNodeLabel == null ? new String() : throttledNodeLabel;
             this.maxConcurrentPerNodeLabeled =
-                    maxConcurrentPerNodeLabeled == null ? new Integer(0) : maxConcurrentPerNodeLabeled;
+                 maxConcurrentPerNodeLabeled == null ? new Integer(0) : maxConcurrentPerNodeLabeled;
         }
 
         public String getThrottledNodeLabel() {
@@ -454,3 +453,4 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         }
     }
 }
+// @formatter:on
