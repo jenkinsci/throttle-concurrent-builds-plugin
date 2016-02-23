@@ -23,7 +23,7 @@
  */
 
 package hudson.plugins.throttleconcurrents;
-// @formatter:off
+
 import hudson.Extension;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixConfiguration;
@@ -86,4 +86,3 @@ public class ThrottleMatrixProjectOptions implements Describable<ThrottleMatrixP
         }
     }
 }
-// @formatter:on
