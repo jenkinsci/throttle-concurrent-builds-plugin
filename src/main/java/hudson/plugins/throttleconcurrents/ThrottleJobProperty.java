@@ -453,4 +453,3 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         }
     }
 }
-// @formatter:on
