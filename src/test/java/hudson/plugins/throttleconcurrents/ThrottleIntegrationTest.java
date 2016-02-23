@@ -1,18 +1,18 @@
 /*
  * The MIT License
- *
+ * 
  * Copyright (c) 2016 IKEDA Yasuyuki
- *
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * 
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-// @formatter:off
+
 package hudson.plugins.throttleconcurrents;
 
 import hudson.EnvVars;
@@ -48,7 +48,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
     private int executorNum = 2;
     private ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark;
     private DumbSlave slave = null;
-
+    
     /**
      * Overrides to modify the number of executor.
      */
@@ -70,7 +70,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
             return slave;
         }
     }
-
+    
     /**
      * sets up slave and waterMark.
      */
@@ -79,31 +79,31 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         waterMark = new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(slave.getRetentionStrategy());
         slave.setRetentionStrategy(waterMark);
     }
-
+    
     public void testNoThrottling() throws Exception {
         setupSlave();
-
+        
         FreeStyleProject p1 = createFreeStyleProject();
         p1.setAssignedNode(slave);
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
-
+        
         FreeStyleProject p2 = createFreeStyleProject();
         p2.setAssignedNode(slave);
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
-
+        
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
-
+        
         waitUntilNoActivity();
-
+        
         // not throttled, and builds run concurrently.
         assertEquals(2, waterMark.getExecutorWaterMark());
     }
-
+    
     public void testThrottlingWithCategory() throws Exception {
         setupSlave();
         final String category = "category";
-
+        
         ThrottleJobProperty.DescriptorImpl descriptor
             = (ThrottleJobProperty.DescriptorImpl)jenkins.getDescriptor(ThrottleJobProperty.class);
         descriptor.setCategories(Arrays.asList(
@@ -114,7 +114,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                         Collections.<NodeLabeledPair>emptyList()
                 )
         ));
-
+        
         FreeStyleProject p1 = createFreeStyleProject();
         p1.setAssignedNode(slave);
         p1.addProperty(new ThrottleJobProperty(
@@ -128,7 +128,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 ThrottleMatrixProjectOptions.DEFAULT
         ));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
-
+        
         FreeStyleProject p2 = createFreeStyleProject();
         p2.setAssignedNode(slave);
         p2.addProperty(new ThrottleJobProperty(
@@ -142,14 +142,13 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 ThrottleMatrixProjectOptions.DEFAULT
         ));
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
-
+        
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
-
+        
         waitUntilNoActivity();
-
+        
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
 }
-// @formatter:on
