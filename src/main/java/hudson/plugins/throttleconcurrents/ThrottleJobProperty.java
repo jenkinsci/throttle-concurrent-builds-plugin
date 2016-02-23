@@ -30,6 +30,8 @@ import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -78,7 +80,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.paramsToUseForLimit = paramsToUseForLimit;
         if ((this.paramsToUseForLimit != null)) {
             if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(this.paramsToUseForLimit.split(","));
+                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(this.paramsToUseForLimit)));
             }
             else {
                 this.paramsToCompare = new ArrayList<String>();
