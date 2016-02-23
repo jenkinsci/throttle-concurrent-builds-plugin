@@ -45,8 +45,8 @@ THE SOFTWARE.
     
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <compileSource>1.7</compileSource>
-    <compileTarget>1.7</compileTarget>
+    <compileSource>1.6</compileSource>
+    <compileTarget>1.6</compileTarget>
   </properties>
     
   <build>
@@ -131,7 +131,6 @@ THE SOFTWARE.
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>matrix-project</artifactId>
-            <version>1.6</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci</groupId>
