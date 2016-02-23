@@ -1,3 +1,4 @@
+<!-- @formatter:off -->
 <!--
 The MIT License
 
@@ -135,5 +136,5 @@ THE SOFTWARE.
             <scope>test</scope>
         </dependency>
     </dependencies>
-</project>  
-
+</project>
+<!-- @formatter:on -->

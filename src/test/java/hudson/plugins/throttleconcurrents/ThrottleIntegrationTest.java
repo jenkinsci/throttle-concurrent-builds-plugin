@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+// @formatter:off
 package hudson.plugins.throttleconcurrents;
 
 import hudson.EnvVars;
@@ -152,3 +152,4 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
 }
+// @formatter:on

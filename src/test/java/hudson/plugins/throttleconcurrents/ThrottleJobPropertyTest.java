@@ -1,5 +1,5 @@
 package hudson.plugins.throttleconcurrents;
-
+// @formatter:off
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
 import hudson.model.Job;
@@ -166,3 +166,4 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
     }
 
 }
+// @formatter:on
