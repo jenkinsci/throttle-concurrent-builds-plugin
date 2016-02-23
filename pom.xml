@@ -94,7 +94,14 @@ THE SOFTWARE.
       <timezone>+3</timezone>
     </developer>
   </developers>
-
+  
+  <contributors>
+    <contributor>
+      <name>Darren Ball</name>
+      <email>balldarrens@gmail.com</email>
+    </contributor>
+  </contributors>
+  
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
