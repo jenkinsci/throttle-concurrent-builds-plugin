@@ -61,7 +61,7 @@ THE SOFTWARE.
           <version>${maven-compiler-plugin.version}</version>
           <configuration>
             <source>${compileSource}</source>
-            <target>${compileTarget}}</target>
+            <target>${compileTarget}</target>
             <showDeprecation>false</showDeprecation>
             <showWarnings>false</showWarnings>
           </configuration>
