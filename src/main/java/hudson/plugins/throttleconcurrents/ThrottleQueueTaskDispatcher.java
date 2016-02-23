@@ -1,5 +1,5 @@
 package hudson.plugins.throttleconcurrents;
-// @formatter:off
+
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
@@ -33,9 +33,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
-
+        
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
-
+        
         // Handle multi-configuration filters
         if (!shouldBeThrottled(task, tjp)) {
             return null;
@@ -106,29 +106,29 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         return null;
     }
-
+    
     @Nonnull
     private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
-        if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;
+        if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
         ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
-
+    
     private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
        if (tjp == null) return false;
        if (!tjp.getThrottleEnabled()) return false;
-
+       
        // Handle matrix options
        ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
        if (matrixOptions == null) matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
        if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
             return false;
-       }
+       } 
        if (!matrixOptions.isThrottleMatrixBuilds()&& task instanceof MatrixProject) {
             return false;
        }
-
+       
        // Allow throttling by default
        return true;
     }
@@ -382,4 +382,3 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
 }
-// @formatter:on
