@@ -20,15 +20,14 @@
              field="maxConcurrentPerNode">
       <f:textbox />
     </f:entry>
-
-    <f:optionalBlock name="limitOneJobWithMatchingParams"
-                     title="${%Prevent multiple jobs with identical parameters from running concurrently}"
-                     inline="true"
-                     checked="${instance.limitOneJobWithMatchingParams}">
-      <f:entry title="${%List of parameters to check (comma-separated)}"
-               field="paramsToUseForLimit"
-               help="${descriptor.getHelpFile('limitOneJobWithMatchingParams')}">
-        <f:textbox />
+  
+  
+    <f:optionalBlock field="limitOneJobWithMatchingParams"
+                   title="${%Prevent multiple jobs with identical parameters from running concurrently}"
+                   inline="true">
+    <f:entry title="${%List of parameters to check (comma-separated)}"
+             field="paramsToUseForLimit">
+    <f:textbox />
       </f:entry>
     </f:optionalBlock>
 
