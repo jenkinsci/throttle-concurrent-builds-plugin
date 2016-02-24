@@ -36,7 +36,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         if (tjp!=null && tjp.getThrottleEnabled()) {
             CauseOfBlockage cause = canRun(task, tjp);
-            if (cause != null) return cause;
+            if (cause != null) {
+            	return cause;
+            }
 
             if (tjp.getThrottleOption().equals("project")) {
                 if (tjp.getMaxConcurrentPerNode().intValue() > 0) {
@@ -100,18 +102,26 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     @Nonnull
     private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
-        if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
+        if (tjp == null){
+        	return ThrottleMatrixProjectOptions.DEFAULT;       
+        }
         ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
     
     private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
-       if (tjp == null) return false;
-       if (!tjp.getThrottleEnabled()) return false;
+       if (tjp == null) {
+    	   return false;
+       }
+       if (!tjp.getThrottleEnabled()) { 
+    	   return false;
+       }
        
        // Handle matrix options
        ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
-       if (matrixOptions == null) matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
+       if (matrixOptions == null) {
+    	   matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
+       }
        if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
             return false;
        } 
