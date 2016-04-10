@@ -48,6 +48,8 @@ THE SOFTWARE.
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <compileSource>1.6</compileSource>
     <compileTarget>1.6</compileTarget>
+    <!--TODO: do not fail on errors-->
+    <findbugs.failOnError>false</findbugs.failOnError>
   </properties>
 
   <developers>
