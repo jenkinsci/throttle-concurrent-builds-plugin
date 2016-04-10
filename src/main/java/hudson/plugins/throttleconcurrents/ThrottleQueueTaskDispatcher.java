@@ -259,6 +259,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
+        if (tjp == null) {
+            // If the property has been ocasionally deleted by this call, 
+            // it does not make sense to limit the throttling by parameter.
+            return false;
+        }
         Computer computer = node.toComputer();
         List<String> paramsToCompare = tjp.getParamsToCompare();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
