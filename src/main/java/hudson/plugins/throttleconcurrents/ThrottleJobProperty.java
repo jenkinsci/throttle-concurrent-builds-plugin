@@ -229,7 +229,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         assert category != null && !category.equals("");
         List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
         Collection<ThrottleJobProperty> properties;
-        DescriptorImpl descriptor = Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class);    
+        DescriptorImpl descriptor = Jenkins.getActiveInstance().getDescriptorByType(DescriptorImpl.class);    
         synchronized (descriptor.propertiesByCategoryLock) {
             Map<ThrottleJobProperty,Void> _properties = descriptor.propertiesByCategory.get(category);
             properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.<ThrottleJobProperty>emptySet();
