@@ -34,9 +34,9 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Defines additional options for throttling of {@link MatrixBuild}s and
- * @{@link MatrixConfiguration}s.
+ * {@link MatrixConfiguration}s.
  * This class is intended to be used inside {@link ThrottleJobProperty}.
- * @author Oleg Nenashev <o.v.nenashev@gmail.com>
+ * @author Oleg Nenashev (github:oleg-nenashev)
  * @since TODO: 1.9.0?
  */
 public class ThrottleMatrixProjectOptions implements Describable<ThrottleMatrixProjectOptions> {

@@ -15,6 +15,7 @@ import hudson.util.ListBoxModel;
 import hudson.Util;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
+import hudson.matrix.MatrixRun;
 
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -37,7 +38,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
-    // Moving category to categories, to support, well, multiple categories per job.
+    // Replaced by categories, to support, well, multiple categories per job (starting from 1.3)
     @Deprecated transient String category;
     
     private Integer maxConcurrentPerNode;
@@ -93,7 +94,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
 
     /**
-     * Migrates deprecated/obsolete data
+     * Migrates deprecated/obsolete data.
+     * 
+     * @return Migrated version of the config
      */
     public Object readResolve() {
         if (configVersion == null) {
@@ -184,7 +187,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
         
     /**
-     * Check if the build throttles {@link MatrixBuild}s.
+     * Check if the build throttles {@link MatrixProject}s.
+     * @return {@code true} if {@link MatrixProject}s should be throttled
+     * @since 1.8.3
      */
     public boolean isThrottleMatrixBuilds() {
         return matrixOptions != null 
@@ -194,6 +199,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     
     /**
      * Check if the build throttles {@link MatrixConfiguration}s.
+     * @return {@code true} if {@link MatrixRun}s should be throttled
+     * @since 1.8.3
      */
     public boolean isThrottleMatrixConfigurations() {
         return matrixOptions != null 
