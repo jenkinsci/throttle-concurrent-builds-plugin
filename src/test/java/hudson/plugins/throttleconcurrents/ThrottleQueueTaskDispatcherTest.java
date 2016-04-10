@@ -34,6 +34,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import org.jvnet.hudson.test.HudsonTestCase;
 
