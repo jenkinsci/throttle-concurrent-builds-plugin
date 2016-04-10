@@ -3,6 +3,8 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
+import hudson.model.AbstractProject;
+import hudson.model.ParameterValue;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Hudson;
@@ -10,12 +12,17 @@ import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
+import hudson.model.queue.WorkUnit;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
 import hudson.security.ACL;
 import hudson.security.NotSerilizableSecurityContext;
+import hudson.model.Action;
+import hudson.model.ParametersAction;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -61,7 +68,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         if (tjp!=null && tjp.getThrottleEnabled()) {
             CauseOfBlockage cause = canRunImpl(task, tjp);
-            if (cause != null) return cause;
+            if (cause != null) {
+            	return cause;
+            }
 
             if (tjp.getThrottleOption().equals("project")) {
                 if (tjp.getMaxConcurrentPerNode().intValue() > 0) {
@@ -117,6 +126,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     public CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp!=null && tjp.getThrottleEnabled()) {
+            if (tjp.isLimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
+                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
+            }
             return canRun(item.task, tjp);
         }
         return null;
@@ -125,18 +137,26 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     @Nonnull
     private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
-        if (tjp == null) return ThrottleMatrixProjectOptions.DEFAULT;       
+        if (tjp == null){
+        	return ThrottleMatrixProjectOptions.DEFAULT;       
+        }
         ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
     
     private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
-       if (tjp == null) return false;
-       if (!tjp.getThrottleEnabled()) return false;
+       if (tjp == null) {
+    	   return false;
+       }
+       if (!tjp.getThrottleEnabled()) { 
+    	   return false;
+       }
        
        // Handle matrix options
        ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
-       if (matrixOptions == null) matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
+       if (matrixOptions == null) {
+    	   matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
+       }
        if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
             return false;
        } 
@@ -220,6 +240,106 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         return null;
     }
+
+    private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
+        if (isAnotherBuildWithSameParametersRunningOnNode(Hudson.getInstance(), item)) {
+            return true;
+        }
+
+        for (Node node : Hudson.getInstance().getNodes()) {
+            if (isAnotherBuildWithSameParametersRunningOnNode(node, item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
+        ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
+        Computer computer = node.toComputer();
+        List<String> paramsToCompare = tjp.getParamsToCompare();
+        List<ParameterValue> itemParams = getParametersFromQueueItem(item);
+
+        if (paramsToCompare.size() > 0) {
+            itemParams = doFilterParams(paramsToCompare, itemParams);
+        }
+
+        if (computer != null) {
+            for (Executor exec : computer.getExecutors()) {
+                if (item != null && item.task != null) {
+                    // TODO: refactor into a nameEquals helper method
+                    if (exec.getCurrentExecutable() != null &&
+                            exec.getCurrentExecutable().getParent() != null &&
+                            exec.getCurrentExecutable().getParent().getOwnerTask() != null &&
+                            exec.getCurrentExecutable().getParent().getOwnerTask().getName().equals(item.task.getName())) {
+                        List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+                        executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+
+                        if (executingUnitParams.containsAll(itemParams)) {
+                            LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
+                                    ") with identical parameters (" +
+                                    executingUnitParams + ") is already running.");
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Filter job parameters to only include parameters used for throttling
+     * @param params
+     * @param OriginalParams
+     * @return
+     */
+    private List<ParameterValue> doFilterParams(List<String> params, List<ParameterValue> OriginalParams) {
+        if (params.isEmpty()) {
+            return OriginalParams;
+        }
+
+        List<ParameterValue> newParams = new ArrayList<ParameterValue>();
+
+        for (ParameterValue p : OriginalParams) {
+            if (params.contains(p.getName())) {
+                newParams.add(p);
+            }
+        }
+        return newParams;
+    }
+
+    public List<ParameterValue> getParametersFromWorkUnit(WorkUnit unit) {
+        List<ParameterValue> paramsList = new ArrayList<ParameterValue>();
+
+        if (unit != null && unit.context != null && unit.context.actions != null) {
+            List<Action> actions = unit.context.actions;
+            for (Action action : actions) {
+                if (action instanceof ParametersAction) {
+                    ParametersAction params = (ParametersAction) action;
+                    if (params != null) {
+                        paramsList = params.getParameters();
+                    }
+                }
+            }
+        }
+        return paramsList;
+    }
+
+    public List<ParameterValue> getParametersFromQueueItem(Queue.Item item) {
+        List<ParameterValue> paramsList;
+
+        ParametersAction params = item.getAction(ParametersAction.class);
+        if (params != null) {
+            paramsList = params.getParameters();
+        }
+        else
+        {
+            paramsList  = new ArrayList<ParameterValue>();
+        }
+        return paramsList;
+    }
+
 
     @CheckForNull
     private ThrottleJobProperty getThrottleJobProperty(Task task) {

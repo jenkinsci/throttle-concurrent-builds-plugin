@@ -16,6 +16,7 @@ import hudson.Util;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,6 +30,8 @@ import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -42,8 +45,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     private List<String> categories;
     private boolean throttleEnabled;
     private String throttleOption;
+    private boolean limitOneJobWithMatchingParams;
     private transient boolean throttleConfiguration;
     private @CheckForNull ThrottleMatrixProjectOptions matrixOptions;
+
+    private String paramsToUseForLimit;
+    private transient List<String> paramsToCompare;
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -57,6 +64,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                List<String> categories,
                                boolean throttleEnabled,
                                String throttleOption,
+                               boolean limitOneJobWithMatchingParams,
+                               String paramsToUseForLimit,
                                @CheckForNull ThrottleMatrixProjectOptions matrixOptions
                                ) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
@@ -66,7 +75,20 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 new CopyOnWriteArrayList<String>(categories);
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
+        this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.matrixOptions = matrixOptions;
+        this.paramsToUseForLimit = paramsToUseForLimit;
+        if ((this.paramsToUseForLimit != null)) {
+            if ((this.paramsToUseForLimit.length() > 0)) {
+                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(this.paramsToUseForLimit)));
+            }
+            else {
+                this.paramsToCompare = new ArrayList<String>();
+            }
+        }
+        else {
+            this.paramsToCompare = new ArrayList<String>();
+        }
     }
 
 
@@ -126,6 +148,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return throttleEnabled;
     }
 
+    public boolean isLimitOneJobWithMatchingParams() {
+        return limitOneJobWithMatchingParams;
+    }
+
     public String getThrottleOption() {
         return throttleOption;
     }
@@ -146,6 +172,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             maxConcurrentTotal = 0;
         
         return maxConcurrentTotal;
+    }
+
+    public String getParamsToUseForLimit() {
+        return paramsToUseForLimit;
     }
 
     @CheckForNull
@@ -169,6 +199,23 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return matrixOptions != null 
                 ? matrixOptions.isThrottleMatrixConfigurations() 
                 : ThrottleMatrixProjectOptions.DEFAULT.isThrottleMatrixConfigurations();
+    }
+
+    public List<String> getParamsToCompare() {
+        if (paramsToCompare == null) {
+            if ((paramsToUseForLimit != null)) {
+                if ((paramsToUseForLimit.length() > 0)) {
+                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
+                }
+                else {
+                    paramsToCompare = new ArrayList<String>();
+                }
+            }
+            else {
+                paramsToCompare = new ArrayList<String>();
+            }
+        }
+        return paramsToCompare;
     }
 
     static List<Queue.Task> getCategoryTasks(String category) {

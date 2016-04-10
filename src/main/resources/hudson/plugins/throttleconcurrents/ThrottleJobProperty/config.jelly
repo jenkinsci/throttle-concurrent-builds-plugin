@@ -20,6 +20,17 @@
              field="maxConcurrentPerNode">
       <f:textbox />
     </f:entry>
+  
+  
+    <f:optionalBlock field="limitOneJobWithMatchingParams"
+                   title="${%Prevent multiple jobs with identical parameters from running concurrently}"
+                   inline="true">
+    <f:entry title="${%List of parameters to check (comma-separated)}"
+             field="paramsToUseForLimit">
+    <f:textbox />
+      </f:entry>
+    </f:optionalBlock>
+
     <j:if test="${!empty(descriptor.categories)}">
       <f:entry title="${%Multi-Project Throttle Category}">
         <j:forEach var="cat" items="${descriptor.categories}">
