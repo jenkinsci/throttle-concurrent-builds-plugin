@@ -24,11 +24,13 @@
 
 package hudson.plugins.throttleconcurrents;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node.Mode;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty.NodeLabeledPair;
 import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
+import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
@@ -37,8 +39,13 @@ import hudson.slaves.SlaveComputer;
 import java.util.Arrays;
 import java.util.Collections;
 
+import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.SleepBuilder;
+
+/*
+import com.cloudbees.hudson.plugins.folder.Folder;
+*/
 
 /**
  * Tests that {@link ThrottleJobProperty} actually works for builds.
@@ -80,8 +87,19 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         slave.setRetentionStrategy(waterMark);
     }
     
+    /**
+     * setup security so that no one except SYSTEM has any permissions.
+     * should be called after {@link #setupSlave()}
+     */
+    private void setupSecurity() {
+        jenkins.setSecurityRealm(createDummySecurityRealm());
+        GlobalMatrixAuthorizationStrategy auth = new GlobalMatrixAuthorizationStrategy();
+        jenkins.setAuthorizationStrategy(auth);
+    }
+    
     public void testNoThrottling() throws Exception {
         setupSlave();
+        setupSecurity();
         
         FreeStyleProject p1 = createFreeStyleProject();
         p1.setAssignedNode(slave);
@@ -102,6 +120,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
     
     public void testThrottlingWithCategory() throws Exception {
         setupSlave();
+        setupSecurity();
         final String category = "category";
         
         ThrottleJobProperty.DescriptorImpl descriptor
@@ -139,6 +158,62 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 "category",     // throttleOption
                 false,
                 null,
+                ThrottleMatrixProjectOptions.DEFAULT
+        ));
+        p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+        
+        p1.scheduleBuild2(0);
+        p2.scheduleBuild2(0);
+        
+        waitUntilNoActivity();
+        
+        // throttled, and only one build runs at the same time.
+        assertEquals(1, waterMark.getExecutorWaterMark());
+    }
+    
+    @Bug(25326)
+    public void testThrottlingWithCategoryInFolder() throws Exception {
+        setupSlave();
+        setupSecurity();
+        final String category = "category";
+        
+        ThrottleJobProperty.DescriptorImpl descriptor
+            = (ThrottleJobProperty.DescriptorImpl)jenkins.getDescriptor(ThrottleJobProperty.class);
+        descriptor.setCategories(Arrays.asList(
+                new ThrottleJobProperty.ThrottleCategory(
+                        category,
+                        1,      // maxConcurrentPerNode
+                        null,   // maxConcurrentTotal
+                        Collections.<NodeLabeledPair>emptyList()
+                )
+        ));
+        
+        Folder f1 = jenkins.createProject(Folder.class, "folder1");
+        FreeStyleProject p1 = f1.createProject(FreeStyleProject.class, "p");
+        p1.setAssignedNode(slave);
+        p1.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Arrays.asList(category),      // categories
+                true,   // throttleEnabled
+                "category",     // throttleOption
+                false,  // limitOneJobWithMatchingParams
+                null,   // paramsToUse for the previous flag
+                ThrottleMatrixProjectOptions.DEFAULT
+        ));
+        p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+        
+        Folder f2 = jenkins.createProject(Folder.class, "folder2");
+        FreeStyleProject p2 = f2.createProject(FreeStyleProject.class, "p");
+        p2.setAssignedNode(slave);
+        p2.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Arrays.asList(category),      // categories
+                true,   // throttleEnabled
+                "category",     // throttleOption
+                false,  // limitOneJobWithMatchingParams
+                null,   // paramsToUse for the previous flag
                 ThrottleMatrixProjectOptions.DEFAULT
         ));
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));

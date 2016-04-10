@@ -135,6 +135,19 @@ THE SOFTWARE.
             <version>1.4.1</version>
         </dependency>
         
+        <!-- Dependencies for test -->
+        <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>cloudbees-folder</artifactId>
+          <version>4.0</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>credentials</artifactId>
+          <version>1.9.4</version>
+          <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>  
 

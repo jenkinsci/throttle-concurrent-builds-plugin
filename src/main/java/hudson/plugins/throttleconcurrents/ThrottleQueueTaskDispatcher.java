@@ -16,6 +16,8 @@ import hudson.model.queue.WorkUnit;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.security.ACL;
+import hudson.security.NotSerilizableSecurityContext;
 import hudson.model.Action;
 import hudson.model.ParametersAction;
 
@@ -28,11 +30,34 @@ import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
+
+import jenkins.model.Jenkins;
+
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
+        if (Jenkins.getAuthentication() == ACL.SYSTEM) {
+            return canTakeImpl(node, task);
+        }
+        
+        // Throttle-concurrent-builds requires READ permissions for all projects.
+        SecurityContext orig = SecurityContextHolder.getContext();
+        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
+        auth.setAuthentication(ACL.SYSTEM);
+        SecurityContextHolder.setContext(auth);
+        
+        try {
+            return canTakeImpl(node, task);
+        } finally {
+            SecurityContextHolder.setContext(orig);
+        }
+    }
+    
+    private CauseOfBlockage canTakeImpl(Node node, Task task) {
         
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         
@@ -42,7 +67,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         if (tjp!=null && tjp.getThrottleEnabled()) {
-            CauseOfBlockage cause = canRun(task, tjp);
+            CauseOfBlockage cause = canRunImpl(task, tjp);
             if (cause != null) {
             	return cause;
             }
@@ -144,6 +169,24 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp) {
+        if (Jenkins.getAuthentication() == ACL.SYSTEM) {
+            return canRunImpl(task, tjp);
+        }
+        
+        // Throttle-concurrent-builds requires READ permissions for all projects.
+        SecurityContext orig = SecurityContextHolder.getContext();
+        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
+        auth.setAuthentication(ACL.SYSTEM);
+        SecurityContextHolder.setContext(auth);
+        
+        try {
+            return canRunImpl(task, tjp);
+        } finally {
+            SecurityContextHolder.setContext(orig);
+        }
+    }
+    
+    private CauseOfBlockage canRunImpl(Task task, ThrottleJobProperty tjp) {
         if (!shouldBeThrottled(task, tjp)) {
             return null;
         }
