@@ -24,6 +24,7 @@
 
 package hudson.plugins.throttleconcurrents;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node.Mode;
@@ -170,8 +171,6 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
     
-    /*
-    // Requires Jenkins >= 1.480.3 and cloudbees-folder-plugin
     @Bug(25326)
     public void testThrottlingWithCategoryInFolder() throws Exception {
         setupSlave();
@@ -198,6 +197,8 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 Arrays.asList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
+                false,  // limitOneJobWithMatchingParams
+                null,   // paramsToUse for the previous flag
                 ThrottleMatrixProjectOptions.DEFAULT
         ));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
@@ -211,6 +212,8 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 Arrays.asList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
+                false,  // limitOneJobWithMatchingParams
+                null,   // paramsToUse for the previous flag
                 ThrottleMatrixProjectOptions.DEFAULT
         ));
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
@@ -223,5 +226,4 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
-    */
 }
