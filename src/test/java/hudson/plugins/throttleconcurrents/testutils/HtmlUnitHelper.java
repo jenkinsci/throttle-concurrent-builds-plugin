@@ -34,7 +34,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 /**
  * Stores helpers for HtmlUnit.
  * @author Oleg Nenashev
- * @since TODO
+ * @since 1.9.0
  */
 @Restricted(NoExternalUse.class)
 public class HtmlUnitHelper {
