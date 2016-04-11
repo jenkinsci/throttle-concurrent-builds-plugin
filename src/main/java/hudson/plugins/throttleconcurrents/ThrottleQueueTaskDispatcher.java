@@ -20,6 +20,7 @@ import hudson.security.ACL;
 import hudson.security.NotSerilizableSecurityContext;
 import hudson.model.Action;
 import hudson.model.ParametersAction;
+import hudson.model.queue.SubTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,7 +59,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
     
     private CauseOfBlockage canTakeImpl(Node node, Task task) {
-        
+        final Jenkins jenkins = Jenkins.getActiveInstance();
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         
         // Handle multi-configuration filters
@@ -102,7 +103,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 if (maxConcurrentPerNode > 0) {
                                     int runCount = 0;
                                     for (Task catTask : categoryTasks) {
-                                        if (Hudson.getInstance().getQueue().isPending(catTask)) {
+                                        if (jenkins.getQueue().isPending(catTask)) {
                                             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                         }
                                         runCount += buildsOfProjectOnNode(node, catTask);
@@ -187,10 +188,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
     
     private CauseOfBlockage canRunImpl(Task task, ThrottleJobProperty tjp) {
+        final Jenkins jenkins = Jenkins.getActiveInstance();
         if (!shouldBeThrottled(task, tjp)) {
             return null;
         }
-        if (Hudson.getInstance().getQueue().isPending(task)) {
+        if (jenkins.getQueue().isPending(task)) {
             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
         }
         if (tjp.getThrottleOption().equals("project")) {
@@ -221,7 +223,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 int totalRunCount = 0;
 
                                 for (Task catTask : categoryTasks) {
-                                    if (Hudson.getInstance().getQueue().isPending(catTask)) {
+                                    if (jenkins.getQueue().isPending(catTask)) {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                     }
                                     totalRunCount += buildsOfProjectOnAllNodes(catTask);
@@ -242,11 +244,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
-        if (isAnotherBuildWithSameParametersRunningOnNode(Hudson.getInstance(), item)) {
+        final Jenkins jenkins = Jenkins.getActiveInstance();
+        if (isAnotherBuildWithSameParametersRunningOnNode(jenkins, item)) {
             return true;
         }
 
-        for (Node node : Hudson.getInstance().getNodes()) {
+        for (Node node : jenkins.getNodes()) {
             if (isAnotherBuildWithSameParametersRunningOnNode(node, item)) {
                 return true;
             }
@@ -256,6 +259,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
+        if (tjp == null) {
+            // If the property has been ocasionally deleted by this call, 
+            // it does not make sense to limit the throttling by parameter.
+            return false;
+        }
         Computer computer = node.toComputer();
         List<String> paramsToCompare = tjp.getParamsToCompare();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
@@ -268,10 +276,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             for (Executor exec : computer.getExecutors()) {
                 if (item != null && item.task != null) {
                     // TODO: refactor into a nameEquals helper method
-                    if (exec.getCurrentExecutable() != null &&
-                            exec.getCurrentExecutable().getParent() != null &&
-                            exec.getCurrentExecutable().getParent().getOwnerTask() != null &&
-                            exec.getCurrentExecutable().getParent().getOwnerTask().getName().equals(item.task.getName())) {
+                    final Queue.Executable currentExecutable = exec.getCurrentExecutable();
+                    final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
+                    if (currentExecutable != null && parentTask != null &&
+                            parentTask.getOwnerTask() != null &&
+                            parentTask.getOwnerTask().getName().equals(item.task.getName())) {
                         List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
@@ -380,9 +389,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int buildsOfProjectOnAllNodes(Task task) {
-        int totalRunCount = buildsOfProjectOnNode(Hudson.getInstance(), task);
+        final Jenkins jenkins = Jenkins.getActiveInstance();
+        int totalRunCount = buildsOfProjectOnNode(jenkins, task);
 
-        for (Node node : Hudson.getInstance().getNodes()) {
+        for (Node node : jenkins.getNodes()) {
             totalRunCount += buildsOfProjectOnNode(node, task);
         }
         return totalRunCount;
@@ -390,8 +400,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
-        if (exec.getCurrentExecutable() != null
-            && task.equals(exec.getCurrentExecutable().getParent())) {
+        final Queue.Executable currentExecutable = exec.getCurrentExecutable();
+        if (currentExecutable != null && task.equals(currentExecutable.getParent())) {
             runCount++;
         }
 

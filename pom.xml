@@ -26,7 +26,7 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.609.3</version>
+    <version>2.6</version>
   </parent>
 
   <artifactId>throttle-concurrents</artifactId>
@@ -44,40 +44,13 @@ THE SOFTWARE.
   </licenses>
     
   <properties>
+    <jenkins.version>1.609.3</jenkins.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <compileSource>1.6</compileSource>
     <compileTarget>1.6</compileTarget>
+    <!--TODO: do not fail on errors-->
+    <findbugs.failOnError>false</findbugs.failOnError>
   </properties>
-    
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>${maven-clean-plugin.version}</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>${maven-compiler-plugin.version}</version>
-          <configuration>
-            <source>${compileSource}</source>
-            <target>${compileTarget}</target>
-            <showDeprecation>false</showDeprecation>
-            <showWarnings>false</showWarnings>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <configuration>
-          <goals>deploy</goals>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 
   <developers>
     <developer>
@@ -140,6 +113,12 @@ THE SOFTWARE.
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>cloudbees-folder</artifactId>
           <version>4.0</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>matrix-auth</artifactId>
+          <version>1.2</version>
           <scope>test</scope>
         </dependency>
         <dependency>
