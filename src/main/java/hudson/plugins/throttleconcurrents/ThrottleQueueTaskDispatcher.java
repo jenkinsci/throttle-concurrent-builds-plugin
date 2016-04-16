@@ -265,34 +265,34 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return false;
         }
         Computer computer = node.toComputer();
-        List<String> paramsToCompare = tjp.getParamsToCompare();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
-
-        if (paramsToCompare.size() > 0) {
-            itemParams = doFilterParams(paramsToCompare, itemParams);
-        }
-
-        if (computer != null) {
-            for (Executor exec : computer.getExecutors()) {
-                if (item != null && item.task != null) {
-                    // TODO: refactor into a nameEquals helper method
-                    final Queue.Executable currentExecutable = exec.getCurrentExecutable();
-                    final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
-                    if (currentExecutable != null && parentTask != null &&
-                            parentTask.getOwnerTask() != null &&
-                            parentTask.getOwnerTask().getName().equals(item.task.getName())) {
-                        List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
-                        executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
-
-                        if (executingUnitParams.containsAll(itemParams)) {
-                            LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
-                                    ") with identical parameters (" +
-                                    executingUnitParams + ") is already running.");
-                            return true;
-                        }
-                    }
-                }
-            }
+        for (List<String> paramsToCompare: tjp.getParameterGroupsToCompare()){
+	        if (paramsToCompare.size() > 0) {
+	            itemParams = doFilterParams(paramsToCompare, itemParams);
+	        }
+	
+	        if (computer != null) {
+	            for (Executor exec : computer.getExecutors()) {
+	                if (item != null && item.task != null) {
+	                    // TODO: refactor into a nameEquals helper method
+	                    final Queue.Executable currentExecutable = exec.getCurrentExecutable();
+	                    final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
+	                    if (currentExecutable != null && parentTask != null &&
+	                            parentTask.getOwnerTask() != null &&
+	                            parentTask.getOwnerTask().getName().equals(item.task.getName())) {
+	                        List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+	                        executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+	
+	                        if (executingUnitParams.containsAll(itemParams)) {
+	                            LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
+	                                    ") with identical parameters (" +
+	                                    executingUnitParams + ") is already running.");
+	                            return true;
+	                        }
+	                    }
+	                }
+	            }
+	        }
         }
         return false;
     }

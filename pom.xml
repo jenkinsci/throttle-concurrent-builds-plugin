@@ -107,7 +107,12 @@ THE SOFTWARE.
             <artifactId>matrix-project</artifactId>
             <version>1.4.1</version>
         </dependency>
-        
+        <dependency>
+            <groupId>hudson.plugins</groupId>
+            <artifactId>project-inheritance</artifactId>
+            <version>1.5.3</version>
+            <optional>true</optional>
+        </dependency>
         <!-- Dependencies for test -->
         <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>

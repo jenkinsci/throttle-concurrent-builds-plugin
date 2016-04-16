@@ -52,6 +52,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
     private String paramsToUseForLimit;
     private transient List<String> paramsToCompare;
+    private transient List<List<String>> parameterGroupsToCompare;
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -60,36 +61,48 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     private Long configVersion;
     
     @DataBoundConstructor
-    public ThrottleJobProperty(Integer maxConcurrentPerNode,
-                               Integer maxConcurrentTotal,
-                               List<String> categories,
-                               boolean throttleEnabled,
-                               String throttleOption,
-                               boolean limitOneJobWithMatchingParams,
-                               String paramsToUseForLimit,
-                               @CheckForNull ThrottleMatrixProjectOptions matrixOptions
-                               ) {
+    public ThrottleJobProperty(Integer maxConcurrentPerNode, Integer maxConcurrentTotal, List<String> categories,
+            boolean throttleEnabled, String throttleOption, boolean limitOneJobWithMatchingParams,
+            String paramsToUseForLimit, @CheckForNull ThrottleMatrixProjectOptions matrixOptions) {
+        this(maxConcurrentPerNode, maxConcurrentTotal, categories, throttleEnabled, throttleOption,
+                limitOneJobWithMatchingParams, paramsToUseForLimit, matrixOptions,
+                parseParameterGroupsToCompare(paramsToUseForLimit));
+    }
+
+    protected ThrottleJobProperty(Integer maxConcurrentPerNode, Integer maxConcurrentTotal, List<String> categories,
+            boolean throttleEnabled, String throttleOption, boolean limitOneJobWithMatchingParams,
+            String paramsToUseForLimit, @CheckForNull ThrottleMatrixProjectOptions matrixOptions,
+            List<List<String>> parameterGroupsToCompare) {
         this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
-        this.categories = categories == null ?
-                new CopyOnWriteArrayList<String>() :
-                new CopyOnWriteArrayList<String>(categories);
+        this.categories = categories == null ? new CopyOnWriteArrayList<String>() :
+                 new CopyOnWriteArrayList<String>(categories);
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.matrixOptions = matrixOptions;
         this.paramsToUseForLimit = paramsToUseForLimit;
-        if ((this.paramsToUseForLimit != null)) {
-            if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(this.paramsToUseForLimit)));
-            }
-            else {
-                this.paramsToCompare = new ArrayList<String>();
-            }
-        }
-        else {
+        this.parameterGroupsToCompare = parameterGroupsToCompare;
+        if (!parameterGroupsToCompare.isEmpty()) {
+            this.paramsToCompare = parameterGroupsToCompare.get(0);
+        } else {
             this.paramsToCompare = new ArrayList<String>();
         }
+    }
+    protected ThrottleJobProperty(ThrottleJobProperty other, Job<?,?> owner){
+        this(other.maxConcurrentPerNode, other.maxConcurrentTotal, other.categories, other.throttleEnabled, other.throttleOption,
+                other.limitOneJobWithMatchingParams, other.paramsToUseForLimit, other.matrixOptions,other.parameterGroupsToCompare);
+        setOwner(owner);
+    }
+    private static List<List<String>> parseParameterGroupsToCompare(String paramsToUseForLimit){
+    	List<List<String>> parameterGroupsToCompare = new ArrayList<List<String>>(1); 
+    	if (paramsToUseForLimit != null && !paramsToUseForLimit.isEmpty()) {
+            parameterGroupsToCompare.add( Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(paramsToUseForLimit))));
+        }
+        else {
+        	parameterGroupsToCompare.add(new ArrayList<String>());
+        }
+    	return parameterGroupsToCompare;
     }
 
 
@@ -126,14 +139,23 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         if (throttleConfiguration && matrixOptions == null) {
             matrixOptions = new ThrottleMatrixProjectOptions(false, true);
         }
-        
+        parameterGroupsToCompare = parseParameterGroupsToCompare(paramsToUseForLimit);
+        if (parameterGroupsToCompare.isEmpty()){
+            paramsToCompare = new ArrayList<String>(0);
+        }else{
+            paramsToCompare = parameterGroupsToCompare.get(0);
+        }
         return this;
     }
 
     @Override protected void setOwner(Job<?,?> owner) {
         super.setOwner(owner);
+        registerPropertyInDescriptor();
+    }
+
+    protected void registerPropertyInDescriptor() {
         if (throttleEnabled && categories != null) {
-            DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();    
+            DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();
             synchronized (descriptor.propertiesByCategoryLock) {
                 for (String c : categories) {
                     Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(c);
@@ -209,20 +231,15 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
 
     public List<String> getParamsToCompare() {
-        if (paramsToCompare == null) {
-            if ((paramsToUseForLimit != null)) {
-                if ((paramsToUseForLimit.length() > 0)) {
-                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-                }
-                else {
-                    paramsToCompare = new ArrayList<String>();
-                }
-            }
-            else {
-                paramsToCompare = new ArrayList<String>();
-            }
-        }
         return paramsToCompare;
+    }
+
+    protected List<List<String>> getParameterGroupsToCompare() {
+        if (parameterGroupsToCompare == null) {
+            List<List<String>> parameterGroupsTmp = new ArrayList<List<String>>();
+            parameterGroupsTmp.add(getParamsToCompare());
+        }
+        return parameterGroupsToCompare;
     }
 
     static List<Queue.Task> getCategoryTasks(String category) {
