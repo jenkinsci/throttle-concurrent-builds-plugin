@@ -18,6 +18,7 @@ import hudson.matrix.MatrixProject;
 import hudson.matrix.MatrixRun;
 
 import java.util.Arrays;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -157,6 +158,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         if (throttleEnabled && categories != null) {
             DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();
             synchronized (descriptor.propertiesByCategoryLock) {
+                //register property in categories
                 for (String c : categories) {
                     Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(c);
                     if (properties == null) {
@@ -165,6 +167,24 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                     }
                     properties.put(this, null);
                 }
+                //remove old properties for job. 
+                WeakReference<ThrottleJobProperty> throttleJobPropertyRef = descriptor.jobPropertiesByJob.get(this.owner);
+                if (throttleJobPropertyRef!=null){
+                    ThrottleJobProperty throttleJobProperty = throttleJobPropertyRef.get();
+                    if (throttleJobProperty!=null){
+                        for (String category: throttleJobProperty.getCategories()){
+                            if (descriptor.propertiesByCategory.containsKey(category)){
+                                Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(category);
+                                if (properties!=null){
+                                    properties.remove(throttleJobProperty);
+                                }
+                            }
+                        }
+                    }
+                }
+                //Insert new job property for job. 
+                descriptor.jobPropertiesByJob.put(this.owner, new WeakReference<ThrottleJobProperty>(this));
+                
             }
         }
     }
@@ -284,6 +304,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         /** Map from category names, to properties including that category. */
         private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory 
                  = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+        private transient Map<Job<?,?>,WeakReference<ThrottleJobProperty>> jobPropertiesByJob 
+                 = new WeakHashMap<Job<?,?>,WeakReference<ThrottleJobProperty>>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
 
