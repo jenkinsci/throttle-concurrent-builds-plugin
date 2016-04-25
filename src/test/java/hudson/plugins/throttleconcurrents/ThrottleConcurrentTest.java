@@ -25,11 +25,13 @@ import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.GivenStage, ThrottleConcurrentTest.WhenAction, ThrottleConcurrentTest.ThenSomeOutcome> {
+public abstract class ThrottleConcurrentTest<T extends ThrottleConcurrentTest.GivenStage> extends ScenarioTest<T, ThrottleConcurrentTest.WhenAction, ThrottleConcurrentTest.ThenSomeOutcome> {
     @Rule
     @ScenarioState
-    public JenkinsRule j = new JenkinsRule();
-
+    public JenkinsRule j;
+    protected ThrottleConcurrentTest(){
+        j = new JenkinsRule();
+    }
     @Test
     public void category_per_node_throttling() throws Exception {
         int nodeNumber = 2;
@@ -79,7 +81,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         public JenkinsRule j;
 
         @ScenarioState
-        private List<RunProject> projects = new ArrayList<RunProject>();
+        private List<Callable<AbstractBuild<?, ?>>> projects = new ArrayList<Callable<AbstractBuild<?, ?>>>();
 
         private int numNodes = 2;
         private int numExecutorsPerNode = 10;
@@ -103,9 +105,13 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         public GivenStage $_projects_having_this_category(int num) throws Exception {
             configureNodes();
             for (int i = 0; i < num; i++) {
-                projects.add(new RunProject(j, currentCategory.name));
+                projects.add(createRunProject(j, currentCategory.name));
             }
             return self();
+        }
+
+        public Callable<AbstractBuild<?, ?>> createRunProject(JenkinsRule j, String categoryName) throws IOException {
+            return new RunProject(j, categoryName);
         }
 
         public GivenStage $_nodes(int i) throws Exception {
@@ -172,7 +178,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
     public static class WhenAction extends Stage<WhenAction> {
         @ScenarioState
-        private List<RunProject> projects;
+        private List<Callable<AbstractBuild<?, ?>>> projects;
 
         ExecutorService executorService;
         private List<Future<AbstractBuild<?, ?>>> builds;
@@ -187,8 +193,8 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         public WhenAction each_project_is_built_$_times(int i) throws InterruptedException {
-            List<RunProject> projectsToBeBuilt = new ArrayList<RunProject>();
-            for (RunProject project : projects) {
+            List<Callable<AbstractBuild<?, ?>>> projectsToBeBuilt = new ArrayList<Callable<AbstractBuild<?, ?>>>();
+            for (Callable<AbstractBuild<?, ?>> project : projects) {
                 projectsToBeBuilt.addAll(Collections.nCopies(i, project));
             }
             Collections.shuffle(projectsToBeBuilt);
@@ -272,8 +278,9 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
     private static class RunProject implements Callable<AbstractBuild<?, ?>> {
         private final Semaphore inQueue = new Semaphore(1);
+        
         private final FreeStyleProject project;
-        private final JenkinsRule j;
+        protected final JenkinsRule j;
 
         private RunProject(JenkinsRule j, String categoryName) throws IOException {
             this.j = j;
@@ -297,10 +304,10 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
     }
 
-    private static class SemaphoreBuilder extends Builder {
+    public static class SemaphoreBuilder extends Builder {
         private Semaphore inBuild;
 
-        SemaphoreBuilder(Semaphore inBuild) {
+        public SemaphoreBuilder(Semaphore inBuild) {
             this.inBuild = inBuild;
         }
 

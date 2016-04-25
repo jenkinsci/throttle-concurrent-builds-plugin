@@ -5,13 +5,12 @@ import hudson.Extension;
 import hudson.model.JobProperty;
 import hudson.plugins.project_inheritance.projects.InheritanceProject;
 import hudson.plugins.project_inheritance.projects.inheritance.InheritanceSelector;
-
+import hudson.plugins.project_inheritance.util.TimedBuffer;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-
-
+import java.util.Objects;
 
 /**
  * 
@@ -21,38 +20,47 @@ import java.util.List;
 
 @Extension(optional = true)
 public class ThrottleJobPropertySelector extends InheritanceSelector<JobProperty<?>> {
-    class ParameterGroup {
-        private List<String> parameters;
-        public ParameterGroup(List<String> parameters){
-            this.parameters = parameters;
-        }
-        @Override
-        public boolean equals(Object other){
-            if (!(other instanceof ParameterGroup)){
-                return false;
+    /*
+     * ThrottleJobPropertyCache is a hack to get access to project cache to keep reference to
+     * newly created ThrottleJobProperty for as long as needed, i.e. whenever
+     * project configuration changes, the cache gets invalidated. But otherwise
+     * the reference to a property will be kept.
+     */
+    private static class ThrottleJobPropertyCache {
+        private final static String cacheKey = "ThrottleJobProperty";
+
+        private static TimedBuffer<InheritanceProject, String> getOnInheritChangeBuffer() {
+            Field f;
+            try {
+                f = InheritanceProject.class.getDeclaredField("onInheritChangeBuffer");
+
+                f.setAccessible(true);
+                return (TimedBuffer<InheritanceProject, String>) f.get(null);
+            } catch (NoSuchFieldException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (SecurityException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IllegalArgumentException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
-            ParameterGroup otherParameterGroup = (ParameterGroup)other;
-            if (parameters == null) return otherParameterGroup.parameters == null;
-            if (otherParameterGroup.parameters == null) return false;
-            if (parameters.size()!=otherParameterGroup.parameters.size()) return false;
-            for (int i=0;i<parameters.size();i++){
-                if (!parameters.get(i).equals(otherParameterGroup.parameters.get(i))){
-                    return false;
-                }
-            }
-            return true;
-            
+            return null;
         }
-        @Override
-        public int hashCode(){
-            if (parameters == null) return 0;
-            if (parameters.isEmpty()) return 1;
-            return parameters.get(0).hashCode()^parameters.size();
+
+        public static void put(ThrottleJobProperty property, InheritanceProject project) {
+            getOnInheritChangeBuffer().set(project, cacheKey, property);
         }
-        public List<String> getParameters() {
-           return parameters;
+
+        public static ThrottleJobProperty get(InheritanceProject project) {
+            return (ThrottleJobProperty) getOnInheritChangeBuffer().get(project, cacheKey);
         }
     }
+
     private static final long serialVersionUID = 1L;
 
     @Override
@@ -120,37 +128,21 @@ public class ThrottleJobPropertySelector extends InheritanceSelector<JobProperty
             boolean limitOneJobWithMatchingParamsLatter) {
         return limitOneJobWithMatchingParamsLatter || limitOneJobWithMatchingParamsPrior;
     }
-    private List<List<String>> getMergedParameterGroupsToCompare(List<List<String>> prior, List<List<String>> latter){
-        if (prior == null || prior.isEmpty() ) return latter;
-        if (latter == null || latter.isEmpty() ) return prior;
-        HashSet<ParameterGroup> uniqueParameterGroup = new HashSet<ParameterGroup>(wrapParameterGroups(prior));
-        for(ParameterGroup parameterGroup:wrapParameterGroups(latter)){
-            if (!uniqueParameterGroup.contains(parameterGroup)){
+
+    private List<List<String>> getMergedParameterGroupsToCompare(List<List<String>> prior, List<List<String>> latter) {
+        if (prior == null || prior.isEmpty())
+            return latter;
+        if (latter == null || latter.isEmpty())
+            return prior;
+        HashSet<List<String>> uniqueParameterGroup = new HashSet<List<String>>(prior);
+        for (List<String> parameterGroup : latter) {
+            if (!uniqueParameterGroup.contains(parameterGroup)) {
                 uniqueParameterGroup.add(parameterGroup);
             }
         }
-        return unwrapParameterGroups(uniqueParameterGroup);
+        return new ArrayList<List<String>>(uniqueParameterGroup);
     }
-    private List<ParameterGroup> wrapParameterGroups(Collection<List<String>> parameterGroups) {
-        if (parameterGroups == null || parameterGroups.isEmpty()){
-            return new ArrayList<ParameterGroup>(0);
-        }
-        List<ParameterGroup> wrappedParameterGroups = new ArrayList<ParameterGroup>(parameterGroups.size());
-        for (List<String> parameterGroup:parameterGroups){
-            wrappedParameterGroups.add(new ParameterGroup(parameterGroup));
-        }
-        return wrappedParameterGroups;
-    }
-    private List<List<String>> unwrapParameterGroups(Collection<ParameterGroup> parameterGroups){
-        if (parameterGroups == null || parameterGroups.isEmpty()){
-            return new ArrayList<List<String>>(0);
-        }
-        List<List<String>> unwrappedParameterGroups = new ArrayList<List<String>>(parameterGroups.size());
-        for (ParameterGroup parameterGroup:parameterGroups){
-            unwrappedParameterGroups.add(parameterGroup.getParameters());
-        }
-        return unwrappedParameterGroups;
-    }
+
     @Override
     public ThrottleJobProperty merge(JobProperty<?> prior, JobProperty<?> latter, InheritanceProject caller) {
         ThrottleJobProperty priorThrottleJobProperty = getThrottleJobProperty(prior);
@@ -163,34 +155,65 @@ public class ThrottleJobPropertySelector extends InheritanceSelector<JobProperty
         }
         boolean mergedThrottleEnabled = true;
 
-        List<String> mergedCategories = getMergedCategories(priorThrottleJobProperty.getCategories(), 
+        List<String> mergedCategories = getMergedCategories(priorThrottleJobProperty.getCategories(),
                 latterThrottleJobProperty.getCategories());
-        
-        Integer mergedMaxConcurrentPerNodePerProject = getLowerOfMaximums(priorThrottleJobProperty.getMaxConcurrentPerNode(),
+
+        Integer mergedMaxConcurrentPerNodePerProject = getLowerOfMaximums(
+                priorThrottleJobProperty.getMaxConcurrentPerNode(),
                 latterThrottleJobProperty.getMaxConcurrentPerNode());
-        
+
         Integer mergedMaxConcurrentTotalPerProject = getLowerOfMaximums(
                 priorThrottleJobProperty.getMaxConcurrentTotal(), latterThrottleJobProperty.getMaxConcurrentTotal());
-        
+
         String mergedThrottleOption = getMergedThrottleOption(priorThrottleJobProperty.getThrottleOption(),
                 latterThrottleJobProperty.getThrottleOption());
-        
+
         boolean mergedIsLimitOneJobWithMatchingParameters = getMergedLimitOneJobWithMatchingParameters(
                 priorThrottleJobProperty.isLimitOneJobWithMatchingParams(),
                 latterThrottleJobProperty.isLimitOneJobWithMatchingParams());
-        
+
         String mergedParamsToUseForLimit = null;
-        
+
         ThrottleMatrixProjectOptions mergedThrottleMatrixProjectOptions = null;
-        
+
         List<List<String>> mergedParameterGroupsToCompare = getMergedParameterGroupsToCompare(
                 mergedIsLimitOneJobWithMatchingParameters, priorThrottleJobProperty.getParameterGroupsToCompare(),
                 latterThrottleJobProperty.getParameterGroupsToCompare());
-        
+
         return new ThrottleJobProperty(mergedMaxConcurrentPerNodePerProject, mergedMaxConcurrentTotalPerProject,
                 mergedCategories, mergedThrottleEnabled, mergedThrottleOption,
                 mergedIsLimitOneJobWithMatchingParameters, mergedParamsToUseForLimit,
                 mergedThrottleMatrixProjectOptions, mergedParameterGroupsToCompare);
+    }
+
+    private static boolean areEssentiallyTheSame(ThrottleJobProperty jobProperty1, ThrottleJobProperty jobProperty2) {
+        if (jobProperty1 == null) {
+            return jobProperty2 == null;
+        }
+        if (jobProperty2 == null)
+            return false;
+
+        if (jobProperty1.getThrottleEnabled() != jobProperty2.getThrottleEnabled())
+            return false;
+
+        if (!Objects.equals(jobProperty1.getCategories(), jobProperty2.getCategories()))
+            return false;
+
+        if (!Objects.equals(jobProperty1.getMaxConcurrentPerNode(), jobProperty2.getMaxConcurrentPerNode()))
+            return false;
+
+        if (!Objects.equals(jobProperty1.getMaxConcurrentTotal(), jobProperty2.getMaxConcurrentTotal()))
+            return false;
+
+        if (!Objects.equals(jobProperty1.getThrottleOption(), jobProperty2.getThrottleOption()))
+            return false;
+
+        if (jobProperty1.isLimitOneJobWithMatchingParams() != jobProperty2.isLimitOneJobWithMatchingParams())
+            return false;
+
+        if (!Objects.equals(jobProperty1.getParameterGroupsToCompare(), jobProperty2.getParameterGroupsToCompare()))
+            return false;
+        return true;
     }
 
     @Override
@@ -202,8 +225,12 @@ public class ThrottleJobPropertySelector extends InheritanceSelector<JobProperty
 
         if (!ThrottleJobProperty.class.isAssignableFrom(jobProperty.getClass()))
             return jobProperty;
-       
+        ThrottleJobProperty cachedJobProperty = ThrottleJobPropertyCache.get(caller);
+        if (cachedJobProperty == null || !areEssentiallyTheSame(cachedJobProperty, (ThrottleJobProperty) jobProperty)) {
+            cachedJobProperty = new ThrottleJobProperty((ThrottleJobProperty) jobProperty, caller);
+            ThrottleJobPropertyCache.put(cachedJobProperty, caller);
+        } 
+        return cachedJobProperty;
 
-        return new ThrottleJobProperty((ThrottleJobProperty)jobProperty, caller);
     }
 }
