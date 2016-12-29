@@ -12,15 +12,12 @@ import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
-import hudson.model.queue.WorkUnit;
+import hudson.model.queue.*;
 import hudson.model.labels.LabelAtom;
-import hudson.model.queue.CauseOfBlockage;
-import hudson.model.queue.QueueTaskDispatcher;
 import hudson.security.ACL;
 import hudson.security.NotSerilizableSecurityContext;
 import hudson.model.Action;
 import hudson.model.ParametersAction;
-import hudson.model.queue.SubTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -129,6 +126,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (tjp!=null && tjp.getThrottleEnabled()) {
             if (tjp.isLimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
                 return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
+            } else if (tjp.isLimitOneJobWithMatchingParams() && isPendingAndNotFirstInLine(item)) {
+                // This build is not first in line, so keep blocked until first in line starts so that we can check parameters.
+                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_NotFirstInLine());
             }
             return canRun(item.task, tjp);
         }
@@ -278,9 +278,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     // TODO: refactor into a nameEquals helper method
                     final Queue.Executable currentExecutable = exec.getCurrentExecutable();
                     final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
-                    if (currentExecutable != null && parentTask != null &&
-                            parentTask.getOwnerTask() != null &&
-                            parentTask.getOwnerTask().getName().equals(item.task.getName())) {
+                    if (currentExecutable != null && parentTask != null && parentTask.getOwnerTask() != null) {
+                        if (tjp.getThrottleOption().equalsIgnoreCase("category") && !isInMutualCategory(tjp, getThrottleJobProperty(parentTask.getOwnerTask()))) {
+                            continue;
+                        } else if (tjp.getThrottleOption().equalsIgnoreCase("project") && !parentTask.getOwnerTask().getName().equals(item.task.getName())) {
+                            continue;
+                        }
                         List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
@@ -294,6 +297,35 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 }
             }
         }
+        return false;
+    }
+
+    private Boolean isInMutualCategory(ThrottleJobProperty jobBeingChecked, ThrottleJobProperty executingJob) {
+
+        for (String category: jobBeingChecked.getCategories()) {
+            if (executingJob.getCategories().contains(category)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Boolean isPendingAndNotFirstInLine(Queue.Item itemBeingChecked) {
+        final Jenkins jenkins = Jenkins.getActiveInstance();
+        Queue queue = jenkins.getQueue();
+
+        List<Queue.BlockedItem> blockedItems = new ArrayList<>();
+        for (Queue.Item item : queue.getPendingItems()) { //List of Buildable items to list of blocked items.
+            blockedItems.add((Queue.BlockedItem) item);
+        }
+
+        if (blockedItems.size() > 0) {
+            queue.getSorter().sortBlockedItems(blockedItems); // Sort the blocked items.
+            if (itemBeingChecked.isBlocked() && !blockedItems.get(0).equals(itemBeingChecked)) {
+                return true;
+            }
+        }
+
         return false;
     }
 
