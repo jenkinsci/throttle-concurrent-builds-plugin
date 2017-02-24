@@ -12,12 +12,15 @@ import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
-import hudson.model.queue.*;
+import hudson.model.queue.WorkUnit;
 import hudson.model.labels.LabelAtom;
+import hudson.model.queue.CauseOfBlockage;
+import hudson.model.queue.QueueTaskDispatcher;
 import hudson.security.ACL;
 import hudson.security.NotSerilizableSecurityContext;
 import hudson.model.Action;
 import hudson.model.ParametersAction;
+import hudson.model.queue.SubTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -126,7 +129,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (tjp!=null && tjp.getThrottleEnabled()) {
             if (tjp.isLimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
                 return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
-            } else if (tjp.isLimitOneJobWithMatchingParams() && isPendingAndNotFirstInLine(item)) {
+            } else if (tjp.isLimitOneJobWithMatchingParams() && isBlockedAndNotFirstInLine(item)) {
                 // This build is not first in line, so keep blocked until first in line starts so that we can check parameters.
                 return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_NotFirstInLine());
             }
@@ -300,29 +303,49 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return false;
     }
 
-    private Boolean isInMutualCategory(ThrottleJobProperty jobBeingChecked, ThrottleJobProperty executingJob) {
+    /**
+     * Checks if two jobs are in a mutual category.
+     * @param jobBeingChecked
+     * @param executingJob
+     * @return
+     */
+    private boolean isInMutualCategory(ThrottleJobProperty jobBeingChecked, ThrottleJobProperty executingJob) {
 
-        for (String category: jobBeingChecked.getCategories()) {
-            if (executingJob.getCategories().contains(category)) {
-                return true;
+        if (jobBeingChecked != null && executingJob != null) {
+            for (String category : jobBeingChecked.getCategories()) {
+                if (executingJob.getCategories().contains(category)) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
-    private Boolean isPendingAndNotFirstInLine(Queue.Item itemBeingChecked) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
-        Queue queue = jenkins.getQueue();
+    /**
+     * Checks if item is blocked. If so, check if this item is first in line among blocked.
+     * @param itemBeingChecked
+     * @return
+     */
+    private boolean isBlockedAndNotFirstInLine(Queue.Item itemBeingChecked) {
 
-        List<Queue.BlockedItem> blockedItems = new ArrayList<>();
-        for (Queue.Item item : queue.getPendingItems()) { //List of Buildable items to list of blocked items.
-            blockedItems.add((Queue.BlockedItem) item);
-        }
+        if (itemBeingChecked != null && itemBeingChecked.isBlocked()) {
+            final Jenkins jenkins = Jenkins.getActiveInstance();
+            Queue queue = jenkins.getQueue();
 
-        if (blockedItems.size() > 0) {
-            queue.getSorter().sortBlockedItems(blockedItems); // Sort the blocked items.
-            if (itemBeingChecked.isBlocked() && !blockedItems.get(0).equals(itemBeingChecked)) {
-                return true;
+            List<Queue.BlockedItem> blockedItems = new ArrayList<>();
+            for (Queue.Item item : queue.getPendingItems()) { //List of Buildable items to list of blocked items.
+                if (item.isBlocked()) {
+                    blockedItems.add((Queue.BlockedItem) item);
+                }
+            }
+
+            if (blockedItems.size() == 1) {
+                return false;
+            } else if (blockedItems.size() > 1) {
+                queue.getSorter().sortBlockedItems(blockedItems); // Sort the blocked items.
+                if (!blockedItems.get(0).equals(itemBeingChecked)) {
+                    return true;
+                }
             }
         }
 
