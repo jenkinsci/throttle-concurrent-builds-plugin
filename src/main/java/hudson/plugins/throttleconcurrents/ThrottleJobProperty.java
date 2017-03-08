@@ -3,6 +3,7 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.model.AbstractDescribableImpl;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -10,6 +11,9 @@ import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
 import hudson.model.Queue;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.plugins.throttleconcurrents.pipeline.ThrottledStepInfo;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
@@ -17,6 +21,7 @@ import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 import hudson.matrix.MatrixRun;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,15 +29,24 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
 import jenkins.model.Jenkins;
 
 import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -229,20 +243,20 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         assert category != null && !category.equals("");
         List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
         Collection<ThrottleJobProperty> properties;
-        DescriptorImpl descriptor = Jenkins.getActiveInstance().getDescriptorByType(DescriptorImpl.class);    
+        DescriptorImpl descriptor = Jenkins.getActiveInstance().getDescriptorByType(DescriptorImpl.class);
         synchronized (descriptor.propertiesByCategoryLock) {
-            Map<ThrottleJobProperty,Void> _properties = descriptor.propertiesByCategory.get(category);
+            Map<ThrottleJobProperty, Void> _properties = descriptor.propertiesByCategory.get(category);
             properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.<ThrottleJobProperty>emptySet();
         }
         for (ThrottleJobProperty t : properties) {
             if (t.getThrottleEnabled()) {
                 if (t.getCategories() != null && t.getCategories().contains(category)) {
-                    Job<?,?> p = t.owner;
+                    Job<?, ?> p = t.owner;
                     if (/*is a task*/ p instanceof Queue.Task && /* not deleted */getItem(p.getParent(), p.getName()) == p &&
                         /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
                         categoryTasks.add((Queue.Task) p);
                         if (p instanceof MatrixProject && t.isThrottleMatrixConfigurations()) {
-                            for (MatrixConfiguration mc : ((MatrixProject)p).getActiveConfigurations()) {
+                            for (MatrixConfiguration mc : ((MatrixProject) p).getActiveConfigurations()) {
                                 categoryTasks.add(mc);
                             }
                         }
@@ -250,8 +264,61 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 }
             }
         }
+
         return categoryTasks;
     }
+
+    static List<ThrottledStepInfo> getThrottledPipelinesForCategory(String category) {
+        List<ThrottledStepInfo> throttledPipelines = new ArrayList<>();
+
+        DescriptorImpl descriptor = Jenkins.getActiveInstance().getDescriptorByType(DescriptorImpl.class);
+        for (Map.Entry<String,Integer> currentPipeline : descriptor.getThrottledPipelinesForCategory(category).entrySet()) {
+            Run<?,?> flowNodeRun = Run.fromExternalizableId(currentPipeline.getKey());
+
+            if (flowNodeRun == null) {
+                // No run found, so remove the throttle.
+                descriptor.removeThrottledPipelineForCategory(currentPipeline.getKey(), category, null);
+            } else if (!(flowNodeRun instanceof FlowExecutionOwner.Executable)) {
+                // If for some reason we've somehow ended up with a non-pipeline job, remove the throttle.
+                descriptor.removeThrottledPipelineForCategory(currentPipeline.getKey(), category, null);
+            } else if (!flowNodeRun.isBuilding()) {
+                // The run is done building, so remove the throttle.
+                descriptor.removeThrottledPipelineForCategory(currentPipeline.getKey(), category, null);
+            } else {
+                FlowExecutionOwner owner = ((FlowExecutionOwner.Executable)flowNodeRun).asFlowExecutionOwner();
+                FlowExecution execution = owner.getOrNull();
+                if (execution == null) {
+                    // For some reason, the flow execution is null, so again? Remove the throttle.
+                    descriptor.removeThrottledPipelineForCategory(currentPipeline.getKey(), category, null);
+                } else {
+                    try {
+                        for (StepExecution stepExec : execution.getCurrentExecutions(false).get()) {
+                            try {
+                                Computer c = stepExec.getContext().get(Computer.class);
+                                ThrottledStepInfo candidateInfo = stepExec.getContext().get(ThrottledStepInfo.class);
+                                if (c != null && candidateInfo != null) {
+                                    ThrottledStepInfo info = candidateInfo.forCategory(category);
+                                    if (info != null) {
+                                        if (info.getNode() == null && c.getNode() != null) {
+                                            info.setNode(c.getNode().getNodeName());
+                                        }
+                                        throttledPipelines.add(info);
+                                    }
+                                }
+                            } catch (IOException e) {
+                                // TODO: What do we do here if anything?
+                            }
+                        }
+                    } catch (InterruptedException | ExecutionException e) {
+                        // TODO: What do we do here if anything?
+                    }
+                }
+            }
+        }
+
+        return throttledPipelines;
+    }
+
     private static Item getItem(ItemGroup group, String name) {
         if (group instanceof Jenkins) {
             return ((Jenkins) group).getItemMap().get(name);
@@ -262,7 +329,11 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     
     @Extension
     public static final class DescriptorImpl extends JobPropertyDescriptor {
+        private static final Logger LOGGER = Logger.getLogger(DescriptorImpl.class.getName());
+
         private List<ThrottleCategory> categories;
+
+        private Map<String,Map<String,Integer>> throttledPipelines;
         
         /** Map from category names, to properties including that category. */
         private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory 
@@ -369,7 +440,108 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
             return m;
         }
-        
+
+        @Override
+        public void load() {
+            super.load();
+            if (throttledPipelines == null) {
+                throttledPipelines = new TreeMap<>();
+            }
+            LOGGER.log(Level.FINE, "load: {0}", throttledPipelines);
+        }
+
+        @Override
+        public void save() {
+            super.save();
+            LOGGER.log(Level.FINE, "save: {0}", throttledPipelines);
+        }
+
+        @Nonnull
+        public synchronized Map<String,Integer> getThrottledPipelinesForCategory(@Nonnull String category) {
+            return internalGetThrottledPipelinesForCategory(category);
+        }
+
+        @Nonnull
+        private Map<String,Integer> internalGetThrottledPipelinesForCategory(@Nonnull String category) {
+            if (getCategoryByName(category) != null) {
+                if (throttledPipelines.containsKey(category)) {
+                    return throttledPipelines.get(category);
+                }
+            }
+            return new TreeMap<>();
+        }
+
+        public synchronized void addThrottledPipelineForCategory(@Nonnull String runId,
+                                                                 @Nonnull String category,
+                                                                 TaskListener listener) {
+            if (getCategoryByName(category) == null) {
+                if (listener != null) {
+                    listener.getLogger().println(Messages.ThrottleJobProperty_DescriptorImpl_NoSuchCategory(category));
+                }
+            } else {
+                Map<String,Integer> currentPipelines = internalGetThrottledPipelinesForCategory(category);
+
+                if (!currentPipelines.containsKey(runId)) {
+                    currentPipelines.put(runId, 1);
+                } else {
+                    currentPipelines.put(runId, currentPipelines.get(runId) + 1);
+                }
+
+                throttledPipelines.put(category, currentPipelines);
+            }
+        }
+
+        public synchronized void removeThrottledPipelineForCategory(@Nonnull String runId,
+                                                                    @Nonnull String category,
+                                                                    TaskListener listener) {
+            if (getCategoryByName(category) == null) {
+                if (listener != null) {
+                    listener.getLogger().println(Messages.ThrottleJobProperty_DescriptorImpl_NoSuchCategory(category));
+                }
+            } else {
+                Map<String,Integer> currentPipelines = internalGetThrottledPipelinesForCategory(category);
+
+                if (!currentPipelines.isEmpty()) {
+                    if (currentPipelines.containsKey(runId)) {
+                        Integer currentCount = currentPipelines.get(runId);
+                        if (currentCount > 1) {
+                            currentPipelines.put(runId, currentCount - 1);
+                        } else {
+                            currentPipelines.remove(runId);
+                        }
+                    }
+                }
+
+                if (currentPipelines.isEmpty()) {
+                    throttledPipelines.remove(category);
+                } else {
+                    throttledPipelines.put(category, currentPipelines);
+                }
+            }
+        }
+
+        public synchronized void removeAllFromRunForCategory(@Nonnull String runId,
+                                                             @Nonnull String category,
+                                                             TaskListener listener) {
+            if (getCategoryByName(category) == null) {
+                if (listener != null) {
+                    listener.getLogger().println(Messages.ThrottleJobProperty_DescriptorImpl_NoSuchCategory(category));
+                }
+            } else {
+                Map<String,Integer> currentPipelines = internalGetThrottledPipelinesForCategory(category);
+
+                if (!currentPipelines.isEmpty()) {
+                    if (currentPipelines.containsKey(runId)) {
+                        currentPipelines.remove(runId);
+                    }
+                }
+                if (currentPipelines.isEmpty()) {
+                    throttledPipelines.remove(category);
+                } else {
+                    throttledPipelines.put(category, currentPipelines);
+                }
+            }
+        }
     }
 
     public static final class ThrottleCategory extends AbstractDescribableImpl<ThrottleCategory> {

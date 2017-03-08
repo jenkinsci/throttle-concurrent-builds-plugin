@@ -16,6 +16,7 @@ import hudson.model.queue.WorkUnit;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.plugins.throttleconcurrents.pipeline.ThrottledStepInfo;
 import hudson.security.ACL;
 import hudson.security.NotSerilizableSecurityContext;
 import hudson.model.Action;
@@ -97,17 +98,21 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
                             // Double check category itself isn't null
                             if (category != null) {
+                                int runCount = 0;
+
                                 // Max concurrent per node for category
                                 int maxConcurrentPerNode = getMaxConcurrentPerNodeBasedOnMatchingLabels(
                                     node, category, category.getMaxConcurrentPerNode().intValue());
                                 if (maxConcurrentPerNode > 0) {
-                                    int runCount = 0;
                                     for (Task catTask : categoryTasks) {
                                         if (jenkins.getQueue().isPending(catTask)) {
                                             return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                         }
                                         runCount += buildsOfProjectOnNode(node, catTask);
                                     }
+                                    List<ThrottledStepInfo> throttledPipelines = ThrottleJobProperty.getThrottledPipelinesForCategory(catNm);
+                                    runCount += pipelinesOnNode(node, throttledPipelines);
+
                                     // This would mean that there are as many or more builds currently running than are allowed.
                                     if (runCount >= maxConcurrentPerNode) {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
@@ -228,6 +233,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     }
                                     totalRunCount += buildsOfProjectOnAllNodes(catTask);
                                 }
+                                List<ThrottledStepInfo> throttledPipelines = ThrottleJobProperty.getThrottledPipelinesForCategory(catNm);
+                                totalRunCount += pipelinesOnAllNodes(throttledPipelines);
 
                                 if (totalRunCount >= maxConcurrentTotal) {
                                     return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
@@ -361,6 +368,24 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return tjp;
         }
         return null;
+    }
+
+    private int pipelinesOnNode(@Nonnull Node node, @Nonnull List<ThrottledStepInfo> throttledPipelines) {
+        int runCount = 0;
+
+        String nodeName = node.getNodeName();
+
+        for (ThrottledStepInfo info : throttledPipelines) {
+            if (nodeName.equals(info.getNode())) {
+                runCount++;
+            }
+        }
+
+        return runCount;
+    }
+
+    private int pipelinesOnAllNodes(@Nonnull List<ThrottledStepInfo> throttledPipelines) {
+        return throttledPipelines.size();
     }
 
     private int buildsOfProjectOnNode(Node node, Task task) {
