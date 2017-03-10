@@ -79,8 +79,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                String paramsToUseForLimit,
                                @CheckForNull ThrottleMatrixProjectOptions matrixOptions
                                ) {
-        this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
-        this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
+        this.maxConcurrentPerNode = maxConcurrentPerNode;
+        this.maxConcurrentTotal = maxConcurrentTotal;
         this.categories = categories == null ?
                 new CopyOnWriteArrayList<String>() :
                 new CopyOnWriteArrayList<String>(categories);
@@ -278,25 +278,28 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                     !flowNodeRun.isBuilding()) {
                 descriptor.removeAllFromPipelineRunForCategory(currentPipeline.getKey(), category, null);
             } else {
-                FlowExecution execution = ((FlowExecutionOwner.Executable) flowNodeRun).asFlowExecutionOwner().getOrNull();
-                if (execution == null) {
-                    descriptor.removeAllFromPipelineRunForCategory(currentPipeline.getKey(), category, null);
-                } else {
-                    for (String flowNodeId : currentPipeline.getValue()) {
-                        try {
-                            FlowNode node = execution.getNode(flowNodeId);
-                            if (node != null) {
-                                flowNodes.add(node);
-                            } else {
-                                descriptor.removeThrottledPipelineForCategory(currentPipeline.getKey(), flowNodeId, category, null);
+                FlowExecutionOwner executionOwner = ((FlowExecutionOwner.Executable) flowNodeRun).asFlowExecutionOwner();
+                if (executionOwner != null) {
+                    FlowExecution execution = executionOwner.getOrNull();
+                    if (execution == null) {
+                        descriptor.removeAllFromPipelineRunForCategory(currentPipeline.getKey(), category, null);
+                    } else {
+                        for (String flowNodeId : currentPipeline.getValue()) {
+                            try {
+                                FlowNode node = execution.getNode(flowNodeId);
+                                if (node != null) {
+                                    flowNodes.add(node);
+                                } else {
+                                    descriptor.removeThrottledPipelineForCategory(currentPipeline.getKey(), flowNodeId, category, null);
+                                }
+                            } catch (IOException e) {
+                                // do nothing
                             }
-                        } catch (IOException e) {
-                            // do nothing
                         }
                     }
-                }
-                if (!flowNodes.isEmpty()) {
-                    throttledPipelines.put(flowNodeRun, flowNodes);
+                    if (!flowNodes.isEmpty()) {
+                        throttledPipelines.put(flowNodeRun, flowNodes);
+                    }
                 }
             }
         }
@@ -433,10 +436,14 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         @Override
         public void load() {
             super.load();
+            initThrottledPipelines();
+            LOGGER.log(Level.FINE, "load: {0}", throttledPipelinesByCategory);
+        }
+
+        private synchronized void initThrottledPipelines() {
             if (throttledPipelinesByCategory == null) {
                 throttledPipelinesByCategory = new TreeMap<>();
             }
-            LOGGER.log(Level.FINE, "load: {0}", throttledPipelinesByCategory);
         }
 
         @Override
@@ -547,8 +554,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                 Integer maxConcurrentPerNode,
                                 Integer maxConcurrentTotal,
                                 List<NodeLabeledPair> nodeLabeledPairs) {
-            this.maxConcurrentPerNode = maxConcurrentPerNode == null ? 0 : maxConcurrentPerNode;
-            this.maxConcurrentTotal = maxConcurrentTotal == null ? 0 : maxConcurrentTotal;
+            this.maxConcurrentPerNode = maxConcurrentPerNode;
+            this.maxConcurrentTotal = maxConcurrentTotal;
             this.categoryName = categoryName;
             this.nodeLabeledPairs =
                  nodeLabeledPairs == null ? new ArrayList<NodeLabeledPair>() : nodeLabeledPairs;
@@ -598,21 +605,20 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         @DataBoundConstructor
         public NodeLabeledPair(String throttledNodeLabel,
                                Integer maxConcurrentPerNodeLabeled) {
-            this.throttledNodeLabel = throttledNodeLabel == null ? new String() : throttledNodeLabel;
-            this.maxConcurrentPerNodeLabeled =
-                 maxConcurrentPerNodeLabeled == null ? new Integer(0) : maxConcurrentPerNodeLabeled;
+            this.throttledNodeLabel = throttledNodeLabel == null ? "" : throttledNodeLabel;
+            this.maxConcurrentPerNodeLabeled = maxConcurrentPerNodeLabeled;
         }
 
         public String getThrottledNodeLabel() {
             if(throttledNodeLabel == null) {
-                throttledNodeLabel = new String();
+                throttledNodeLabel = "";
             }
             return throttledNodeLabel;
         }
 
         public Integer getMaxConcurrentPerNodeLabeled() {
             if(maxConcurrentPerNodeLabeled == null) {
-                maxConcurrentPerNodeLabeled = new Integer(0);
+                maxConcurrentPerNodeLabeled = 0;
             }
             return maxConcurrentPerNodeLabeled;
         }

@@ -4,8 +4,6 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
 import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -14,10 +12,11 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Set;
 
-public class ThrottleStep extends Step {
+public class ThrottleStep extends Step implements Serializable {
     private String category;
 
     @DataBoundConstructor
@@ -34,6 +33,8 @@ public class ThrottleStep extends Step {
     public StepExecution start(StepContext context) throws Exception {
         return new ThrottleStepExecution(this, context);
     }
+
+    private static final long serialVersionUID = 1L;
 
     @Extension
     public static final class DescriptorImpl extends StepDescriptor {

@@ -41,6 +41,7 @@ import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
 
 @Extension
@@ -298,26 +299,24 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
-                if (item != null && item.task != null) {
-                    // TODO: refactor into a nameEquals helper method
-                    final Queue.Executable currentExecutable = exec.getCurrentExecutable();
-                    final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
-                    if (currentExecutable != null && parentTask != null &&
-                            parentTask.getOwnerTask() != null &&
-                            parentTask.getOwnerTask().getName().equals(item.task.getName())) {
-                        List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
-                        executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+                // TODO: refactor into a nameEquals helper method
+                final Queue.Executable currentExecutable = exec.getCurrentExecutable();
+                final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
+                if (currentExecutable != null &&
+                        parentTask.getOwnerTask().getName().equals(item.task.getName())) {
+                    List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+                    executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
-                        if (executingUnitParams.containsAll(itemParams)) {
-                            LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
-                                    ") with identical parameters (" +
-                                    executingUnitParams + ") is already running.");
-                            return true;
-                        }
+                    if (executingUnitParams.containsAll(itemParams)) {
+                        LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
+                                ") with identical parameters (" +
+                                executingUnitParams + ") is already running.");
+                        return true;
                     }
                 }
             }
         }
+
         return false;
     }
 
@@ -349,10 +348,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             List<Action> actions = unit.context.actions;
             for (Action action : actions) {
                 if (action instanceof ParametersAction) {
-                    ParametersAction params = (ParametersAction) action;
-                    if (params != null) {
-                        paramsList = params.getParameters();
-                    }
+                    paramsList = ((ParametersAction)action).getParameters();
                 }
             }
         }
@@ -461,9 +457,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         int runCount = 0;
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
         if (currentExecutable != null) {
-            if (currentExecutable.getParent() instanceof ExecutorStepExecution.PlaceholderTask) {
-                ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask)currentExecutable.getParent();
-                if (task.run() != null && task.run().equals(run)) {
+            SubTask parent = currentExecutable.getParent();
+            if (parent instanceof ExecutorStepExecution.PlaceholderTask) {
+                ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask)parent;
+                if (run.equals(task.run())) {
                     try {
                         FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
                         if (firstThrottle != null && flowNodes.contains(firstThrottle)) {
@@ -480,14 +477,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     @CheckForNull
-    private FlowNode firstThrottleStartNode(@Nonnull FlowNode inner) {
-        LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
-        scanner.setup(inner);
-        for (FlowNode enclosing : scanner) {
-            if (enclosing instanceof BlockStartNode && enclosing instanceof StepNode) {
-                // Check if this is a *different* throttling node.
-                if (((StepNode)enclosing).getDescriptor().getClass().equals(ThrottleStep.DescriptorImpl.class)) {
-                    return enclosing;
+    private FlowNode firstThrottleStartNode(@CheckForNull FlowNode inner) {
+        if (inner != null) {
+            LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
+            scanner.setup(inner);
+            for (FlowNode enclosing : scanner) {
+                if (enclosing != null && enclosing instanceof BlockStartNode && enclosing instanceof StepNode) {
+                    // Check if this is a *different* throttling node.
+                    StepDescriptor desc = ((StepNode) enclosing).getDescriptor();
+                    if (desc != null && desc.getClass().equals(ThrottleStep.DescriptorImpl.class)) {
+                        return enclosing;
+                    }
                 }
             }
         }
