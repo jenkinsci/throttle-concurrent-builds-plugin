@@ -3,29 +3,29 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
-import hudson.model.AbstractProject;
 import hudson.model.ParameterValue;
 import hudson.model.Computer;
 import hudson.model.Executor;
-import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
+import hudson.model.Run;
 import hudson.model.queue.WorkUnit;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
-import hudson.plugins.throttleconcurrents.pipeline.ThrottledStepInfo;
+import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.security.ACL;
 import hudson.security.NotSerilizableSecurityContext;
 import hudson.model.Action;
 import hudson.model.ParametersAction;
 import hudson.model.queue.SubTask;
 
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,6 +36,12 @@ import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.graph.StepNode;
+import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
+import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -110,9 +116,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                         }
                                         runCount += buildsOfProjectOnNode(node, catTask);
                                     }
-                                    List<ThrottledStepInfo> throttledPipelines = ThrottleJobProperty.getThrottledPipelinesForCategory(catNm);
-                                    runCount += pipelinesOnNode(node, throttledPipelines);
-
+                                    Map<Run<?,?>,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
+                                    for (Map.Entry<Run<?,?>,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                                        Run<?,?> r = entry.getKey();
+                                        List<FlowNode> flowNodes = entry.getValue();
+                                        if (r.isBuilding()) {
+                                            runCount += pipelinesOnNode(node, r, flowNodes);
+                                        }
+                                    }
                                     // This would mean that there are as many or more builds currently running than are allowed.
                                     if (runCount >= maxConcurrentPerNode) {
                                         return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
@@ -233,8 +244,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     }
                                     totalRunCount += buildsOfProjectOnAllNodes(catTask);
                                 }
-                                List<ThrottledStepInfo> throttledPipelines = ThrottleJobProperty.getThrottledPipelinesForCategory(catNm);
-                                totalRunCount += pipelinesOnAllNodes(throttledPipelines);
+                                Map<Run<?,?>,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
+                                for (Map.Entry<Run<?,?>,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                                    Run<?,?> r = entry.getKey();
+                                    List<FlowNode> flowNodes = entry.getValue();
+                                    if (r.isBuilding()) {
+                                        totalRunCount += pipelinesOnAllNodes(r, flowNodes);
+                                    }
+                                }
 
                                 if (totalRunCount >= maxConcurrentTotal) {
                                     return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
@@ -370,22 +387,29 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
-    private int pipelinesOnNode(@Nonnull Node node, @Nonnull List<ThrottledStepInfo> throttledPipelines) {
+    private int pipelinesOnNode(@Nonnull Node node, @Nonnull Run<?,?> run, @Nonnull List<FlowNode> flowNodes) {
         int runCount = 0;
+        LOGGER.log(Level.FINE, "Checking for pipelines of {0} on node {1}", new Object[] {run.getDisplayName(), node.getDisplayName()});
 
-        String nodeName = node.getNodeName();
-
-        for (ThrottledStepInfo info : throttledPipelines) {
-            if (nodeName.equals(info.getNode())) {
-                runCount++;
+        Computer computer = node.toComputer();
+        if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
+            // Don't count flyweight tasks that might not consume an actual executor, unlike with builds.
+            for (Executor e : computer.getExecutors()) {
+                runCount += pipelinesOnExecutor(run, e, flowNodes);
             }
         }
 
         return runCount;
     }
 
-    private int pipelinesOnAllNodes(@Nonnull List<ThrottledStepInfo> throttledPipelines) {
-        return throttledPipelines.size();
+    private int pipelinesOnAllNodes(@Nonnull Run<?,?> run, @Nonnull List<FlowNode> flowNodes) {
+        final Jenkins jenkins = Jenkins.getActiveInstance();
+        int totalRunCount = pipelinesOnNode(jenkins, run, flowNodes);
+
+        for (Node node : jenkins.getNodes()) {
+            totalRunCount += pipelinesOnNode(node, run, flowNodes);
+        }
+        return totalRunCount;
     }
 
     private int buildsOfProjectOnNode(Node node, Task task) {
@@ -431,6 +455,43 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         return runCount;
+    }
+
+    private int pipelinesOnExecutor(@Nonnull Run<?,?> run, @Nonnull Executor exec, @Nonnull List<FlowNode> flowNodes) {
+        int runCount = 0;
+        final Queue.Executable currentExecutable = exec.getCurrentExecutable();
+        if (currentExecutable != null) {
+            if (currentExecutable.getParent() instanceof ExecutorStepExecution.PlaceholderTask) {
+                ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask)currentExecutable.getParent();
+                if (task.run() != null && task.run().equals(run)) {
+                    try {
+                        FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
+                        if (firstThrottle != null && flowNodes.contains(firstThrottle)) {
+                            runCount++;
+                        }
+                    } catch (IOException | InterruptedException e) {
+                        // TODO: do something?
+                    }
+                }
+            }
+        }
+
+        return runCount;
+    }
+
+    @CheckForNull
+    private FlowNode firstThrottleStartNode(@Nonnull FlowNode inner) {
+        LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
+        scanner.setup(inner);
+        for (FlowNode enclosing : scanner) {
+            if (enclosing instanceof BlockStartNode && enclosing instanceof StepNode) {
+                // Check if this is a *different* throttling node.
+                if (((StepNode)enclosing).getDescriptor().getClass().equals(ThrottleStep.DescriptorImpl.class)) {
+                    return enclosing;
+                }
+            }
+        }
+        return null;
     }
 
     /**
