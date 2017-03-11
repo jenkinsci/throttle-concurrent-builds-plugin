@@ -49,6 +49,11 @@ public class ThrottleStep extends Step implements Serializable {
         }
 
         @Override
+        public boolean takesImplicitBlockArgument() {
+            return true;
+        }
+
+        @Override
         public Set<? extends Class<?>> getRequiredContext() {
             return Collections.singleton(TaskListener.class);
         }
