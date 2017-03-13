@@ -10,10 +10,12 @@ import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
@@ -250,6 +252,18 @@ public class ThrottleStepTest {
                 "    semaphore 'wait-" + jobName + "-job'\n" +
                 "  }\n" +
                 "}\n", false);
+    }
+
+    @Test
+    public void snippetizer() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                setupAgentsAndCategories();
+                SnippetizerTester st = new SnippetizerTester(story.j);
+                st.assertRoundTrip(new ThrottleStep(ONE_PER_NODE), "throttle('" + ONE_PER_NODE + "') {\n    // some block\n}");
+            }
+        });
     }
 
     private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
