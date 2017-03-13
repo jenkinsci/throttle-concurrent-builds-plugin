@@ -15,8 +15,6 @@ import javax.annotation.Nonnull;
 public class ThrottleStepExecution extends StepExecution {
     private final ThrottleStep step;
 
-    private BodyExecution body;
-
     public ThrottleStepExecution(@Nonnull ThrottleStep step, StepContext context) {
         super(context);
         this.step = step;
@@ -43,7 +41,7 @@ public class ThrottleStepExecution extends StepExecution {
             descriptor.addThrottledPipelineForCategory(runId, flowNodeId, getCategory(), listener);
         }
 
-        body = getContext().newBodyInvoker()
+        getContext().newBodyInvoker()
                 .withCallback(new Callback(runId, flowNodeId, getCategory()))
                 .start();
         return false;
@@ -64,7 +62,7 @@ public class ThrottleStepExecution extends StepExecution {
 
         private static final long serialVersionUID = 1;
 
-        Callback(String runId, String flowNodeId, @Nonnull String category) {
+        Callback(@CheckForNull String runId, @CheckForNull String flowNodeId, @Nonnull String category) {
             this.runId = runId;
             this.flowNodeId = flowNodeId;
             this.category = category;

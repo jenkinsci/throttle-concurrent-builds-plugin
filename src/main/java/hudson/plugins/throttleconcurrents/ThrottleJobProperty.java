@@ -235,7 +235,16 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return paramsToCompare;
     }
 
-    static List<String> getCategoriesForRunAndFlowNode(String runId, String flowNodeId) {
+    /**
+     * Get the list of categories for a given run ID (from {@link Run#getExternalizableId()}) and flow node ID (from
+     * {@link FlowNode#getId()}, if that run/flow node combination is recorded for one or more categories.
+     *
+     * @param runId The run ID
+     * @param flowNodeId The flow node ID
+     * @return A list of category names. May be empty.
+     */
+    @Nonnull
+    static List<String> getCategoriesForRunAndFlowNode(@Nonnull String runId, @Nonnull String flowNodeId) {
         List<String> categories = new ArrayList<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
@@ -251,8 +260,14 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return categories;
     }
 
-    static List<Queue.Task> getCategoryTasks(String category) {
-        assert category != null && !category.equals("");
+    /**
+     * Get all {@link Queue.Task}s with {@link ThrottleJobProperty}s attached to them.
+     *
+     * @param category a non-null string, the category name.
+     * @return A list of {@link Queue.Task}s with {@link ThrottleJobProperty} attached.
+     */
+    static List<Queue.Task> getCategoryTasks(@Nonnull String category) {
+        assert !StringUtils.isEmpty(category);
         List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
         Collection<ThrottleJobProperty> properties;
         DescriptorImpl descriptor = fetchDescriptor();
@@ -280,7 +295,16 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return categoryTasks;
     }
 
-    static Map<Run<?,?>,List<FlowNode>> getThrottledPipelineRunsForCategory(String category) {
+    /**
+     * Gets a map of {@link Run}s to a list of {@link FlowNode}s currently running for a given category. Removes any
+     * no longer valid run/flow node combinations from the internal tracking for that category, due to the run not being
+     * found, the run not being a {@link FlowExecutionOwner.Executable}, the run no longer building, etc
+     *
+     * @param category The category name to look for.
+     * @return a map of {@link Run}s to lists of {@link FlowNode}s for this category, if any. May be empty.
+     */
+    @Nonnull
+    static Map<Run<?,?>,List<FlowNode>> getThrottledPipelineRunsForCategory(@Nonnull String category) {
         Map<Run<?,?>,List<FlowNode>> throttledPipelines = new TreeMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();

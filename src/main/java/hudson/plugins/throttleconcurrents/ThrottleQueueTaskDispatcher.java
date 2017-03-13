@@ -37,13 +37,13 @@ import org.acegisecurity.context.SecurityContextHolder;
 
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.actions.BodyInvocationAction;
-import org.jenkinsci.plugins.workflow.actions.LogAction;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
+import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.PlaceholderTask;
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
@@ -386,8 +386,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private List<String> categoriesForPipeline(Task task) {
-        if (task instanceof ExecutorStepExecution.PlaceholderTask) {
-            ExecutorStepExecution.PlaceholderTask placeholderTask = (ExecutorStepExecution.PlaceholderTask)task;
+        if (task instanceof PlaceholderTask) {
+            PlaceholderTask placeholderTask = (PlaceholderTask)task;
             try {
                 FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
                 if (firstThrottle != null) {
@@ -484,18 +484,28 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
+    /**
+     * Get the count of currently executing {@link PlaceholderTask}s on a given {@link Executor} for a given {@link Run}
+     * and list of {@link FlowNode}s in that run that have been throttled.
+     *
+     * @param run The {@link Run} we care about.
+     * @param exec The {@link Executor} we're checking on.
+     * @param flowNodes The list of {@link FlowNode}s associated with that run that have been throttled with a particular
+     *                  category.
+     * @return 1 if there's something currently executing on that executor and it's of that run and one of the provided
+     * flow nodes, 0 otherwise.
+     */
     private int pipelinesOnExecutor(@Nonnull Run<?,?> run, @Nonnull Executor exec, @Nonnull List<FlowNode> flowNodes) {
-        int runCount = 0;
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
         if (currentExecutable != null) {
             SubTask parent = currentExecutable.getParent();
-            if (parent instanceof ExecutorStepExecution.PlaceholderTask) {
-                ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask)parent;
+            if (parent instanceof PlaceholderTask) {
+                PlaceholderTask task = (PlaceholderTask)parent;
                 if (run.equals(task.run())) {
                     try {
                         FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
                         if (firstThrottle != null && flowNodes.contains(firstThrottle)) {
-                            runCount++;
+                            return 1;
                         }
                     } catch (IOException | InterruptedException e) {
                         // TODO: do something?
@@ -504,9 +514,15 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             }
         }
 
-        return runCount;
+        return 0;
     }
 
+    /**
+     * Given a {@link FlowNode}, find the {@link FlowNode} most directly enclosing this one that comes from a {@link ThrottleStep}.
+     *
+     * @param inner The inner {@link FlowNode}
+     * @return The most immediate enclosing {@link FlowNode} of the inner one that is associated with {@link ThrottleStep}. May be null.
+     */
     @CheckForNull
     private FlowNode firstThrottleStartNode(@CheckForNull FlowNode inner) {
         if (inner != null) {
@@ -516,6 +532,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (enclosing != null &&
                         enclosing instanceof BlockStartNode &&
                         enclosing instanceof StepNode &&
+                        // There are two BlockStartNodes (aka StepStartNodes) for ThrottleStep, so make sure we get the
+                        // first one of those two, which will not have BodyInvocationAction.class on it.
                         enclosing.getAction(BodyInvocationAction.class) == null) {
                     // Check if this is a *different* throttling node.
                     StepDescriptor desc = ((StepNode) enclosing).getDescriptor();
