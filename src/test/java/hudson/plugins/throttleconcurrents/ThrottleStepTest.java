@@ -1,7 +1,15 @@
 package hudson.plugins.throttleconcurrents;
 
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
 import hudson.model.Executor;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.Queue;
+import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
@@ -10,18 +18,19 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
+import org.jvnet.hudson.test.TestBuilder;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.Semaphore;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -70,24 +79,13 @@ public class ThrottleStepTest {
             public void evaluate() throws Throwable {
                 setupAgentsAndCategories();
                 WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
-                // And I cannot figure out why. So for now...
-                firstJob.setDefinition(new CpsFlowDefinition("throttle('" + ONE_PER_NODE + "') {\n" +
-                        "  echo 'hi there'\n" +
-                        "  node('first-agent') {\n" +
-                        "    semaphore 'wait-first-job'\n" +
-                        "  }\n" +
-                        "}\n", false));
+                firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
 
                 WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
                 SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
                 WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(new CpsFlowDefinition("throttle('" + ONE_PER_NODE + "') {\n" +
-                        "  node('first-agent') {\n" +
-                        "    semaphore 'wait-second-job'\n" +
-                        "  }\n" +
-                        "}\n", false));
+                secondJob.setDefinition(getJobFlow("second", ONE_PER_NODE, "first-agent"));
 
                 WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
                 story.j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
@@ -117,34 +115,19 @@ public class ThrottleStepTest {
             public void evaluate() throws Throwable {
                 setupAgentsAndCategories();
                 WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
-                // And I cannot figure out why. So for now...
-                firstJob.setDefinition(new CpsFlowDefinition("throttle('" + TWO_TOTAL + "') {\n" +
-                        "  echo 'hi there'\n" +
-                        "  node('first-agent') {\n" +
-                        "    semaphore 'wait-first-job'\n" +
-                        "  }\n" +
-                        "}\n", false));
+                firstJob.setDefinition(getJobFlow("first", TWO_TOTAL, "first-agent"));
 
                 WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
                 SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
                 WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(new CpsFlowDefinition("throttle('" + TWO_TOTAL + "') {\n" +
-                        "  node('second-agent') {\n" +
-                        "    semaphore 'wait-second-job'\n" +
-                        "  }\n" +
-                        "}\n", false));
+                secondJob.setDefinition(getJobFlow("second", TWO_TOTAL, "second-agent"));
 
                 WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
                 SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
                 WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
-                thirdJob.setDefinition(new CpsFlowDefinition("throttle('" + TWO_TOTAL + "') {\n" +
-                        "  node('on-agent') {\n" +
-                        "    semaphore 'wait-third-job'\n" +
-                        "  }\n" +
-                        "}\n", false));
+                thirdJob.setDefinition(getJobFlow("third", TWO_TOTAL, "on-agent"));
 
                 WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
                 story.j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
@@ -173,6 +156,100 @@ public class ThrottleStepTest {
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
             }
         });
+    }
+
+    @Test
+    public void interopWithFreestyle() throws Exception {
+        final Semaphore semaphore = new Semaphore(1);
+
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                setupAgentsAndCategories();
+                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
+
+                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+
+                FreeStyleProject freeStyleProject = story.j.createFreeStyleProject("f");
+                freeStyleProject.addProperty(new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Arrays.asList(ONE_PER_NODE),      // categories
+                        true,   // throttleEnabled
+                        "category",     // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT
+                ));
+                freeStyleProject.setAssignedLabel(Label.get("first-agent"));
+                freeStyleProject.getBuildersList().add(new TestBuilder() {
+                    @Override
+                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+                        semaphore.acquire();
+                        return true;
+                    }
+                });
+
+                semaphore.acquire();
+
+                QueueTaskFuture<FreeStyleBuild> futureBuild = freeStyleProject.scheduleBuild2(0);
+                assertFalse(story.j.jenkins.getQueue().isEmpty());
+                assertEquals(1, story.j.jenkins.getQueue().getItems().length);
+                Queue.Item i = story.j.jenkins.getQueue().getItems()[0];
+                assertTrue(i.task instanceof FreeStyleProject);
+
+                Node n = story.j.jenkins.getNode("first-agent");
+                assertNotNull(n);
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+                SemaphoreStep.success("wait-first-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
+
+                FreeStyleBuild freeStyleBuild = futureBuild.waitForStart();
+                assertEquals(1, n.toComputer().countBusy());
+                for (Executor e : n.toComputer().getExecutors()) {
+                    if (e.isBusy()) {
+                        assertEquals(freeStyleBuild, e.getCurrentExecutable());
+                    }
+                }
+
+                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
+                secondJob.setDefinition(getJobFlow("second", ONE_PER_NODE, "first-agent"));
+
+                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+                story.j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
+                assertFalse(story.j.jenkins.getQueue().isEmpty());
+
+                assertEquals(1, n.toComputer().countBusy());
+                for (Executor e : n.toComputer().getExecutors()) {
+                    if (e.isBusy()) {
+                        assertEquals(freeStyleBuild, e.getCurrentExecutable());
+                    }
+                }
+                semaphore.release();
+
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(freeStyleBuild));
+                SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+                assertTrue(story.j.jenkins.getQueue().isEmpty());
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, secondJobFirstRun);
+                SemaphoreStep.success("wait-second-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+            }
+        });
+    }
+
+    private CpsFlowDefinition getJobFlow(String jobName, String category, String label) {
+        // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
+        // And I cannot figure out why. So for now...
+        return new CpsFlowDefinition("throttle('" + category + "') {\n" +
+                "  echo 'hi there'\n" +
+                "  node('" + label + "') {\n" +
+                "    semaphore 'wait-" + jobName + "-job'\n" +
+                "  }\n" +
+                "}\n", false);
     }
 
     private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
