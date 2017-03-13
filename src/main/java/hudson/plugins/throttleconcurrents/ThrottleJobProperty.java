@@ -235,6 +235,22 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return paramsToCompare;
     }
 
+    static List<String> getCategoriesForRunAndFlowNode(String runId, String flowNodeId) {
+        List<String> categories = new ArrayList<>();
+
+        final DescriptorImpl descriptor = fetchDescriptor();
+
+        for (ThrottleCategory cat : descriptor.getCategories()) {
+            Map<String,List<String>> runs = descriptor.getThrottledPipelinesForCategory(cat.getCategoryName());
+
+            if (!runs.isEmpty() && runs.containsKey(runId) && runs.get(runId).contains(flowNodeId)) {
+                categories.add(cat.getCategoryName());
+            }
+        }
+
+        return categories;
+    }
+
     static List<Queue.Task> getCategoryTasks(String category) {
         assert category != null && !category.equals("");
         List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
