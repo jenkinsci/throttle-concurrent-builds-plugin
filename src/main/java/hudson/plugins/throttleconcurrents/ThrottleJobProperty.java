@@ -296,21 +296,20 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
 
     /**
-     * Gets a map of {@link Run}s to a list of {@link FlowNode}s currently running for a given category. Removes any
+     * Gets a map of IDs for {@link Run}s to a list of {@link FlowNode}s currently running for a given category. Removes any
      * no longer valid run/flow node combinations from the internal tracking for that category, due to the run not being
      * found, the run not being a {@link FlowExecutionOwner.Executable}, the run no longer building, etc
      *
      * @param category The category name to look for.
-     * @return a map of {@link Run}s to lists of {@link FlowNode}s for this category, if any. May be empty.
+     * @return a map of IDs for {@link Run}s to lists of {@link FlowNode}s for this category, if any. May be empty.
      */
     @Nonnull
-    static Map<Run<?,?>,List<FlowNode>> getThrottledPipelineRunsForCategory(@Nonnull String category) {
-        Map<Run<?,?>,List<FlowNode>> throttledPipelines = new TreeMap<>();
+    static Map<String,List<FlowNode>> getThrottledPipelineRunsForCategory(@Nonnull String category) {
+        Map<String,List<FlowNode>> throttledPipelines = new TreeMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
         for (Map.Entry<String,List<String>> currentPipeline : descriptor.getThrottledPipelinesForCategory(category).entrySet()) {
             Run<?, ?> flowNodeRun = Run.fromExternalizableId(currentPipeline.getKey());
-
             List<FlowNode> flowNodes = new ArrayList<>();
 
             if (flowNodeRun == null ||
@@ -337,10 +336,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                             }
                         }
                     }
-                    if (!flowNodes.isEmpty()) {
-                        throttledPipelines.put(flowNodeRun, flowNodes);
-                    }
                 }
+            }
+            if (!flowNodes.isEmpty()) {
+                throttledPipelines.put(currentPipeline.getKey(), flowNodes);
             }
         }
 

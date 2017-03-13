@@ -128,9 +128,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 }
                                 runCount += buildsOfProjectOnNode(node, catTask);
                             }
-                            Map<Run<?,?>,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
-                            for (Map.Entry<Run<?,?>,List<FlowNode>> entry : throttledPipelines.entrySet()) {
-                                Run<?,?> r = entry.getKey();
+                            Map<String,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
+                            for (Map.Entry<String,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                                Run<?,?> r = Run.fromExternalizableId(entry.getKey());
                                 List<FlowNode> flowNodes = entry.getValue();
                                 if (r.isBuilding()) {
                                     runCount += pipelinesOnNode(node, r, flowNodes);
@@ -264,9 +264,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                             }
                             totalRunCount += buildsOfProjectOnAllNodes(catTask);
                         }
-                        Map<Run<?,?>,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
-                        for (Map.Entry<Run<?,?>,List<FlowNode>> entry : throttledPipelines.entrySet()) {
-                            Run<?,?> r = entry.getKey();
+                        Map<String,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
+                        for (Map.Entry<String,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                            Run<?,?> r = Run.fromExternalizableId(entry.getKey());
+
                             List<FlowNode> flowNodes = entry.getValue();
                             if (r.isBuilding()) {
                                 totalRunCount += pipelinesOnAllNodes(r, flowNodes);

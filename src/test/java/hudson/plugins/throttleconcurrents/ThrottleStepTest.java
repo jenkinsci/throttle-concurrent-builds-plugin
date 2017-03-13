@@ -110,6 +110,71 @@ public class ThrottleStepTest {
         });
     }
 
+    @Test
+    public void twoTotal() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                setupAgentsAndCategories();
+                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
+                // And I cannot figure out why. So for now...
+                firstJob.setDefinition(new CpsFlowDefinition("throttle('" + TWO_TOTAL + "') {\n" +
+                        "  echo 'hi there'\n" +
+                        "  node('first-agent') {\n" +
+                        "    semaphore 'wait-first-job'\n" +
+                        "  }\n" +
+                        "}\n", false));
+
+                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+
+                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
+                secondJob.setDefinition(new CpsFlowDefinition("throttle('" + TWO_TOTAL + "') {\n" +
+                        "  node('second-agent') {\n" +
+                        "    semaphore 'wait-second-job'\n" +
+                        "  }\n" +
+                        "}\n", false));
+
+                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+
+                WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
+                thirdJob.setDefinition(new CpsFlowDefinition("throttle('" + TWO_TOTAL + "') {\n" +
+                        "  node('on-agent') {\n" +
+                        "    semaphore 'wait-third-job'\n" +
+                        "  }\n" +
+                        "}\n", false));
+
+                WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
+                story.j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
+                assertFalse(story.j.jenkins.getQueue().isEmpty());
+                Node n = story.j.jenkins.getNode("first-agent");
+                assertNotNull(n);
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+
+                Node n2 = story.j.jenkins.getNode("second-agent");
+                assertNotNull(n2);
+                assertEquals(1, n2.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+
+                SemaphoreStep.success("wait-first-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
+                SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+                assertTrue(story.j.jenkins.getQueue().isEmpty());
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, thirdJobFirstRun);
+
+                SemaphoreStep.success("wait-second-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+
+                SemaphoreStep.success("wait-third-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
+            }
+        });
+    }
+
     private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
         for (Executor exec : n.toComputer().getExecutors()) {
             if (exec.getCurrentExecutable() != null) {
