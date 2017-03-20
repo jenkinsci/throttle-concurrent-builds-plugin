@@ -20,6 +20,7 @@ public class ThrottleStepExecution extends StepExecution {
         this.step = step;
     }
 
+    @Nonnull
     public String getCategory() {
         return step.getCategory();
     }
@@ -38,6 +39,7 @@ public class ThrottleStepExecution extends StepExecution {
         if (r != null && flowNode != null) {
             runId = r.getExternalizableId();
             flowNodeId = flowNode.getId();
+            listener.getLogger().println("Throttling in run " + runId + " for category " + getCategory());
             descriptor.addThrottledPipelineForCategory(runId, flowNodeId, getCategory(), listener);
         }
 
