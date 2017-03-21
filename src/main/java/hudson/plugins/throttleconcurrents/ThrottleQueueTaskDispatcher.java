@@ -42,7 +42,6 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.PlaceholderTask;
 
 @Extension
@@ -130,6 +129,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                             }
                             Map<String,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
                             for (Map.Entry<String,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                                if (hasPendingPipelineForCategory(entry.getValue())) {
+                                    return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                                }
                                 Run<?,?> r = Run.fromExternalizableId(entry.getKey());
                                 List<FlowNode> flowNodes = entry.getValue();
                                 if (r.isBuilding()) {
@@ -146,6 +148,16 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             }
         }
         return null;
+    }
+
+    private boolean hasPendingPipelineForCategory(List<FlowNode> flowNodes) {
+        for (Queue.BuildableItem pending : Jenkins.getActiveInstance().getQueue().getPendingItems()) {
+            if (isTaskThrottledPipeline(pending.task, flowNodes)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // @Override on jenkins 4.127+ , but still compatible with 1.399
@@ -266,6 +278,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         }
                         Map<String,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
                         for (Map.Entry<String,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                            if (hasPendingPipelineForCategory(entry.getValue())) {
+                                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                            }
                             Run<?,?> r = Run.fromExternalizableId(entry.getKey());
 
                             List<FlowNode> flowNodes = entry.getValue();
@@ -503,19 +518,28 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             if (parent instanceof PlaceholderTask) {
                 PlaceholderTask task = (PlaceholderTask)parent;
                 if (run.equals(task.run())) {
-                    try {
-                        FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
-                        if (firstThrottle != null && flowNodes.contains(firstThrottle)) {
-                            return 1;
-                        }
-                    } catch (IOException | InterruptedException e) {
-                        // TODO: do something?
+                    if (isTaskThrottledPipeline(task, flowNodes)) {
+                        return 1;
                     }
                 }
             }
         }
 
         return 0;
+    }
+
+    private boolean isTaskThrottledPipeline(Task origTask, List<FlowNode> flowNodes) {
+        if (origTask instanceof PlaceholderTask) {
+            PlaceholderTask task = (PlaceholderTask)origTask;
+            try {
+                FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
+                return firstThrottle != null && flowNodes.contains(firstThrottle);
+            } catch (IOException | InterruptedException e) {
+                    // TODO: do something?
+            }
+        }
+
+        return false;
     }
 
     /**

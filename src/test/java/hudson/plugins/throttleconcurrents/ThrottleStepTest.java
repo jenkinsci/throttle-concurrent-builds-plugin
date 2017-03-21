@@ -3,6 +3,7 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -106,6 +107,65 @@ public class ThrottleStepTest {
                 SemaphoreStep.success("wait-second-job/1", null);
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
 
+            }
+        });
+    }
+
+    @Test
+    public void onePerNodeParallel() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                setupAgentsAndCategories();
+                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                firstJob.setDefinition(new CpsFlowDefinition("parallel(\n" +
+                        "  a: { " + getThrottleScript("first-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
+                        "  b: { " + getThrottleScript("first-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
+                        "  c: { " + getThrottleScript("first-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
+                        ")\n", false));
+
+                WorkflowRun run1 = firstJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait-first-branch-a-job/1", run1);
+                SemaphoreStep.waitForStart("wait-first-branch-b-job/1", run1);
+
+                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
+                secondJob.setDefinition(new CpsFlowDefinition("parallel(\n" +
+                        "  a: { " + getThrottleScript("second-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
+                        "  b: { " + getThrottleScript("second-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
+                        "  c: { " + getThrottleScript("second-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
+                        ")\n", false));
+
+                WorkflowRun run2 = secondJob.scheduleBuild2(0).waitForStart();
+
+                Computer first = story.j.jenkins.getNode("first-agent").toComputer();
+                Computer second = story.j.jenkins.getNode("second-agent").toComputer();
+                assertEquals(1, first.countBusy());
+                assertEquals(1, second.countBusy());
+
+                story.j.waitForMessage("Still waiting to schedule task", run1);
+                story.j.waitForMessage("Still waiting to schedule task", run2);
+
+                SemaphoreStep.success("wait-first-branch-a-job/1", null);
+                SemaphoreStep.waitForStart("wait-first-branch-c-job/1", run1);
+                assertEquals(1, first.countBusy());
+                assertEquals(1, second.countBusy());
+                SemaphoreStep.success("wait-first-branch-b-job/1", null);
+                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run1);
+                assertEquals(1, first.countBusy());
+                assertEquals(1, second.countBusy());
+                SemaphoreStep.success("wait-first-branch-c-job/1", null);
+                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run1);
+                assertEquals(1, first.countBusy());
+                assertEquals(1, second.countBusy());
+                SemaphoreStep.success("wait-second-branch-a-job/1", null);
+                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run1);
+                assertEquals(1, first.countBusy());
+                assertEquals(1, second.countBusy());
+                SemaphoreStep.success("wait-second-branch-b-job/1", null);
+                SemaphoreStep.success("wait-second-branch-c-job/1", null);
+
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(run1));
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(run2));
             }
         });
     }
@@ -246,12 +306,16 @@ public class ThrottleStepTest {
     private CpsFlowDefinition getJobFlow(String jobName, String category, String label) {
         // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
         // And I cannot figure out why. So for now...
-        return new CpsFlowDefinition("throttle('" + category + "') {\n" +
+        return new CpsFlowDefinition(getThrottleScript(jobName, category, label), false);
+    }
+
+    private String getThrottleScript(String jobName, String category, String label) {
+        return "throttle('" + category + "') {\n" +
                 "  echo 'hi there'\n" +
                 "  node('" + label + "') {\n" +
                 "    semaphore 'wait-" + jobName + "-job'\n" +
                 "  }\n" +
-                "}\n", false);
+                "}\n";
     }
 
     @Test
