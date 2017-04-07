@@ -133,9 +133,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                 }
                                 Run<?,?> r = Run.fromExternalizableId(entry.getKey());
-                                List<FlowNode> flowNodes = entry.getValue();
-                                if (r.isBuilding()) {
-                                    runCount += pipelinesOnNode(node, r, flowNodes);
+                                if (r != null) {
+                                    List<FlowNode> flowNodes = entry.getValue();
+                                    if (r.isBuilding()) {
+                                        runCount += pipelinesOnNode(node, r, flowNodes);
+                                    }
                                 }
                             }
                             // This would mean that there are as many or more builds currently running than are allowed.
@@ -282,10 +284,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
                             }
                             Run<?,?> r = Run.fromExternalizableId(entry.getKey());
-
-                            List<FlowNode> flowNodes = entry.getValue();
-                            if (r.isBuilding()) {
-                                totalRunCount += pipelinesOnAllNodes(r, flowNodes);
+                            if (r != null) {
+                                List<FlowNode> flowNodes = entry.getValue();
+                                if (r.isBuilding()) {
+                                    totalRunCount += pipelinesOnAllNodes(r, flowNodes);
+                                }
                             }
                         }
 
@@ -406,8 +409,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             PlaceholderTask placeholderTask = (PlaceholderTask)task;
             try {
                 FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
-                if (firstThrottle != null) {
-                    return ThrottleJobProperty.getCategoriesForRunAndFlowNode(placeholderTask.run().getExternalizableId(),
+                Run<?,?> r = placeholderTask.run();
+                if (firstThrottle != null && r != null) {
+                    return ThrottleJobProperty.getCategoriesForRunAndFlowNode(r.getExternalizableId(),
                             firstThrottle.getId());
                 }
             } catch (IOException | InterruptedException e) {

@@ -13,20 +13,35 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 public class ThrottleStep extends Step implements Serializable {
-    private String category;
+    private String categories;
 
     @DataBoundConstructor
-    public ThrottleStep(@Nonnull String category) {
-        this.category = category;
+    public ThrottleStep(@Nonnull String categories) {
+        this.categories = categories;
     }
 
     @Nonnull
-    public String getCategory() {
-        return category;
+    public String getCategories() {
+        return categories;
+    }
+
+    @Nonnull
+    public List<String> getCategoriesList() {
+        List<String> catList = new ArrayList<>();
+
+        StringTokenizer tokenizer = new StringTokenizer(categories, ",");
+        while (tokenizer.hasMoreTokens()) {
+            catList.add(tokenizer.nextToken().trim());
+        }
+
+        return catList;
     }
 
     @Override

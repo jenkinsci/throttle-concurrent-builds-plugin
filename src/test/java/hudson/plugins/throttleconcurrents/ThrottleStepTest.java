@@ -42,6 +42,7 @@ import static org.junit.Assert.assertTrue;
 
 public class ThrottleStepTest {
     private static final String ONE_PER_NODE = "one_per_node";
+    private static final String OTHER_ONE_PER_NODE = "other_one_per_node";
     private static final String TWO_TOTAL = "two_total";
 
     @Rule
@@ -69,10 +70,11 @@ public class ThrottleStepTest {
 
         ThrottleJobProperty.ThrottleCategory firstCat = new ThrottleJobProperty.ThrottleCategory(ONE_PER_NODE, 1, 0, null);
         ThrottleJobProperty.ThrottleCategory secondCat = new ThrottleJobProperty.ThrottleCategory(TWO_TOTAL, 0, 2, null);
+        ThrottleJobProperty.ThrottleCategory thirdCat = new ThrottleJobProperty.ThrottleCategory(OTHER_ONE_PER_NODE, 1, 0, null);
 
         ThrottleJobProperty.DescriptorImpl descriptor = story.j.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
         assertNotNull(descriptor);
-        descriptor.setCategories(Arrays.asList(firstCat, secondCat));
+        descriptor.setCategories(Arrays.asList(firstCat, secondCat, thirdCat));
     }
 
     @Test
@@ -107,6 +109,59 @@ public class ThrottleStepTest {
                 SemaphoreStep.success("wait-second-job/1", null);
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
 
+            }
+        });
+    }
+
+    @Test
+    public void multipleCategories() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                setupAgentsAndCategories();
+                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
+
+                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+
+                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
+                secondJob.setDefinition(getJobFlow("second", OTHER_ONE_PER_NODE, "second-agent"));
+
+                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+
+                WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
+                thirdJob.setDefinition(getJobFlow("third",
+                        ONE_PER_NODE + ", " + OTHER_ONE_PER_NODE,
+                        "on-agent"));
+
+                WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
+                story.j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
+                assertFalse(story.j.jenkins.getQueue().isEmpty());
+                Node n = story.j.jenkins.getNode("first-agent");
+                assertNotNull(n);
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+
+                Node n2 = story.j.jenkins.getNode("second-agent");
+                assertNotNull(n2);
+                assertEquals(1, n2.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+
+                SemaphoreStep.success("wait-first-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
+
+                SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+                assertTrue(story.j.jenkins.getQueue().isEmpty());
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, thirdJobFirstRun);
+
+                SemaphoreStep.success("wait-second-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+
+                SemaphoreStep.success("wait-third-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
             }
         });
     }
@@ -325,7 +380,8 @@ public class ThrottleStepTest {
             public void evaluate() throws Throwable {
                 setupAgentsAndCategories();
                 SnippetizerTester st = new SnippetizerTester(story.j);
-                st.assertRoundTrip(new ThrottleStep(ONE_PER_NODE), "throttle('" + ONE_PER_NODE + "') {\n    // some block\n}");
+                st.assertRoundTrip(new ThrottleStep(ONE_PER_NODE),
+                        "throttle('" + ONE_PER_NODE + "') {\n    // some block\n}");
             }
         });
     }

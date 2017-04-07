@@ -11,6 +11,8 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ThrottleStepExecution extends StepExecution {
     private final ThrottleStep step;
@@ -21,8 +23,8 @@ public class ThrottleStepExecution extends StepExecution {
     }
 
     @Nonnull
-    public String getCategory() {
-        return step.getCategory();
+    public List<String> getCategories() {
+        return step.getCategoriesList();
     }
 
     @Override
@@ -39,12 +41,13 @@ public class ThrottleStepExecution extends StepExecution {
         if (r != null && flowNode != null) {
             runId = r.getExternalizableId();
             flowNodeId = flowNode.getId();
-            listener.getLogger().println("Throttling in run " + runId + " for category " + getCategory());
-            descriptor.addThrottledPipelineForCategory(runId, flowNodeId, getCategory(), listener);
+            for (String category : getCategories()) {
+                descriptor.addThrottledPipelineForCategory(runId, flowNodeId, category, listener);
+            }
         }
 
         getContext().newBodyInvoker()
-                .withCallback(new Callback(runId, flowNodeId, getCategory()))
+                .withCallback(new Callback(runId, flowNodeId, getCategories()))
                 .start();
         return false;
     }
@@ -59,23 +62,25 @@ public class ThrottleStepExecution extends StepExecution {
         private String runId;
         @CheckForNull
         private String flowNodeId;
-        private String category;
+        private List<String> categories = new ArrayList<>();
 
 
         private static final long serialVersionUID = 1;
 
-        Callback(@CheckForNull String runId, @CheckForNull String flowNodeId, @Nonnull String category) {
+        Callback(@CheckForNull String runId, @CheckForNull String flowNodeId, @Nonnull List<String> categories) {
             this.runId = runId;
             this.flowNodeId = flowNodeId;
-            this.category = category;
+            this.categories.addAll(categories);
         }
 
         @Override protected void finished(StepContext context) throws Exception {
             if (runId != null && flowNodeId != null) {
-                ThrottleJobProperty.fetchDescriptor().removeThrottledPipelineForCategory(runId,
-                        flowNodeId,
-                        category,
-                        context.get(TaskListener.class));
+                for (String category : categories) {
+                    ThrottleJobProperty.fetchDescriptor().removeThrottledPipelineForCategory(runId,
+                            flowNodeId,
+                            category,
+                            context.get(TaskListener.class));
+                }
             }
         }
     }
