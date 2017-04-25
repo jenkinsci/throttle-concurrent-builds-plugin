@@ -60,7 +60,7 @@ public class ThrottleStep extends Step implements Serializable {
 
         @Override
         public String getDisplayName() {
-            return "Throttle execution of node blocks within this body";
+            return Messages.ThrottleStep_DisplayName();
         }
 
         @Override

@@ -415,6 +415,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                             firstThrottle.getId());
                 }
             } catch (IOException | InterruptedException e) {
+                LOGGER.log(Level.WARNING, "Error getting categories for pipeline {0}: {1}",
+                        new Object[] {task.getDisplayName(), e});
                 return new ArrayList<>();
             }
         }
