@@ -4,6 +4,7 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
 import hudson.util.FormValidation;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -38,7 +39,10 @@ public class ThrottleStep extends Step implements Serializable {
 
         StringTokenizer tokenizer = new StringTokenizer(categories, ",");
         while (tokenizer.hasMoreTokens()) {
-            catList.add(tokenizer.nextToken().trim());
+            String nextToken = tokenizer.nextToken().trim();
+            if (StringUtils.isNotEmpty(nextToken)) {
+                catList.add(nextToken);
+            }
         }
 
         return catList;
