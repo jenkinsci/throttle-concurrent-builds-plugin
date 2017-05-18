@@ -4,7 +4,6 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.jenkinsci.plugins.workflow.steps.BodyExecution;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -24,7 +23,7 @@ public class ThrottleStepExecution extends StepExecution {
 
     @Nonnull
     public List<String> getCategories() {
-        return step.getCategoriesList();
+        return step.getCategories();
     }
 
     @Override

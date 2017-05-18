@@ -4,7 +4,7 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
 import hudson.util.FormValidation;
-import org.apache.commons.lang.StringUtils;
+import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -14,38 +14,21 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.StringTokenizer;
 
 public class ThrottleStep extends Step implements Serializable {
-    private String categories;
+    private List<String> categories;
 
     @DataBoundConstructor
-    public ThrottleStep(@Nonnull String categories) {
+    public ThrottleStep(@Nonnull List<String> categories) {
         this.categories = categories;
     }
 
     @Nonnull
-    public String getCategories() {
+    public List<String> getCategories() {
         return categories;
-    }
-
-    @Nonnull
-    public List<String> getCategoriesList() {
-        List<String> catList = new ArrayList<>();
-
-        StringTokenizer tokenizer = new StringTokenizer(categories, ",");
-        while (tokenizer.hasMoreTokens()) {
-            String nextToken = tokenizer.nextToken().trim();
-            if (StringUtils.isNotEmpty(nextToken)) {
-                catList.add(nextToken);
-            }
-        }
-
-        return catList;
     }
 
     @Override
@@ -79,6 +62,14 @@ public class ThrottleStep extends Step implements Serializable {
 
         public FormValidation doCheckCategoryName(@QueryParameter String value) {
             return ThrottleJobProperty.fetchDescriptor().doCheckCategoryName(value);
+        }
+
+        public List<ThrottleJobProperty.ThrottleCategory> getCategories() {
+            return ThrottleJobProperty.fetchDescriptor().getCategories();
+        }
+
+        public ListBoxModel doFillCategoryItems() {
+            return ThrottleJobProperty.fetchDescriptor().doFillCategoryItems();
         }
     }
 

@@ -15,6 +15,7 @@ import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -31,8 +32,10 @@ import org.jvnet.hudson.test.RestartableJenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import static org.junit.Assert.assertEquals;
@@ -359,13 +362,26 @@ public class ThrottleStepTest {
     }
 
     private CpsFlowDefinition getJobFlow(String jobName, String category, String label) {
+        return getJobFlow(jobName, Collections.singletonList(category), label);
+    }
+
+    private CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label) {
         // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
         // And I cannot figure out why. So for now...
-        return new CpsFlowDefinition(getThrottleScript(jobName, category, label), false);
+        return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), false);
     }
 
     private String getThrottleScript(String jobName, String category, String label) {
-        return "throttle('" + category + "') {\n" +
+        return getThrottleScript(jobName, Collections.singletonList(category), label);
+    }
+
+    private String getThrottleScript(String jobName, List<String> categories, String label) {
+        List<String> quoted = new ArrayList<>();
+        for (String c : categories) {
+            quoted.add("'" + c + "'");
+        }
+
+        return "throttle([" + StringUtils.join(quoted, ", ") + "]) {\n" +
                 "  echo 'hi there'\n" +
                 "  node('" + label + "') {\n" +
                 "    semaphore 'wait-" + jobName + "-job'\n" +
@@ -380,8 +396,8 @@ public class ThrottleStepTest {
             public void evaluate() throws Throwable {
                 setupAgentsAndCategories();
                 SnippetizerTester st = new SnippetizerTester(story.j);
-                st.assertRoundTrip(new ThrottleStep(ONE_PER_NODE),
-                        "throttle('" + ONE_PER_NODE + "') {\n    // some block\n}");
+                st.assertRoundTrip(new ThrottleStep(Collections.singletonList(ONE_PER_NODE)),
+                        "throttle(['" + ONE_PER_NODE + "']) {\n    // some block\n}");
             }
         });
     }
