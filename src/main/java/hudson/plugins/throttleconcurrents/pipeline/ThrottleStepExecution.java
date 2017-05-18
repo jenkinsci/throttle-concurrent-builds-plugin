@@ -12,6 +12,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,7 +27,7 @@ public class ThrottleStepExecution extends StepExecution {
 
     @Nonnull
     public List<String> getCategories() {
-        return step.getCategories();
+        return Collections.unmodifiableList(step.getCategories());
     }
 
     private List<String> validateCategories(ThrottleJobProperty.DescriptorImpl descriptor, TaskListener listener) {
