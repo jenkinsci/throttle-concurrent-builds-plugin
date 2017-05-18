@@ -3,6 +3,7 @@ package hudson.plugins.throttleconcurrents.pipeline;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -11,7 +12,9 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ThrottleStepExecution extends StepExecution {
     private final ThrottleStep step;
@@ -24,6 +27,38 @@ public class ThrottleStepExecution extends StepExecution {
     @Nonnull
     public List<String> getCategories() {
         return step.getCategories();
+    }
+
+    private List<String> validateCategories(ThrottleJobProperty.DescriptorImpl descriptor, TaskListener listener) {
+        List<String> undefinedCategories = new ArrayList<>();
+        Set<String> duplicates = new HashSet<>();
+        List<String> unique = new ArrayList<>();
+
+        if (descriptor.getCategories().isEmpty()) {
+            undefinedCategories.addAll(getCategories());
+        } else {
+            for (String c : getCategories()) {
+                if (!unique.contains(c)) {
+                    unique.add(c);
+                } else {
+                    duplicates.add(c);
+                }
+                if (descriptor.getCategoryByName(c) == null) {
+                    undefinedCategories.add(c);
+                }
+            }
+        }
+
+        if (!duplicates.isEmpty()) {
+            listener.getLogger().println("One or more duplicate categories (" + StringUtils.join(duplicates, ", ")
+            + ") specified. Duplicates will be ignored.");
+        }
+
+        if (!undefinedCategories.isEmpty()) {
+            throw new IllegalArgumentException("One or more specified categories do not exist: " + StringUtils.join(undefinedCategories, ", "));
+        }
+
+        return unique;
     }
 
     @Override
@@ -40,7 +75,7 @@ public class ThrottleStepExecution extends StepExecution {
         if (r != null && flowNode != null) {
             runId = r.getExternalizableId();
             flowNodeId = flowNode.getId();
-            for (String category : getCategories()) {
+            for (String category : validateCategories(descriptor, listener)) {
                 descriptor.addThrottledPipelineForCategory(runId, flowNodeId, category, listener);
             }
         }

@@ -10,6 +10,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.Queue;
+import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.slaves.DumbSlave;
@@ -117,6 +118,43 @@ public class ThrottleStepTest {
     }
 
     @Test
+    public void duplicateCategories() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                setupAgentsAndCategories();
+
+                WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", false));
+
+                WorkflowRun b = j.scheduleBuild2(0).waitForStart();
+
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
+
+                story.j.assertLogContains("One or more duplicate categories (" + ONE_PER_NODE + ") specified. Duplicates will be ignored.", b);
+                story.j.assertLogContains("Hello", b);
+            }
+        });
+    }
+
+    @Test
+    public void undefinedCategories() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", false));
+
+                WorkflowRun b = j.scheduleBuild2(0).waitForStart();
+
+                story.j.assertBuildStatus(Result.FAILURE, story.j.waitForCompletion(b));
+                story.j.assertLogContains("One or more specified categories do not exist: undefined, also-undefined", b);
+                story.j.assertLogNotContains("Hello", b);
+            }
+        });
+    }
+
+    @Test
     public void multipleCategories() throws Exception {
         story.addStep(new Statement() {
             @Override
@@ -136,7 +174,7 @@ public class ThrottleStepTest {
 
                 WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
                 thirdJob.setDefinition(getJobFlow("third",
-                        ONE_PER_NODE + ", " + OTHER_ONE_PER_NODE,
+                        Arrays.asList(ONE_PER_NODE, OTHER_ONE_PER_NODE),
                         "on-agent"));
 
                 WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
