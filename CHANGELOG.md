@@ -1,13 +1,20 @@
 Changelog
 ===
 
-## 1.10.0
+## 2.0
 
-Release date: Coming soon
+Release date: (May 19, 2017)
 
 * [JENKINS-31801](https://issues.jenkins-ci.org/browse/JENKINS-31801) - 
-Add support of Jenkins Pipeline job throttling by category.
+Add support of Jenkins Pipeline job throttling by category via the `throttle()` step.
 [Documentation](README.md)
+* Update minimal Jenkins core version to `1.642.3`
+
+Compatibility notes:
+
+* The 2.0 release is fully binary compatible with the previous releases.
+* Usage of Throttle Job Property in Pipeline builds is considered as deprecated,.
+Although the behavior does not change in this release, it may change in later 2.x releases.
 
 ## 1.9.0 
 
