@@ -65,17 +65,17 @@ which define throttling behavior for Matrix master run and configuration runs.
 
 <!--TODO: Remove warning once JENKINS-31801 is integrated-->
 
-:exclamation: Pipeline support is coming soon ([JENKINS-31801](https://issues.jenkins-ci.org/browse/JENKINS-31801))
+### throttle() step
 
-In Jenkins Pipeline it is possible to throttle runs by categories.
+Starting from `throttle-concurrents-2.0` the plugin allows throttling particular Pipeline blocks by categories.
 For this purpose you can use the `throttle()` step.
-Throttling within a single job is not supported, use features provided by the `parallel()` step or define a special global category for the job.
+Throttling within a single job **is not supported**, use features provided by the `parallel()` step or define a special global category for the job.
 
 <!--TODO: Update example once JENKINS-31801 is integrated-->
 
 ```groovy
 // The script below triggers 6 subtasks in parallel.
-// Then tasks will be throttled according to the `myThrottleCategory` category settings.
+// Then tasks will be throttled according to the category settings.
 def labels = ['1', '2', '3', '4', '5', '6'] 
 def builders = [:]
 for (x in labels) {
@@ -89,10 +89,28 @@ for (x in labels) {
     }
 }
 
-throttle('myThrottleCategory') {
+throttle(['myThrottleCategory1', 'myThrottleCategory2']) {
   parallel builders
 }
 ```
+
+If the specified category is missing, `throttle()` execution will fail the run.
+
+### Throttling Pipeline via Job properties
+
+:exclamation: **Warning!** It is not recommended to use this option starting from `throttle-concurrents-2.0`.
+Use the `throttle()` step instead.
+
+Plugin supports definition of throttling settings via job properties starting from `throttle-concurrents-1.8.5`. 
+The behavior of such definition **may differ** from your expectation and **may change** in new plugin versions.
+
+Current behavior:
+
+* If the property is defined, Pipeline jobs will be throttled as any other project.
+* Pipeline job will be throttled on the top level as a single instance, it will be considered as a single job even is there are declarations like `parallel()`.
+* Node requirements will be considered for the Root Pipeline task only, so effectively only the master node will be checked
+
+Use this option at your own risk.
 
 # License
 
