@@ -69,7 +69,6 @@ which define throttling behavior for Matrix master run and configuration runs.
 
 Starting from `throttle-concurrents-2.0` the plugin allows throttling particular Pipeline blocks by categories.
 For this purpose you can use the `throttle()` step.
-Throttling within a single job **is not supported**, you would need to define a special global category for the job.
 
 How does it work?
 
