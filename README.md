@@ -69,9 +69,29 @@ which define throttling behavior for Matrix master run and configuration runs.
 
 Starting from `throttle-concurrents-2.0` the plugin allows throttling particular Pipeline blocks by categories.
 For this purpose you can use the `throttle()` step.
-Throttling within a single job **is not supported**, use features provided by the `parallel()` step or define a special global category for the job.
 
-<!--TODO: Update example once JENKINS-31801 is integrated-->
+How does it work?
+
+* If `throttle()` step is defined, all explicit and implicit `node()` invocations within this step will be throttled.
+* If `node()` step is defined within the `parallel()` block, each parallel branch will be throttled separately.
+* Throttling of Pipeline steps in `throttle()` will take other throttling logic like job properties in Pipeline and other job types.
+* If the specified category is missing, `throttle()` execution will fail the run.
+
+#### Examples
+
+**Example 1**: Throttling of node() runs
+
+```groovy
+// Throttle of a single operation
+throttle(['test_2']) {
+    node() {
+        sh "sleep 500"
+        echo "Done"
+    }
+}
+```
+
+**Example 2**: Throttling of parallel steps
 
 ```groovy
 // The script below triggers 6 subtasks in parallel.
@@ -94,7 +114,13 @@ throttle(['myThrottleCategory1', 'myThrottleCategory2']) {
 }
 ```
 
-If the specified category is missing, `throttle()` execution will fail the run.
+##### Unsupported use-cases
+
+This section contains links to the use-cases which **are not supported**
+
+* Throttling of code blocks without `node()` definition.
+Feature request:   [JENKINS-44411](https://issues.jenkins-ci.org/browse/JENKINS-44411).
+
 
 ### Throttling Pipeline via Job properties
 
