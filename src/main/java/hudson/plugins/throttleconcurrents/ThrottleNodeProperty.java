@@ -32,11 +32,6 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
 
     @Extension
     public static class DescriptorImpl extends NodePropertyDescriptor {
-        @Override
-        public String getDisplayName() {
-            // Display name is null to hide the property from users
-            return null;
-        }
 
         @Override
         public boolean isApplicableAsGlobal() {
@@ -45,7 +40,7 @@ public class ThrottleNodeProperty extends NodeProperty<Node> {
 
         @Override
         public boolean isApplicable(Class<? extends Node> targetType) {
-            return true;
+            return false;
         }
     }
 
