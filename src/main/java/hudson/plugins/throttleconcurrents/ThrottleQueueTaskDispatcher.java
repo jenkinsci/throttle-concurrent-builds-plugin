@@ -17,7 +17,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     // @Override on jenkins 4.127+ , but still compatible with 1.399
     public CauseOfBlockage canRun(Queue.Item item) {
-        return Throttler.throttleOnAllNodes(item.task);
+        return Throttler.throttleOnAllNodes(item);
     }
 
 }

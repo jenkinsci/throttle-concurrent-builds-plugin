@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?> 
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:p="/lib/hudson/project">
   <f:optionalBlock name="throttleEnabled"
                    title="${%Throttle Concurrent Builds}"
@@ -20,6 +21,17 @@
              field="maxConcurrentPerNode">
       <f:textbox />
     </f:entry>
+  
+  
+    <f:optionalBlock field="limitOneJobWithMatchingParams"
+                   title="${%Prevent multiple jobs with identical parameters from running concurrently}"
+                   inline="true">
+    <f:entry title="${%List of parameters to check (comma-separated)}"
+             field="paramsToUseForLimit">
+    <f:textbox />
+      </f:entry>
+    </f:optionalBlock>
+
     <j:if test="${!empty(descriptor.categories)}">
       <f:entry title="${%Multi-Project Throttle Category}">
         <j:forEach var="cat" items="${descriptor.categories}">
