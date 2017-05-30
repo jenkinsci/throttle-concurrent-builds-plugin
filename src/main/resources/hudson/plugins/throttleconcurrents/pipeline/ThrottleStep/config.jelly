@@ -1,0 +1,18 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+         xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <j:choose>
+        <j:when test="${!empty(descriptor.categories)}">
+            <f:entry title="${%Categories}">
+                <j:forEach var="cat" items="${descriptor.categories}">
+                    <f:checkbox name="categories" json="${cat.categoryName}" checked="${instance.categories.contains(cat.categoryName)}" />
+                    <label class="attach-previous">${cat.categoryName}</label>
+                    <st:nbsp/>
+                </j:forEach>
+            </f:entry>
+        </j:when>
+        <j:otherwise>
+            No categories configured
+        </j:otherwise>
+    </j:choose>
+</j:jelly>

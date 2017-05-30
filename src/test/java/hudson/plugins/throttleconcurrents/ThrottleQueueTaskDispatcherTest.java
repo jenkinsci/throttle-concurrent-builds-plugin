@@ -16,6 +16,7 @@
  */
 package hudson.plugins.throttleconcurrents;
 
+import com.gargoylesoftware.htmlunit.ElementNotFoundException;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlElement;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
@@ -26,6 +27,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlRadioButtonInput;
 import com.gargoylesoftware.htmlunit.html.HtmlSelect;
 
 import hudson.model.FreeStyleProject;
+import hudson.plugins.throttleconcurrents.testutils.HtmlUnitHelper;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -33,6 +35,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import org.jvnet.hudson.test.HudsonTestCase;
 
@@ -196,11 +199,11 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
         URL url = new URL(getURL()+configUrlSuffix);
         HtmlPage page = createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
-        List<HtmlButton> buttons = form.getByXPath(parentXPath+buttonsXPath);
+        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath+buttonsXPath);
         String buttonText = "Add Category";
         boolean buttonFound = false;
 
-        for(HtmlButton button: buttons) {
+        for(HtmlButton button : buttons) {
             if(button.getTextContent().equals(buttonText))
             {
                 buttonFound = true;
@@ -212,7 +215,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
                 input = form.getInputByName("_.maxConcurrentPerNode");
                 input.setValueAttribute(""+maxConcurrentPerNode);
 
-                buttons = form.getByXPath(parentXPath+buttonsXPath);
+                buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath+buttonsXPath);
                 buttonText = "Add Maximum Per Labeled Node";
                 buttonFound = false;
                 for(HtmlButton deeperButton: buttons) {
@@ -245,7 +248,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
         }
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
 
-        buttons = form.getByXPath(buttonsXPath);
+        buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         buttonText = saveButtonText;
         buttonFound = buttonFoundThusFormSubmitted(form, buttons, buttonText);
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
@@ -257,7 +260,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
         URL url = new URL(getURL()+project.getUrl()+configUrlSuffix);
         HtmlPage page = createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
-        List<HtmlButton> buttons = form.getByXPath(buttonsXPath);
+        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         String buttonText = saveButtonText;
         boolean buttonFound = false;
 
@@ -277,7 +280,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
                 checkbox = page.getElementByName("categories");
                 checkbox.click();
 
-                form.submit(button);
+                button.click();
                 break;
             }
         }
@@ -298,7 +301,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
         for(HtmlRadioButtonInput radio: radios) {
             radio.setChecked(radio.getValueAttribute().equals("hudson.slaves.DumbSlave"));
         }
-        List<HtmlButton> buttons = form.getByXPath(buttonsXPath);
+        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         String buttonText = "OK";
         boolean buttonFound = false;
 
@@ -306,7 +309,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
             if(button.getTextContent().equals(buttonText))
             {
                 buttonFound = true;
-                page = (HtmlPage)form.submit(button);
+                page = button.click();
                 List<HtmlForm> forms = page.getForms();
 
                 for(HtmlForm aForm: forms) {
@@ -329,7 +332,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
         }
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
 
-        buttons = form.getByXPath(buttonsXPath);
+        buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         buttonText = saveButtonText;
         buttonFound = buttonFoundThusFormSubmitted(form, buttons, buttonText);
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
@@ -343,7 +346,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
         URL url = new URL(getURL()+logUrlPrefix+logger+"/"+configUrlSuffix);
         HtmlPage page = createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
-        List<HtmlButton> buttons = form.getByXPath(buttonsXPath);
+        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         String buttonText = "Add";
         boolean buttonFound = false;
 
@@ -358,7 +361,13 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
                     input.setValueAttribute(logger);
                 }
                 HtmlSelect select = form.getSelectByName("level");
-                HtmlOption option = select.getOptionByValue("FINE");
+                HtmlOption option;
+                try {
+                    option = select.getOptionByValue("fine");
+                } catch (ElementNotFoundException e) {
+                    // gets upper case since Jenkins 1.519
+                    option = select.getOptionByValue("FINE");
+                }
                 select.setSelectedAttribute(option, true);
                 break;
             }
@@ -379,7 +388,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
             if(button.getTextContent().equals(buttonText))
             {
                 buttonFound = true;
-                form.submit(button);
+                button.click();
                 break;
             }
         }
