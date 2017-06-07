@@ -236,28 +236,33 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
 
     /**
-     * Get the list of categories for a given run ID (from {@link Run#getExternalizableId()}) and flow node ID (from
-     * {@link FlowNode#getId()}, if that run/flow node combination is recorded for one or more categories.
+     * Get the list of categories for a given run by flow node, if that run/flow node combination is recorded for one or more categories.
      *
-     * @param runId The run ID
-     * @param flowNodeId The flow node ID
-     * @return A list of category names. May be empty.
+     * @param run the run
+     * @return a map (possibly empty) from {@link FlowNode#getId} to a list of category names (possibly empty)
      */
     @Nonnull
-    static List<String> getCategoriesForRunAndFlowNode(@Nonnull String runId, @Nonnull String flowNodeId) {
-        List<String> categories = new ArrayList<>();
+    static Map<String, List<String>> getCategoriesForRunByFlowNode(@Nonnull Run<?, ?> run) {
+        Map<String, List<String>> categoriesByNode = new HashMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
 
         for (ThrottleCategory cat : descriptor.getCategories()) {
             Map<String,List<String>> runs = descriptor.getThrottledPipelinesForCategory(cat.getCategoryName());
-
-            if (!runs.isEmpty() && runs.containsKey(runId) && runs.get(runId).contains(flowNodeId)) {
-                categories.add(cat.getCategoryName());
+            List<String> nodeIds = runs.get(run.getExternalizableId());
+            if (nodeIds != null) {
+                for (String nodeId : nodeIds) {
+                    List<String> categories = categoriesByNode.get(nodeId);
+                    if (categories == null) {
+                        categories = new ArrayList<>();
+                        categoriesByNode.put(nodeId, categories);
+                    }
+                    categories.add(cat.getCategoryName());
+                }
             }
         }
 
-        return categories;
+        return categoriesByNode;
     }
 
     /**

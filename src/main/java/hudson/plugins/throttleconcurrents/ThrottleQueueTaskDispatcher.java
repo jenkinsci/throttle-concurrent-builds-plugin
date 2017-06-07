@@ -406,21 +406,27 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return paramsList;
     }
 
+    @Nonnull
     private List<String> categoriesForPipeline(Task task) {
         if (task instanceof PlaceholderTask) {
             PlaceholderTask placeholderTask = (PlaceholderTask)task;
             Run<?, ?> r = placeholderTask.run();
             if (r != null) {
-                try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
-                    FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
-                    if (firstThrottle != null) {
-                        return ThrottleJobProperty.getCategoriesForRunAndFlowNode(r.getExternalizableId(),
-                                firstThrottle.getId());
+                Map<String, List<String>> categoriesByFlowNode = ThrottleJobProperty.getCategoriesForRunByFlowNode(r);
+                if (!categoriesByFlowNode.isEmpty()) {
+                    try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
+                        FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
+                        if (firstThrottle != null) {
+                            List<String> categories = categoriesByFlowNode.get(firstThrottle.getId());
+                            if (categories != null) {
+                                return categories;
+                            }
+                        }
+                    } catch (IOException | InterruptedException e) {
+                        LOGGER.log(Level.WARNING, "Error getting categories for pipeline {0}: {1}",
+                                new Object[] {task.getDisplayName(), e});
+                        return new ArrayList<>();
                     }
-                } catch (IOException | InterruptedException e) {
-                    LOGGER.log(Level.WARNING, "Error getting categories for pipeline {0}: {1}",
-                            new Object[] {task.getDisplayName(), e});
-                    return new ArrayList<>();
                 }
             }
         }
