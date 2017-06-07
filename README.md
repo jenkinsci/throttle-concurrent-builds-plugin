@@ -79,9 +79,10 @@ How does it work?
 
 #### Warning regarding restarting master
 
-Due to a deadlock (as described in [JENKINS-44747](https://issues.jenkins-ci.org/browse/JENKINS-44747)), a change has 
-been made which can theoretically result in throttle categories being ignored in running Pipelines immediately after the 
-Jenkins master has been restarted. This will be investigated further, but was considered a necessary change in order to 
+:exclamation: Due to a deadlock (as described in [JENKINS-44747](https://issues.jenkins-ci.org/browse/JENKINS-44747)), a 
+change has been made which can theoretically result in throttle categories being ignored in running Pipelines 
+immediately after the Jenkins master has been restarted. This will be investigated further in 
+[JENKINS-44756](https://issues.jenkins-ci.org/browse/JENKINS-44756), but was considered a necessary change in order to 
 resolve the deadlock scenario.
 
 #### Examples
