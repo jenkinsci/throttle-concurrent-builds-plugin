@@ -409,17 +409,19 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private List<String> categoriesForPipeline(Task task) {
         if (task instanceof PlaceholderTask) {
             PlaceholderTask placeholderTask = (PlaceholderTask)task;
-            try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
-                FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
-                Run<?,?> r = placeholderTask.run();
-                if (firstThrottle != null && r != null) {
-                    return ThrottleJobProperty.getCategoriesForRunAndFlowNode(r.getExternalizableId(),
-                            firstThrottle.getId());
+            Run<?, ?> r = placeholderTask.run();
+            if (r != null) {
+                try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
+                    FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
+                    if (firstThrottle != null) {
+                        return ThrottleJobProperty.getCategoriesForRunAndFlowNode(r.getExternalizableId(),
+                                firstThrottle.getId());
+                    }
+                } catch (IOException | InterruptedException e) {
+                    LOGGER.log(Level.WARNING, "Error getting categories for pipeline {0}: {1}",
+                            new Object[] {task.getDisplayName(), e});
+                    return new ArrayList<>();
                 }
-            } catch (IOException | InterruptedException e) {
-                LOGGER.log(Level.WARNING, "Error getting categories for pipeline {0}: {1}",
-                        new Object[] {task.getDisplayName(), e});
-                return new ArrayList<>();
             }
         }
         return new ArrayList<>();
