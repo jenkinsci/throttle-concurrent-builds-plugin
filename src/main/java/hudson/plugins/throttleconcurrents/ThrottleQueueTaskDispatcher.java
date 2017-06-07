@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
@@ -42,6 +43,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.support.concurrent.Timeout;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.PlaceholderTask;
 
 @Extension
@@ -407,7 +409,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private List<String> categoriesForPipeline(Task task) {
         if (task instanceof PlaceholderTask) {
             PlaceholderTask placeholderTask = (PlaceholderTask)task;
-            try {
+            try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
                 FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
                 Run<?,?> r = placeholderTask.run();
                 if (firstThrottle != null && r != null) {
