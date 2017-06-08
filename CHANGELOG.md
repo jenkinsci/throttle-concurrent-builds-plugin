@@ -1,13 +1,23 @@
 Changelog
 ===
 
+## 2.0.1
+
+Release date: (June 07, 2017)
+
+* [JENKINS-44747](https://issues.jenkins-ci.org/browse/JENKINS-44747) -
+Prevent indefinite hanging of the Jenkins Queue when restarting Jenkins with pending Pipeline runs (regression in `2.0`).
+
 ## 2.0
+
+:exclamation: This version causes a critical issue in Jenkins ([JENKINS-44747](https://issues.jenkins-ci.org/browse/JENKINS-44747)), use `2.0.1` or above.
+The introduced Pipeline support is also not complete, see [this warning](README.md#warning-regarding-restarting-master).
 
 Release date: (May 19, 2017)
 
 * [JENKINS-31801](https://issues.jenkins-ci.org/browse/JENKINS-31801) - 
-Add support of Jenkins Pipeline job throttling by category via the `throttle()` step.
-[Documentation](README.md)
+Add partial support of Jenkins Pipeline job throttling by category via the `throttle()` step.
+[Documentation](README.md#throttle-step)
 * Update minimal Jenkins core version to `1.642.3`
 
 Compatibility notes:
