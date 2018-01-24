@@ -24,8 +24,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -313,7 +315,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         Map<String,List<FlowNode>> throttledPipelines = new TreeMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
-        for (Map.Entry<String,List<String>> currentPipeline : descriptor.getThrottledPipelinesForCategory(category).entrySet()) {
+	    final Set<Map.Entry<String, List<String>>> pipelinesForCategoriesEntries = descriptor.getThrottledPipelinesForCategory(category)
+			    .entrySet();
+	    final Set<Map.Entry<String, List<String>>> clone = new HashSet(pipelinesForCategoriesEntries);
+	    for (Map.Entry<String,List<String>> currentPipeline : clone) {
             Run<?, ?> flowNodeRun = Run.fromExternalizableId(currentPipeline.getKey());
             List<FlowNode> flowNodes = new ArrayList<>();
 
