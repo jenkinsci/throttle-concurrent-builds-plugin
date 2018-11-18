@@ -1,16 +1,19 @@
 package hudson.plugins.throttleconcurrents;
 
-import hudson.model.AbstractProject;
-import hudson.model.FreeStyleProject;
-import hudson.model.Job;
+import hudson.model.*;
 import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
+import net.sf.json.JSONObject;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.Issue;
+import org.kohsuke.stapler.StaplerRequest;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import static org.mockito.Mockito.mock;
 
 public class ThrottleJobPropertyTest extends HudsonTestCase {
 
@@ -129,6 +132,31 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertTrue(storedCategories instanceof CopyOnWriteArrayList);
     }
 
+    @Issue("JENKINS-54578")
+    public void testDescriptorImpl_should_be_able_to_clear_configured_categories() throws Descriptor.FormException {
+        ThrottleJobProperty.DescriptorImpl descriptor = new ThrottleJobProperty.DescriptorImpl();
+
+        assertTrue(descriptor.getCategories() instanceof CopyOnWriteArrayList);
+        assertTrue(descriptor.getCategories().isEmpty());
+
+        final ThrottleJobProperty.ThrottleCategory category = new ThrottleJobProperty.ThrottleCategory(
+                anyString(), anyInt(), anyInt(), null);
+
+        ArrayList<ThrottleJobProperty.ThrottleCategory> unsafeList =
+                new ArrayList<ThrottleJobProperty.ThrottleCategory>() {{
+                    add(category);
+                }};
+
+        descriptor.setCategories(unsafeList);
+
+        assertFalse(descriptor.getCategories().isEmpty());
+
+        final StaplerRequest req = mock(StaplerRequest.class);
+        final JSONObject formData = new JSONObject(false);
+        descriptor.configure(req, formData);
+
+        assertTrue(descriptor.getCategories().isEmpty());
+    }
 
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
         jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
