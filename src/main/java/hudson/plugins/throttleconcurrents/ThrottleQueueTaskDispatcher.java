@@ -38,6 +38,8 @@ import org.acegisecurity.context.SecurityContextHolder;
 
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.actions.BodyInvocationAction;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionList;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
@@ -476,7 +478,44 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return 0;
         }
 
+        // Note that this counts flyweight executors in its calculation, which may be a problem if flyweight executors
+        // are being leaked by other plugins.
+        return buildsOfProjectOnNodeImpl(node, task);
+    }
+
+    private int buildsOfProjectOnAllNodes(Task task) {
+        if (!shouldBeThrottled(task, getThrottleJobProperty(task))) {
+            return 0;
+        }
+
+        // Note that we can't use WorkflowJob.class because it is not on this plugin's classpath.
+        if (task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+            return buildsOfPipelineJob(task);
+        } else {
+            return buildsOfProjectOnAllNodesImpl(task);
+        }
+    }
+
+    private int buildsOfPipelineJob(Task task) {
         int runCount = 0;
+
+        for (FlowExecution flowExecution : FlowExecutionList.get()) {
+            try {
+                final Queue.Executable executable = flowExecution.getOwner().getExecutable();
+                if (executable != null && task.equals(executable.getParent())) {
+                    runCount++;
+                }
+            } catch (IOException e) {
+                LOGGER.log(Level.WARNING, "Error getting number of builds for pipeline {0}: {1}", new Object[] {task.getDisplayName(), e});
+            }
+        }
+
+        return runCount;
+    }
+
+    private int buildsOfProjectOnNodeImpl(Node node, Task task) {
+        int runCount = 0;
+
         LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
@@ -496,12 +535,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
-    private int buildsOfProjectOnAllNodes(Task task) {
+    private int buildsOfProjectOnAllNodesImpl(Task task) {
         final Jenkins jenkins = Jenkins.getActiveInstance();
         int totalRunCount = buildsOfProjectOnNode(jenkins, task);
 
         for (Node node : jenkins.getNodes()) {
-            totalRunCount += buildsOfProjectOnNode(node, task);
+            totalRunCount += buildsOfProjectOnNodeImpl(node, task);
         }
         return totalRunCount;
     }

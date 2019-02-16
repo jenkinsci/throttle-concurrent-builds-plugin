@@ -80,6 +80,7 @@ public class ThrottleStepTest {
         ThrottleJobProperty.DescriptorImpl descriptor = story.j.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
         assertNotNull(descriptor);
         descriptor.setCategories(Arrays.asList(firstCat, secondCat, thirdCat));
+        descriptor.save(); // required for tests that restart Jenkins
     }
 
     @Test
@@ -391,6 +392,122 @@ public class ThrottleStepTest {
                 hasPlaceholderTaskForRun(n, thirdJobFirstRun);
 
                 SemaphoreStep.success("wait-0-second-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+
+                SemaphoreStep.success("wait-0-third-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
+            }
+        });
+    }
+
+    @Test
+    public void twoTotalWithJobLevelThrottlingAndRestart() throws Exception {
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                setupAgentsAndCategories();
+                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                firstJob.setDefinition(getJobFlowWithoutThrottleStep("first", "first-agent", 3));
+                firstJob.addProperty(new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Arrays.asList(TWO_TOTAL), // categories
+                        true, // throttleEnabled
+                        "category", // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+
+                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.success("wait-0-first-job/1", null);
+                SemaphoreStep.waitForStart("wait-1-first-job/1", firstJobFirstRun);
+
+                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
+                secondJob.setDefinition(getJobFlowWithoutThrottleStep("second", "second-agent", 3));
+                secondJob.addProperty(new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Arrays.asList(TWO_TOTAL), // categories
+                        true, // throttleEnabled
+                        "category", // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+
+                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.success("wait-0-second-job/1", null);
+                SemaphoreStep.waitForStart("wait-1-second-job/1", secondJobFirstRun);
+
+                WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
+                thirdJob.setDefinition(getJobFlowWithoutThrottleStep("third", "on-agent", 1));
+                thirdJob.addProperty(new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Arrays.asList(TWO_TOTAL), // categories
+                        true, // throttleEnabled
+                        "category", // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+
+                QueueTaskFuture<WorkflowRun> thirdJobFirstRunFuture = thirdJob.scheduleBuild2(0);
+                story.j.jenkins.getQueue().maintain();
+                assertFalse(story.j.jenkins.getQueue().isEmpty());
+                Queue.Item queuedItem = Iterables.getOnlyElement(Arrays.asList(story.j.jenkins.getQueue().getItems()));
+                assertEquals(
+                        Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
+                        queuedItem.getCauseOfBlockage().getShortDescription());
+                Node n = story.j.jenkins.getNode("first-agent");
+                assertNotNull(n);
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+
+                Node n2 = story.j.jenkins.getNode("second-agent");
+                assertNotNull(n2);
+                assertEquals(1, n2.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+            }
+        });
+        story.addStep(new Statement() {
+            @Override
+            public void evaluate() throws Throwable {
+                WorkflowRun firstJobFirstRun =
+                        story.j.jenkins.getItemByFullName("first-job", WorkflowJob.class).getLastBuild();
+                SemaphoreStep.success("wait-1-first-job/1", null);
+                SemaphoreStep.waitForStart("wait-2-first-job/1", firstJobFirstRun);
+
+                WorkflowRun secondJobFirstRun =
+                        story.j.jenkins.getItemByFullName("second-job", WorkflowJob.class).getLastBuild();
+                SemaphoreStep.success("wait-1-second-job/1", null);
+                SemaphoreStep.waitForStart("wait-2-second-job/1", secondJobFirstRun);
+
+                Node n = story.j.jenkins.getNode("first-agent");
+                assertNotNull(n);
+                Node n2 = story.j.jenkins.getNode("second-agent");
+                assertNotNull(n2);
+
+                story.j.jenkins.getQueue().maintain();
+                assertFalse(story.j.jenkins.getQueue().isEmpty());
+                Queue.Item queuedItem = Iterables.getOnlyElement(Arrays.asList(story.j.jenkins.getQueue().getItems()));
+                assertEquals(
+                        Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
+                        queuedItem.getCauseOfBlockage().getShortDescription());
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+
+                assertEquals(1, n2.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+
+                SemaphoreStep.success("wait-2-first-job/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
+                SemaphoreStep.waitForStart("wait-0-third-job/1", null);
+                WorkflowRun thirdJobFirstRun =
+                        story.j.jenkins.getItemByFullName("third-job", WorkflowJob.class).getLastBuild();
+                assertTrue(story.j.jenkins.getQueue().isEmpty());
+                assertEquals(1, n.toComputer().countBusy());
+                hasPlaceholderTaskForRun(n, thirdJobFirstRun);
+
+                SemaphoreStep.success("wait-2-second-job/1", null);
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
 
                 SemaphoreStep.success("wait-0-third-job/1", null);
