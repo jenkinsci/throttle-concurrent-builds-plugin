@@ -118,7 +118,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         assertEquals(2, waterMark.getExecutorWaterMark());
     }
     
-    public void testThrottlingWithCategory() throws Exception {
+    public void testThrottlingWithCategoryPerNode() throws Exception {
         setupSlave();
         setupSecurity();
         final String category = "category";
@@ -171,6 +171,54 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
     
+    public void testThrottlingWithCategoryTotal() throws Exception {
+        setupSlave();
+        setupSecurity();
+        final String category = "category";
+
+        ThrottleJobProperty.DescriptorImpl descriptor =
+                (ThrottleJobProperty.DescriptorImpl) jenkins.getDescriptor(ThrottleJobProperty.class);
+        descriptor.setCategories(Arrays.asList(new ThrottleJobProperty.ThrottleCategory(
+                category,
+                null, // maxConcurrentPerNode
+                1, // maxConcurrentTotal
+                Collections.<NodeLabeledPair>emptyList())));
+
+        FreeStyleProject p1 = createFreeStyleProject();
+        p1.setAssignedNode(slave);
+        p1.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Arrays.asList(category), // categories
+                true, // throttleEnabled
+                "category", // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
+        p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+
+        FreeStyleProject p2 = createFreeStyleProject();
+        p2.setAssignedNode(slave);
+        p2.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Arrays.asList(category), // categories
+                true, // throttleEnabled
+                "category", // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
+        p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+
+        p1.scheduleBuild2(0);
+        p2.scheduleBuild2(0);
+
+        waitUntilNoActivity();
+
+        // throttled, and only one build runs at the same time.
+        assertEquals(1, waterMark.getExecutorWaterMark());
+    }
+
     @Bug(25326)
     public void testThrottlingWithCategoryInFolder() throws Exception {
         setupSlave();
