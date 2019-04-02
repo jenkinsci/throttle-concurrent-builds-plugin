@@ -12,6 +12,7 @@ import hudson.model.JobPropertyDescriptor;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.util.CopyOnWriteMap;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import hudson.Util;
@@ -508,7 +509,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                     return throttledPipelinesByCategory.get(category);
                 }
             }
-            return new TreeMap<>();
+            return new CopyOnWriteMap.Tree<>();
         }
 
         public synchronized void addThrottledPipelineForCategory(@Nonnull String runId,
@@ -524,7 +525,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
                 List<String> flowNodes = currentPipelines.get(runId);
                 if (flowNodes == null) {
-                    flowNodes = new ArrayList<>();
+                    flowNodes = new CopyOnWriteArrayList<>();
                 }
                 flowNodes.add(flowNodeId);
                 currentPipelines.put(runId, flowNodes);
