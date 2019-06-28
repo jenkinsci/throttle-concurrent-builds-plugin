@@ -332,7 +332,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
         if (paramsToCompareSize > 0) {
+            LOGGER.log(Level.FINE, "filter itemParams " + itemParams +
+                    " to only pick " + paramsToCompare);
             itemParams = doFilterParams(paramsToCompare, itemParams);
+            LOGGER.log(Level.FINE, "filtering got " + itemParams.size() +
+                    " itemParams : " + itemParams );
         }
 
         String itemTaskName = item.task.getName();
@@ -349,7 +353,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         parentTask.getOwnerTask().getName().equals(itemTaskName)) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                     if (paramsToCompareSize > 0) {
+                        LOGGER.log(Level.FINE, "filter executingUnitParams " + executingUnitParams +
+                                " to only pick " + paramsToCompare);
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+                        LOGGER.log(Level.FINE, "filtering got " + executingUnitParams.size() +
+                                " executingUnitParams : " + executingUnitParams );
                     }
 
                     // An already executing work unit (of the same name) can have more
