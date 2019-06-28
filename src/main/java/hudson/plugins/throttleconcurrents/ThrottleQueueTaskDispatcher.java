@@ -339,7 +339,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
         if (paramsToCompare.size() > 0) {
+            LOGGER.log(Level.FINE, "filter itemParams " + itemParams +
+                    " to only pick " + paramsToCompare);
             itemParams = doFilterParams(paramsToCompare, itemParams);
+            LOGGER.log(Level.FINE, "filtering got " + itemParams.size() +
+                    " itemParams : " + itemParams );
         }
 
         if (computer != null) {
@@ -350,7 +354,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (currentExecutable != null &&
                         parentTask.getOwnerTask().getName().equals(item.task.getName())) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+
+                    LOGGER.log(Level.FINE, "filter executingUnitParams " + executingUnitParams +
+                                " to only pick " + paramsToCompare);
                     executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+                    LOGGER.log(Level.FINE, "filtering got " + executingUnitParams.size() +
+                                " executingUnitParams : " + executingUnitParams );
+                    }
 
                     if (executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
