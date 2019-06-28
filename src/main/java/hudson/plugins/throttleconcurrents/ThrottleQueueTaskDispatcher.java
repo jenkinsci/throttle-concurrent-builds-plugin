@@ -336,9 +336,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         Computer computer = node.toComputer();
         List<String> paramsToCompare = tjp.getParamsToCompare();
+        Integer paramsToCompareSize = paramsToCompare.size();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
-        if (paramsToCompare.size() > 0) {
+        if (paramsToCompareSize > 0) {
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
 
@@ -351,7 +352,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (currentExecutable != null &&
                         parentTask.getOwnerTask().getName().equals(itemTaskName)) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
-                    if (paramsToCompare.size() > 0) {
+                    if (paramsToCompareSize > 0) {
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
                     }
 
