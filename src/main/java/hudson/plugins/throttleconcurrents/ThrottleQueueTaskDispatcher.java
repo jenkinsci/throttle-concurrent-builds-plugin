@@ -335,6 +335,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         String itemTaskName = item.task.getName();
+        // Look at all executors of specified node => computer,
+        // and what work units they are busy with (if any) - and
+        // whether one of these executing units is an instance
+        // of the queued item we were asked to compare to.
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
                 // TODO: refactor into a nameEquals helper method
@@ -347,6 +351,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
                     }
 
+                    // An already executing work unit (of the same name) can have more
+                    // parameters than the queued item, e.g. due to env injection or by
+                    // unfiltered inheritance of "unsupported officially" from a caller.
+                    // Note that similar inheritance can also get more parameters into
+                    // the queued item than is visibly declared in its job configuration.
+                    // We check here whether the interesting (or all, if not filtered)
+                    // specified params of the queued item are same (glorified key=value
+                    // entries) as ones used in a running work unit, in any order.
                     if (executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
                                 ") with identical parameters (" +
