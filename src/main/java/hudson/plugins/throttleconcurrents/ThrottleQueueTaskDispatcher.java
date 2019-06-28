@@ -350,7 +350,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (currentExecutable != null &&
                         parentTask.getOwnerTask().getName().equals(item.task.getName())) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
-                    executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+                    if (paramsToCompare.size() > 0) {
+                        executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+                    }
 
                     if (executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
