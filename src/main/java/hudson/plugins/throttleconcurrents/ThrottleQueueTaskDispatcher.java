@@ -393,6 +393,16 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 newParams.add(p);
             }
         }
+        if (newParams.size() == 0 ) {
+            LOGGER.log(Level.WARNING, "Error selecting params, got no hits of " +
+                    params + " in " + OriginalParams +
+                    " : is the job configuration valid?");
+        } else if (newParams.size() < params.size() ) {
+            LOGGER.log(Level.WARNING, "Error selecting params, not all of " +
+                    params + " were present in " + OriginalParams +
+                    " : is the job configuration valid?");
+        }
+
         return newParams;
     }
 
