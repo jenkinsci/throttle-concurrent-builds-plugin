@@ -347,7 +347,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     if (executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
                                 ") with identical parameters (" +
-                                executingUnitParams + ") is already running.");
+                                executingUnitParams + ") is already running " +
+                                "on node '" + node.getDisplayName() + "'.");
                         return true;
                     }
                 }
