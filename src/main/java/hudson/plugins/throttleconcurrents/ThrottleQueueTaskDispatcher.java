@@ -333,7 +333,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         if (paramsToCompareSize > 0) {
             LOGGER.log(Level.FINE, "filter itemParams " + itemParams +
-                    " to only pick " + paramsToCompare);
+                    " (from queue) to only pick up to " + paramsToCompareSize +
+                    ": " + paramsToCompare + " (from throttle config)");
             itemParams = doFilterParams(paramsToCompare, itemParams);
             LOGGER.log(Level.FINE, "filtering got " + itemParams.size() +
                     " itemParams : " + itemParams );
@@ -353,18 +354,26 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         parentTask.getOwnerTask().getName().equals(itemTaskName)) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                     if (paramsToCompareSize > 0) {
-                        LOGGER.log(Level.FINE, "filter executingUnitParams " + executingUnitParams +
-                                " to only pick " + paramsToCompare);
+                        LOGGER.log(Level.FINE, "filter executingUnitParams" +
+                                " on " + computer.getDisplayName() + "#" + exec.getNumber() +
+                                " in build (" + exec.getCurrentWorkUnit() + ") from original " +
+                                executingUnitParams + " to only pick up to " +
+                                paramsToCompareSize + ": " + paramsToCompare);
                         executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
                         LOGGER.log(Level.FINE, "filtering got " + executingUnitParams.size() +
-                                " executingUnitParams : " + executingUnitParams );
-                    }
+                                " executingUnitParams : " + executingUnitParams +
+                                " on " + computer.getDisplayName() + "#" + exec.getNumber() +
+                                " in build (" + exec.getCurrentWorkUnit() + ")");
+                    } // else we'll compare all params, not a subset
 
                     // An already executing work unit (of the same name) can have more
                     // parameters than the queued item, e.g. due to env injection or by
                     // unfiltered inheritance of "unsupported officially" from a caller.
                     // Note that similar inheritance can also get more parameters into
                     // the queued item than is visibly declared in its job configuration.
+                    // Normally the job configuration should declare all params that are
+                    // listed in its throttle configuration. Jenkins may forbid passing
+                    // undeclared parameters anyway, due to security concerns by default.
                     // We check here whether the interesting (or all, if not filtered)
                     // specified params of the queued item are same (glorified key=value
                     // entries) as ones used in a running work unit, in any order.
@@ -385,29 +394,34 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     /**
      * Filter job parameters to only include parameters used for throttling
-     * @param params
-     * @param OriginalParams
-     * @return
+     * @param paramsToCompare - a list of Strings with parameter names
+     * @param OriginalParams - a list of ParameterValue descendants whose name fields should match
+     * @return a list of ParameterValue descendants whose name fields did match, entries copied from OriginalParams
      */
-    private List<ParameterValue> doFilterParams(List<String> params, List<ParameterValue> OriginalParams) {
-        if (params.isEmpty()) {
+    private List<ParameterValue> doFilterParams(List<String> paramsToCompare, List<ParameterValue> OriginalParams) {
+        if (paramsToCompare.isEmpty()) {
+            LOGGER.log(Level.FINE, "doFilterParams(): paramsToCompare.isEmpty() => return OriginalParams");
             return OriginalParams;
         }
 
         List<ParameterValue> newParams = new ArrayList<ParameterValue>();
+        LOGGER.log(Level.FINE, "doFilterParams(): filtering by paramsToCompare = " + paramsToCompare);
 
         for (ParameterValue p : OriginalParams) {
-            if (params.contains(p.getName())) {
+            LOGGER.log(Level.FINE, "doFilterParams(): checking if original " +
+                p.getName() + " is on our list of paramsToCompare?.." );
+            if (paramsToCompare.contains(p.getName())) {
+                LOGGER.log(Level.FINE, "doFilterParams(): we have a hit in OriginalParams: " + p);
                 newParams.add(p);
             }
         }
         if (newParams.size() == 0 ) {
-            LOGGER.log(Level.WARNING, "Error selecting params, got no hits of " +
-                    params + " in " + OriginalParams +
+            LOGGER.log(Level.WARNING, "doFilterParams(): Error selecting params," +
+                    " got no hits of " + paramsToCompare + " in " + OriginalParams +
                     " : is the job configuration valid?");
-        } else if (newParams.size() < params.size() ) {
-            LOGGER.log(Level.WARNING, "Error selecting params, not all of " +
-                    params + " were present in " + OriginalParams +
+        } else if (newParams.size() < paramsToCompare.size() ) {
+            LOGGER.log(Level.WARNING, "doFilterParams(): Error selecting params," +
+                    " not all of " + paramsToCompare + " were present in " + OriginalParams +
                     " : is the job configuration valid?");
         }
 
