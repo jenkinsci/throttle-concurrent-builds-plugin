@@ -340,7 +340,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         if (paramsToCompare.size() > 0) {
             LOGGER.log(Level.FINE, "filter itemParams " + itemParams +
-                    " to only pick " + paramsToCompare);
+                    " (from queue) to only pick up to " + paramsToCompare.size() +
+                    ": " + paramsToCompare + " (from throttle config)");
             itemParams = doFilterParams(paramsToCompare, itemParams);
             LOGGER.log(Level.FINE, "filtering got " + itemParams.size() +
                     " itemParams : " + itemParams );
@@ -355,12 +356,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         parentTask.getOwnerTask().getName().equals(item.task.getName())) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
 
-                    LOGGER.log(Level.FINE, "filter executingUnitParams " + executingUnitParams +
-                                " to only pick " + paramsToCompare);
+                    LOGGER.log(Level.FINE, "filter executingUnitParams" +
+                                " on " + computer.getDisplayName() + "#" + exec.getNumber() +
+                                " in build (" + exec.getCurrentWorkUnit() + ") from original " +
+                                executingUnitParams + " to only pick up to " +
+                                paramsToCompare.size() + ": " + paramsToCompare);
                     executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
                     LOGGER.log(Level.FINE, "filtering got " + executingUnitParams.size() +
-                                " executingUnitParams : " + executingUnitParams );
-                    }
+                                " executingUnitParams : " + executingUnitParams +
+                                " on " + computer.getDisplayName() + "#" + exec.getNumber() +
+                                " in build (" + exec.getCurrentWorkUnit() + ")");
+                    // if nothing filtered away, we'll compare all params, not a subset
 
                     if (executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
@@ -379,26 +385,34 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     /**
      * Filter job parameters to only include parameters used for throttling
+     * @param paramsToCompare - a list of Strings with parameter names
+     * @param OriginalParams - a list of ParameterValue descendants whose name fields should match
+     * @return a list of ParameterValue descendants whose name fields did match, entries copied from OriginalParams
      */
     private List<ParameterValue> doFilterParams(List<String> paramsToCompare, List<ParameterValue> OriginalParams) {
         if (paramsToCompare.isEmpty()) {
+            LOGGER.log(Level.FINE, "doFilterParams(): paramsToCompare.isEmpty() => return OriginalParams");
             return OriginalParams;
         }
 
         List<ParameterValue> newParams = new ArrayList<ParameterValue>();
+        LOGGER.log(Level.FINE, "doFilterParams(): filtering by paramsToCompare = " + paramsToCompare);
 
         for (ParameterValue p : OriginalParams) {
+            LOGGER.log(Level.FINE, "doFilterParams(): checking if original " +
+                p.getName() + " is on our list of paramsToCompare?.." );
             if (paramsToCompare.contains(p.getName())) {
+                LOGGER.log(Level.FINE, "doFilterParams(): we have a hit in OriginalParams: " + p);
                 newParams.add(p);
             }
         }
         if (newParams.size() == 0 ) {
-            LOGGER.log(Level.WARNING, "Error selecting params, got no hits of " +
-                    paramsToCompare + " in " + OriginalParams +
+            LOGGER.log(Level.WARNING, "doFilterParams(): Error selecting params," +
+                    " got no hits of " + paramsToCompare + " in " + OriginalParams +
                     " : is the job configuration valid?");
         } else if (newParams.size() < paramsToCompare.size() ) {
-            LOGGER.log(Level.WARNING, "Error selecting params, not all of " +
-                    paramsToCompare + " were present in " + OriginalParams +
+            LOGGER.log(Level.WARNING, "doFilterParams(): Error selecting params," +
+                    " not all of " + paramsToCompare + " were present in " + OriginalParams +
                     " : is the job configuration valid?");
         }
 
