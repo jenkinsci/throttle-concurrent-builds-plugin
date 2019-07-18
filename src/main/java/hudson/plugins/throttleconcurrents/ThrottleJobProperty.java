@@ -91,7 +91,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.paramsToUseForLimit = paramsToUseForLimit;
         if ((this.paramsToUseForLimit != null)) {
             if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(this.paramsToUseForLimit)));
+                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(this.paramsToUseForLimit.split(",\\s*|\\s+")));
             }
             else {
                 this.paramsToCompare = new ArrayList<String>();
@@ -222,7 +222,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         if (paramsToCompare == null) {
             if ((paramsToUseForLimit != null)) {
                 if ((paramsToUseForLimit.length() > 0)) {
-                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
+                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(",\\s*|\\s+"));
                 }
                 else {
                     paramsToCompare = new ArrayList<String>();
