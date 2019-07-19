@@ -332,7 +332,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
         if (paramsToCompareSize > 0) {
-            LOGGER.log(Level.FINE, "filter itemParams " + itemParams +
+            LOGGER.log(Level.FINER, "filter itemParams " + itemParams +
                     " (from queue) to only pick up to " + paramsToCompareSize +
                     ": " + paramsToCompare + " (from throttle config)");
             itemParams = doFilterParams(paramsToCompare, itemParams);
@@ -354,7 +354,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         parentTask.getOwnerTask().getName().equals(itemTaskName)) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                     if (paramsToCompareSize > 0) {
-                        LOGGER.log(Level.FINE, "filter executingUnitParams" +
+                        LOGGER.log(Level.FINER, "filter executingUnitParams" +
                                 " on " + computer.getDisplayName() + "#" + exec.getNumber() +
                                 " in build (" + exec.getCurrentWorkUnit() + ") from original " +
                                 executingUnitParams + " to only pick up to " +
@@ -400,27 +400,27 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
      */
     private List<ParameterValue> doFilterParams(List<String> paramsToCompare, List<ParameterValue> OriginalParams) {
         if (paramsToCompare.isEmpty()) {
-            LOGGER.log(Level.FINE, "doFilterParams(): paramsToCompare.isEmpty() => return OriginalParams");
+            LOGGER.log(Level.FINEST, "paramsToCompare.isEmpty() => return OriginalParams");
             return OriginalParams;
         }
 
         List<ParameterValue> newParams = new ArrayList<ParameterValue>();
-        LOGGER.log(Level.FINE, "doFilterParams(): filtering by paramsToCompare = " + paramsToCompare);
+        LOGGER.log(Level.FINEST, "filtering by paramsToCompare = " + paramsToCompare);
 
         for (ParameterValue p : OriginalParams) {
-            LOGGER.log(Level.FINE, "doFilterParams(): checking if original " +
+            LOGGER.log(Level.FINEST, "checking if original " +
                 p.getName() + " is on our list of paramsToCompare?.." );
             if (paramsToCompare.contains(p.getName())) {
-                LOGGER.log(Level.FINE, "doFilterParams(): we have a hit in OriginalParams: " + p);
+                LOGGER.log(Level.FINEST, "we have a hit in OriginalParams: " + p);
                 newParams.add(p);
             }
         }
         if (newParams.size() == 0 ) {
-            LOGGER.log(Level.WARNING, "doFilterParams(): Error selecting params," +
+            LOGGER.log(Level.WARNING, "Error selecting params," +
                     " got no hits of " + paramsToCompare + " in " + OriginalParams +
                     " : is the job configuration valid?");
         } else if (newParams.size() < paramsToCompare.size() ) {
-            LOGGER.log(Level.WARNING, "doFilterParams(): Error selecting params," +
+            LOGGER.log(Level.WARNING, "Error selecting params," +
                     " not all of " + paramsToCompare + " were present in " + OriginalParams +
                     " : is the job configuration valid?");
         }
