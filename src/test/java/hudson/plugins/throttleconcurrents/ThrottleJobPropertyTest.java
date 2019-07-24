@@ -71,6 +71,91 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertEquals(expectedThrottleOption, property.getThrottleOption());
     }
 
+    public void testThrottleJob_constructor_should_parse_paramsToUseForLimit() {
+        // We just set these values but do not test much, see above for that
+        Integer expectedMaxConcurrentPerNode = anyInt();
+        Integer expectedMaxConcurrentTotal = anyInt();
+        List<String> expectedCategories = Collections.emptyList();
+        boolean expectedThrottleEnabled = anyBoolean();
+        String expectedThrottleOption = anyString();
+        boolean expectedLimitOneJobWithMatchingParams = true;
+
+        // Mix the comma and whitespace separators as commas were documented
+        // in original codebase but did not work so people must have used the
+        // whitespaces de-facto.
+        String assignedParamsToUseForLimit00 = null;
+        List<String> expectedParamsToUseForLimit00 = new ArrayList<String>();
+        String assignedParamsToUseForLimit0 = "";
+        List<String> expectedParamsToUseForLimit0 = new ArrayList<String>();
+        String assignedParamsToUseForLimit1 = "ONE_PARAM";
+        List<String> expectedParamsToUseForLimit1 = Arrays.asList("ONE_PARAM");
+        String assignedParamsToUseForLimit2 = "TWO,PARAMS";
+        List<String> expectedParamsToUseForLimit2 = Arrays.asList("TWO", "PARAMS");
+        String assignedParamsToUseForLimit3 = "THREE DIFFERENT,PARAMS";
+        List<String> expectedParamsToUseForLimit3 = Arrays.asList("DIFFERENT", "PARAMS", "THREE");
+        String assignedParamsToUseForLimit4 = "FOUR ,SOMEWHAT\t,DIFFERENT , PARAMS";
+        List<String> expectedParamsToUseForLimit4 = Arrays.asList("PARAMS", "SOMEWHAT", "FOUR", "DIFFERENT");
+        String assignedParamsToUseForLimit5 = "Multi\nline" +
+                "string,for	kicks";
+        List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "for", "linestring", "kicks");
+
+        ThrottleJobProperty property00 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit00,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property00.getParamsToCompare(), expectedParamsToUseForLimit00);
+
+        ThrottleJobProperty property0 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property0.getParamsToCompare(), expectedParamsToUseForLimit0);
+
+        ThrottleJobProperty property1 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit1,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property1.getParamsToCompare(), expectedParamsToUseForLimit1);
+
+        ThrottleJobProperty property2 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit2,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property2.getParamsToCompare(), expectedParamsToUseForLimit2);
+
+        ThrottleJobProperty property3 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit3,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property3.getParamsToCompare(), expectedParamsToUseForLimit3);
+
+        ThrottleJobProperty property4 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit4,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property4.getParamsToCompare(), expectedParamsToUseForLimit4);
+
+        ThrottleJobProperty property5 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit5,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property5.getParamsToCompare(), expectedParamsToUseForLimit5);
+    }
+
     public void testThrottleJob_should_copy_categories_to_concurrency_safe_list() {
         final String category = anyString();
 
