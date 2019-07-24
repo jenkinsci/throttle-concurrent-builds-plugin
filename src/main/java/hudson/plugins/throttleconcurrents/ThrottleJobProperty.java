@@ -52,7 +52,11 @@ import org.kohsuke.stapler.StaplerRequest;
 public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // Replaced by categories, to support, well, multiple categories per job (starting from 1.3)
     @Deprecated transient String category;
-    
+
+    // Documentation only states "," but its use was broken for so long,
+    // that probably people used de-facto working whitespace instead.
+    private final static String PARAMS_LIMIT_SEPARATOR = ",\\s*|\\s+";
+
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
     private List<String> categories;
@@ -93,7 +97,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.paramsToUseForLimit = paramsToUseForLimit;
         if ((this.paramsToUseForLimit != null)) {
             if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(this.paramsToUseForLimit.split(",\\s*|\\s+")));
+                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(this.paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR)));
             }
             else {
                 this.paramsToCompare = new ArrayList<String>();
@@ -224,7 +228,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         if (paramsToCompare == null) {
             if ((paramsToUseForLimit != null)) {
                 if ((paramsToUseForLimit.length() > 0)) {
-                    paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(paramsToUseForLimit.split(",\\s*|\\s+")));
+                    paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR)));
                 }
                 else {
                     paramsToCompare = new ArrayList<String>();
