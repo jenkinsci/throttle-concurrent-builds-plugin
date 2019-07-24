@@ -95,7 +95,7 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         List<Strings> expectedParamsToUseForLimit3 = Arrays.asList("DIFFERENT", "PARAMS", "THREE");
         String assignedParamsToUseForLimit4 = "FOUR ,SOMEWHAT\t,DIFFERENT , PARAMS";
         List<Strings> expectedParamsToUseForLimit4 = Arrays.asList("PARAMS", "SOMEWHAT", "FOUR", "DIFFERENT");
-        String assignedParamsToUseForLimit5 = "Multi\nline
+        String assignedParamsToUseForLimit5 = "Multi\nline\
 string,for	kicks";
         List<Strings> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "string", "for", "line", "kicks");
 
