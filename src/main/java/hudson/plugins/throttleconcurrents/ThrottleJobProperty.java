@@ -51,10 +51,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // Replaced by categories, to support, well, multiple categories per job (starting from 1.3)
     @Deprecated transient String category;
 
-    // Documentation only states "," but its use was broken for so long,
-    // that probably people used de-facto working whitespace instead.
-    private final static String PARAMS_LIMIT_SEPARATOR = ",\\s*|\\s+";
-
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
     private List<String> categories;
@@ -66,6 +62,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
     private String paramsToUseForLimit;
     private transient List<String> paramsToCompare;
+
+    // Documentation only stated "," but its use was broken for so long,
+    // that probably people used de-facto working whitespace instead.
+    private final static String PARAMS_LIMIT_SEPARATOR = ",\\s*|\\s+";
 
     /**
      * Store a config version so we're able to migrate config on various
