@@ -224,19 +224,45 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 : ThrottleMatrixProjectOptions.DEFAULT.isThrottleMatrixConfigurations();
     }
 
-    public List<String> getParamsToCompare() {
-        if (paramsToCompare == null) {
-            if ((paramsToUseForLimit != null)) {
-                if ((paramsToUseForLimit.length() > 0)) {
-                    paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR)));
-                }
-                else {
-                    paramsToCompare = new ArrayList<String>();
-                }
+    /**
+     * Set the paramsToCompare list of Strings from the user-input
+     * token-separated String.
+     *
+     * @return None, but the this.paramsToCompare will be a valid
+     * populated or empty array (not a null) after this call.
+     */
+    public void setParamsToCompare(String paramsToUseForLimit) {
+        // If there is any contents, tell GC that it is reapable
+        this.paramsToCompare = null;
+
+        if ((paramsToUseForLimit != null)) {
+            if ((paramsToUseForLimit.length() > 0)) {
+                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR)));
             }
             else {
-                paramsToCompare = new ArrayList<String>();
+                this.paramsToCompare = new ArrayList<String>();
             }
+        }
+        else {
+            this.paramsToCompare = new ArrayList<String>();
+        }
+    }
+
+    /**
+     * Returns a copy of this.paramsToCompare, and (unlike a proper getter)
+     * if it was not set yet, make sure first to populate this array from
+     * the user-provided this.paramsToUseForLimit string. Note that this
+     * call only re-synchronizes paramsToCompare from paramsToUseForLimit
+     * if paramsToCompare was null, so that normally should not happen. This
+     * logic was present here before refactoring it into setParamsToCompare()
+     * above which allows to actually update the cached array on demand if
+     * needed later (e.g. when/if a setParamsToUseForLimit() is introduced).
+     *
+     * @return A populated or empty array (not a null) after this call.
+     */
+    public List<String> getParamsToCompare() {
+        if (paramsToCompare == null) {
+            this.setParamsToCompare(this.paramsToUseForLimit);
         }
         return paramsToCompare;
     }
