@@ -26,7 +26,7 @@
     <f:optionalBlock field="limitOneJobWithMatchingParams"
                    title="${%Prevent multiple jobs with identical parameters from running concurrently}"
                    inline="true">
-    <f:entry title="${%List of parameters to check (comma- or whitespace-separated)}"
+    <f:entry title="${%List of parameters to check separated by commas or whitespaces}"
              field="paramsToUseForLimit">
     <f:textbox />
       </f:entry>
