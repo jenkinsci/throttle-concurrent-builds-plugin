@@ -95,17 +95,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.matrixOptions = matrixOptions;
         this.paramsToUseForLimit = paramsToUseForLimit;
-        if ((this.paramsToUseForLimit != null)) {
-            if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(this.paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR)));
-            }
-            else {
-                this.paramsToCompare = new ArrayList<String>();
-            }
-        }
-        else {
-            this.paramsToCompare = new ArrayList<String>();
-        }
+        this.setParamsToCompare(this.paramsToUseForLimit);
     }
 
 
