@@ -86,15 +86,27 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         // Note that the data type of paramsToUseForLimit is a List (ordered)
         // so in the test we expect it as such. Production code seems to use
         // it as an unordered set as suffices for filtering, however.
-        // (0*) Null and empty string inputs should result in an empty list object
+        // (0*) Null and empty string inputs should result in an empty list
+        // object; surrounding whitespace should be truncated so a non-empty
+        // input made of just separators is effectively empty for us too.
         String assignedParamsToUseForLimit00 = null;
         List<String> expectedParamsToUseForLimit00 = new ArrayList<String>();
         String assignedParamsToUseForLimit0 = "";
         List<String> expectedParamsToUseForLimit0 = new ArrayList<String>();
+        String assignedParamsToUseForLimit0a = " ";
+        List<String> expectedParamsToUseForLimit0a = new ArrayList<String>();
+        String assignedParamsToUseForLimit0b = " , ";
+        List<String> expectedParamsToUseForLimit0b = new ArrayList<String>();
+        String assignedParamsToUseForLimit0c = " ,,,  \n";
+        List<String> expectedParamsToUseForLimit0c = new ArrayList<String>();
         // (1) One buildarg name listed in input becomes the only one string
-        // in the list
+        // in the list; surrounding whitespace should be truncated
         String assignedParamsToUseForLimit1 = "ONE_PARAM";
         List<String> expectedParamsToUseForLimit1 = Arrays.asList("ONE_PARAM");
+        String assignedParamsToUseForLimit1a = " ONE_PARAM";
+        List<String> expectedParamsToUseForLimit1a = Arrays.asList("ONE_PARAM");
+        String assignedParamsToUseForLimit1b = " ONE_PARAM\n";
+        List<String> expectedParamsToUseForLimit1b = Arrays.asList("ONE_PARAM");
         // (2) Two buildarg names listed in input become two strings in the list
         String assignedParamsToUseForLimit2 = "TWO,PARAMS";
         List<String> expectedParamsToUseForLimit2 = Arrays.asList("TWO", "PARAMS");
@@ -129,6 +141,30 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
                 ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(property0.getParamsToCompare(), expectedParamsToUseForLimit0);
 
+        ThrottleJobProperty property0a = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0a,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property0a.getParamsToCompare(), expectedParamsToUseForLimit0a);
+
+        ThrottleJobProperty property0b = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0b,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property0b.getParamsToCompare(), expectedParamsToUseForLimit0b);
+
+        ThrottleJobProperty property0c = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0c,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property0c.getParamsToCompare(), expectedParamsToUseForLimit0c);
+
         ThrottleJobProperty property1 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
                 expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
@@ -136,6 +172,22 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
                 assignedParamsToUseForLimit1,
                 ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(property1.getParamsToCompare(), expectedParamsToUseForLimit1);
+
+        ThrottleJobProperty property1a = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit1a,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property1a.getParamsToCompare(), expectedParamsToUseForLimit1a);
+
+        ThrottleJobProperty property1b = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories, expectedThrottleEnabled, expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit1b,
+                ThrottleMatrixProjectOptions.DEFAULT);
+        assertEquals(property1b.getParamsToCompare(), expectedParamsToUseForLimit1b);
 
         ThrottleJobProperty property2 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
