@@ -84,20 +84,20 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         // in original codebase but did not work so people must have used the
         // whitespaces de-facto.
         String assignedParamsToUseForLimit00 = null;
-        List<Strings> expectedParamsToUseForLimit00 = new ArrayList<String>();
+        List<String> expectedParamsToUseForLimit00 = new ArrayList<String>();
         String assignedParamsToUseForLimit0 = "";
-        List<Strings> expectedParamsToUseForLimit0 = new ArrayList<String>();
+        List<String> expectedParamsToUseForLimit0 = new ArrayList<String>();
         String assignedParamsToUseForLimit1 = "ONE_PARAM";
-        List<Strings> expectedParamsToUseForLimit1 = Arrays.asList("ONE_PARAM");
+        List<String> expectedParamsToUseForLimit1 = Arrays.asList("ONE_PARAM");
         String assignedParamsToUseForLimit2 = "TWO,PARAMS";
-        List<Strings> expectedParamsToUseForLimit2 = Arrays.asList("TWO", "PARAMS");
+        List<String> expectedParamsToUseForLimit2 = Arrays.asList("TWO", "PARAMS");
         String assignedParamsToUseForLimit3 = "THREE DIFFERENT,PARAMS";
-        List<Strings> expectedParamsToUseForLimit3 = Arrays.asList("DIFFERENT", "PARAMS", "THREE");
+        List<String> expectedParamsToUseForLimit3 = Arrays.asList("DIFFERENT", "PARAMS", "THREE");
         String assignedParamsToUseForLimit4 = "FOUR ,SOMEWHAT\t,DIFFERENT , PARAMS";
-        List<Strings> expectedParamsToUseForLimit4 = Arrays.asList("PARAMS", "SOMEWHAT", "FOUR", "DIFFERENT");
+        List<String> expectedParamsToUseForLimit4 = Arrays.asList("PARAMS", "SOMEWHAT", "FOUR", "DIFFERENT");
         String assignedParamsToUseForLimit5 = "Multi\nline" +
                 "string,for	kicks";
-        List<Strings> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "for", "linestring", "kicks");
+        List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "for", "linestring", "kicks");
 
         ThrottleJobProperty property00 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
