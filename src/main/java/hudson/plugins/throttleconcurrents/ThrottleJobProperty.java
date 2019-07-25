@@ -231,7 +231,15 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
         if ((paramsToUseForLimit != null)) {
             if ((paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR)));
+                List<String> list = new ArrayList<String>(Arrays.asList(ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR))));
+                // Due to type casting, DO NOT MERGE with the line above
+                // in accordance with https://stackoverflow.com/a/5520808/4715872
+                // Logically, we should only remove all blanks "" and the
+                // split() should have taken care of other chars... but
+                // better safe than sorry. Also remove("") did not seem
+                // to cut it for more than one blank entry in the List.
+                list.removeAll(Arrays.asList("", " ", "\n", "\t", ","));
+                this.paramsToCompare = list;
             }
             else {
                 this.paramsToCompare = new ArrayList<String>();
