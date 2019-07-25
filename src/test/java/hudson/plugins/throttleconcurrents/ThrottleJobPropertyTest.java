@@ -83,6 +83,9 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         // Mix the comma and whitespace separators as commas were documented
         // in original codebase but did not work so people must have used the
         // whitespaces de-facto.
+        // Note that the data type of paramsToUseForLimit is a List (ordered)
+        // so in the test we expect it as such. Production code seems to use
+        // it as an unordered set as suffices for filtering, however.
         String assignedParamsToUseForLimit00 = null;
         List<String> expectedParamsToUseForLimit00 = new ArrayList<String>();
         String assignedParamsToUseForLimit0 = "";
@@ -92,12 +95,12 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         String assignedParamsToUseForLimit2 = "TWO,PARAMS";
         List<String> expectedParamsToUseForLimit2 = Arrays.asList("TWO", "PARAMS");
         String assignedParamsToUseForLimit3 = "THREE DIFFERENT,PARAMS";
-        List<String> expectedParamsToUseForLimit3 = Arrays.asList("DIFFERENT", "PARAMS", "THREE");
+        List<String> expectedParamsToUseForLimit3 = Arrays.asList("THREE", "DIFFERENT", "PARAMS");
         String assignedParamsToUseForLimit4 = "FOUR ,SOMEWHAT\t,DIFFERENT , PARAMS";
-        List<String> expectedParamsToUseForLimit4 = Arrays.asList("PARAMS", "SOMEWHAT", "FOUR", "DIFFERENT");
+        List<String> expectedParamsToUseForLimit4 = Arrays.asList("FOUR", "SOMEWHAT", "DIFFERENT", "PARAMS");
         String assignedParamsToUseForLimit5 = "Multi\nline" +
                 "string,for	kicks";
-        List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "for", "linestring", "kicks");
+        List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "linestring", "for", "kicks");
 
         ThrottleJobProperty property00 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
