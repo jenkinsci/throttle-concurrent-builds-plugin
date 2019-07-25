@@ -216,21 +216,32 @@ public class ThrottleJobPropertyTest {
         // Note that the data type of paramsToUseForLimit is a List (ordered)
         // so in the test we expect it as such. Production code seems to use
         // it as an unordered set as suffices for filtering, however.
+        // (0*) Null and empty string inputs should result in an empty list object
         String assignedParamsToUseForLimit00 = null;
         List<String> expectedParamsToUseForLimit00 = new ArrayList<String>();
         String assignedParamsToUseForLimit0 = "";
         List<String> expectedParamsToUseForLimit0 = new ArrayList<String>();
+        // (1) One buildarg name listed in input becomes the only one string
+        // in the list
         String assignedParamsToUseForLimit1 = "ONE_PARAM";
         List<String> expectedParamsToUseForLimit1 = Arrays.asList("ONE_PARAM");
+        // (2) Two buildarg names listed in input become two strings in the list
         String assignedParamsToUseForLimit2 = "TWO,PARAMS";
         List<String> expectedParamsToUseForLimit2 = Arrays.asList("TWO", "PARAMS");
+        // (3) Different separators handled the same
         String assignedParamsToUseForLimit3 = "THREE DIFFERENT,PARAMS";
         List<String> expectedParamsToUseForLimit3 = Arrays.asList("THREE", "DIFFERENT", "PARAMS");
+        // (4) Several separating tokens together must go away as one - we want
+        // no empties in the resulting list
         String assignedParamsToUseForLimit4 = "FOUR ,SOMEWHAT\t,DIFFERENT , PARAMS";
         List<String> expectedParamsToUseForLimit4 = Arrays.asList("FOUR", "SOMEWHAT", "DIFFERENT", "PARAMS");
+        // (5) Java does not really have multilines, but still... note that
+        // if any whitespace should be there in the carry-over of string
+        // representation, it is the coder's responsibility to ensure some.
         String assignedParamsToUseForLimit5 = "Multi\nline" +
-                "string,for	kicks";
-        List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "linestring", "for", "kicks");
+                "string,for	kicks\n" +
+                "EOL";
+        List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "linestring", "for", "kicks", "EOL");
 
         ThrottleJobProperty property00 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
