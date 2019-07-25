@@ -219,8 +219,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
 
     /**
-     * Set the paramsToCompare list of Strings from the user-input
-     * token-separated String.
+     * @param paramsToUseForLimit   Set the paramsToCompare list
+     * of Strings from the user-input token-separated String.
      *
      * There is no return, but the this.paramsToCompare will be a
      * valid non-null populated or empty array after this call.
