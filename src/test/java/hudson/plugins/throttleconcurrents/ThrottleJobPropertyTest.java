@@ -261,7 +261,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit00,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property00.getParamsToCompare(), expectedParamsToUseForLimit00);
+        assertEquals(expectedParamsToUseForLimit00, property00.getParamsToCompare());
 
         ThrottleJobProperty property0 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -269,7 +269,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit0,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property0.getParamsToCompare(), expectedParamsToUseForLimit0);
+        assertEquals(expectedParamsToUseForLimit0, property0.getParamsToCompare());
 
         ThrottleJobProperty property0a = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -277,7 +277,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit0a,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property0a.getParamsToCompare(), expectedParamsToUseForLimit0a);
+        assertEquals(expectedParamsToUseForLimit0a, property0a.getParamsToCompare());
 
         ThrottleJobProperty property0b = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -285,7 +285,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit0b,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property0b.getParamsToCompare(), expectedParamsToUseForLimit0b);
+        assertEquals(expectedParamsToUseForLimit0b, property0b.getParamsToCompare());
 
         ThrottleJobProperty property0c = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -293,7 +293,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit0c,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property0c.getParamsToCompare(), expectedParamsToUseForLimit0c);
+        assertEquals(expectedParamsToUseForLimit0c, property0c.getParamsToCompare());
 
         ThrottleJobProperty property1 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -301,7 +301,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit1,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property1.getParamsToCompare(), expectedParamsToUseForLimit1);
+        assertEquals(expectedParamsToUseForLimit1, property1.getParamsToCompare());
 
         ThrottleJobProperty property1a = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -309,7 +309,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit1a,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property1a.getParamsToCompare(), expectedParamsToUseForLimit1a);
+        assertEquals(expectedParamsToUseForLimit1a, property1a.getParamsToCompare());
 
         ThrottleJobProperty property1b = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -317,7 +317,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit1b,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property1b.getParamsToCompare(), expectedParamsToUseForLimit1b);
+        assertEquals(expectedParamsToUseForLimit1b, property1b.getParamsToCompare());
 
         ThrottleJobProperty property2 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -325,7 +325,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit2,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property2.getParamsToCompare(), expectedParamsToUseForLimit2);
+        assertEquals(expectedParamsToUseForLimit2, property2.getParamsToCompare());
 
         ThrottleJobProperty property3 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -333,7 +333,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit3,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property3.getParamsToCompare(), expectedParamsToUseForLimit3);
+        assertEquals(expectedParamsToUseForLimit3, property3.getParamsToCompare());
 
         ThrottleJobProperty property4 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -341,7 +341,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit4,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property4.getParamsToCompare(), expectedParamsToUseForLimit4);
+        assertEquals(expectedParamsToUseForLimit4, property4.getParamsToCompare());
 
         ThrottleJobProperty property5 = new ThrottleJobProperty(expectedMaxConcurrentPerNode,
                 expectedMaxConcurrentTotal,
@@ -349,7 +349,7 @@ public class ThrottleJobPropertyTest {
                 expectedLimitOneJobWithMatchingParams,
                 assignedParamsToUseForLimit5,
                 ThrottleMatrixProjectOptions.DEFAULT);
-        assertEquals(property5.getParamsToCompare(), expectedParamsToUseForLimit5);
+        assertEquals(expectedParamsToUseForLimit5, property5.getParamsToCompare());
     }
 
     @Test
