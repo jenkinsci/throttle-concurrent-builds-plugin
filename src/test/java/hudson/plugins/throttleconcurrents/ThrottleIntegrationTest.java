@@ -24,6 +24,8 @@
 
 package hudson.plugins.throttleconcurrents;
 
+import static org.junit.Assert.assertEquals;
+
 import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
@@ -39,8 +41,11 @@ import hudson.slaves.SlaveComputer;
 import java.util.Arrays;
 import java.util.Collections;
 
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.jvnet.hudson.test.Bug;
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SleepBuilder;
 
 /*
@@ -50,30 +55,33 @@ import com.cloudbees.hudson.plugins.folder.Folder;
 /**
  * Tests that {@link ThrottleJobProperty} actually works for builds.
  */
-public class ThrottleIntegrationTest extends HudsonTestCase {
+public class ThrottleIntegrationTest {
     private final long SLEEP_TIME = 100;
     private int executorNum = 2;
     private ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark;
     private DumbSlave slave = null;
     
+    @Rule
+    public JenkinsRule r = new JenkinsRule();
+
     /**
-     * Overrides to modify the number of executor.
+     * Copypasta of {@link JenkinsRule#createSlave(String, String, EnvVars)} to enable modifying the
+     * number of executors.
      */
-    @Override
-    public DumbSlave createSlave(String nodeName, String labels, EnvVars env) throws Exception {
-        synchronized (jenkins) {
+    private DumbSlave createSlave(String nodeName, String labels, EnvVars env) throws Exception {
+        synchronized (r.jenkins) {
             DumbSlave slave = new DumbSlave(
                     nodeName,
                     "dummy",
-                    createTmpDir().getPath(),
+                    r.createTmpDir().getPath(),
                     Integer.toString(executorNum),      // Overridden!
                     Mode.NORMAL,
                     labels==null?"":labels,
-                    createComputerLauncher(env),
+                    r.createComputerLauncher(env),
                     RetentionStrategy.NOOP,
                     Collections.<NodeProperty<?>>emptyList()
             );
-            jenkins.addNode(slave);
+            r.jenkins.addNode(slave);
             return slave;
         }
     }
@@ -81,8 +89,11 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
     /**
      * sets up slave and waterMark.
      */
-    private void setupSlave() throws Exception {
-        slave = createOnlineSlave();
+    @Before
+    public void setupSlave() throws Exception {
+        int sz = r.jenkins.getNodes().size();
+        slave = createSlave("slave" + sz, null, null);
+        r.waitOnline(slave);
         waterMark = new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(slave.getRetentionStrategy());
         slave.setRetentionStrategy(waterMark);
     }
@@ -91,40 +102,38 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
      * setup security so that no one except SYSTEM has any permissions.
      * should be called after {@link #setupSlave()}
      */
-    private void setupSecurity() {
-        jenkins.setSecurityRealm(createDummySecurityRealm());
+    @Before
+    public void setupSecurity() {
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
         GlobalMatrixAuthorizationStrategy auth = new GlobalMatrixAuthorizationStrategy();
-        jenkins.setAuthorizationStrategy(auth);
+        r.jenkins.setAuthorizationStrategy(auth);
     }
     
+    @Test
     public void testNoThrottling() throws Exception {
-        setupSlave();
-        setupSecurity();
-        
-        FreeStyleProject p1 = createFreeStyleProject();
+        FreeStyleProject p1 = r.createFreeStyleProject();
         p1.setAssignedNode(slave);
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
         
-        FreeStyleProject p2 = createFreeStyleProject();
+        FreeStyleProject p2 = r.createFreeStyleProject();
         p2.setAssignedNode(slave);
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
         
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
         
-        waitUntilNoActivity();
+        r.waitUntilNoActivity();
         
         // not throttled, and builds run concurrently.
         assertEquals(2, waterMark.getExecutorWaterMark());
     }
     
+    @Test
     public void testThrottlingWithCategory() throws Exception {
-        setupSlave();
-        setupSecurity();
         final String category = "category";
         
         ThrottleJobProperty.DescriptorImpl descriptor
-            = (ThrottleJobProperty.DescriptorImpl)jenkins.getDescriptor(ThrottleJobProperty.class);
+            = (ThrottleJobProperty.DescriptorImpl)r.jenkins.getDescriptor(ThrottleJobProperty.class);
         descriptor.setCategories(Arrays.asList(
                 new ThrottleJobProperty.ThrottleCategory(
                         category,
@@ -134,7 +143,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 )
         ));
         
-        FreeStyleProject p1 = createFreeStyleProject();
+        FreeStyleProject p1 = r.createFreeStyleProject();
         p1.setAssignedNode(slave);
         p1.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
@@ -148,7 +157,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         ));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
         
-        FreeStyleProject p2 = createFreeStyleProject();
+        FreeStyleProject p2 = r.createFreeStyleProject();
         p2.setAssignedNode(slave);
         p2.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
@@ -165,20 +174,19 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
         
-        waitUntilNoActivity();
+        r.waitUntilNoActivity();
         
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
     
     @Bug(25326)
+    @Test
     public void testThrottlingWithCategoryInFolder() throws Exception {
-        setupSlave();
-        setupSecurity();
         final String category = "category";
         
         ThrottleJobProperty.DescriptorImpl descriptor
-            = (ThrottleJobProperty.DescriptorImpl)jenkins.getDescriptor(ThrottleJobProperty.class);
+            = (ThrottleJobProperty.DescriptorImpl)r.jenkins.getDescriptor(ThrottleJobProperty.class);
         descriptor.setCategories(Arrays.asList(
                 new ThrottleJobProperty.ThrottleCategory(
                         category,
@@ -188,7 +196,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
                 )
         ));
         
-        Folder f1 = jenkins.createProject(Folder.class, "folder1");
+        Folder f1 = r.createProject(Folder.class, "folder1");
         FreeStyleProject p1 = f1.createProject(FreeStyleProject.class, "p");
         p1.setAssignedNode(slave);
         p1.addProperty(new ThrottleJobProperty(
@@ -203,7 +211,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         ));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
         
-        Folder f2 = jenkins.createProject(Folder.class, "folder2");
+        Folder f2 = r.createProject(Folder.class, "folder2");
         FreeStyleProject p2 = f2.createProject(FreeStyleProject.class, "p");
         p2.setAssignedNode(slave);
         p2.addProperty(new ThrottleJobProperty(
@@ -221,7 +229,7 @@ public class ThrottleIntegrationTest extends HudsonTestCase {
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
         
-        waitUntilNoActivity();
+        r.waitUntilNoActivity();
         
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
