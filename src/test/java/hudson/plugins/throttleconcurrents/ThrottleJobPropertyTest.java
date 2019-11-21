@@ -2,6 +2,7 @@ package hudson.plugins.throttleconcurrents;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -103,8 +104,10 @@ public class ThrottleJobPropertyTest {
 
         List<String> storedCategories = property.getCategories();
         assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
-        assertTrue("expected unsafe list to be converted to a converted to some other concurrency-safe impl",
-                unsafeList != storedCategories);
+        assertNotSame(
+                "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
+                unsafeList,
+                storedCategories);
         assertTrue(storedCategories instanceof CopyOnWriteArrayList);
     }
 
@@ -140,8 +143,10 @@ public class ThrottleJobPropertyTest {
         descriptor.setCategories(unsafeList);
         List<ThrottleJobProperty.ThrottleCategory> storedCategories = descriptor.getCategories();
         assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
-        assertTrue("expected unsafe list to be converted to a converted to some other concurrency-safe impl",
-                unsafeList != storedCategories);
+        assertNotSame(
+                "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
+                unsafeList,
+                storedCategories);
         assertTrue(storedCategories instanceof CopyOnWriteArrayList);
     }
 
