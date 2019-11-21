@@ -13,7 +13,7 @@ import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.util.*;
@@ -27,7 +27,7 @@ public class ThrottleJobPropertyTest {
     @Rule
     public JenkinsRule r = new JenkinsRule();
 
-    @Bug(19623)
+    @Issue("JENKINS-19623")
     @Test
     public void testGetCategoryProjects() throws Exception {
         String alpha = "alpha", beta = "beta", gamma = "gamma"; // category names

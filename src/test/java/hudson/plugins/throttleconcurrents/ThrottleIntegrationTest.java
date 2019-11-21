@@ -44,7 +44,7 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SleepBuilder;
 
@@ -180,7 +180,7 @@ public class ThrottleIntegrationTest {
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
     
-    @Bug(25326)
+    @Issue("JENKINS-25326")
     @Test
     public void testThrottlingWithCategoryInFolder() throws Exception {
         final String category = "category";
