@@ -82,7 +82,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void onePerNode() throws Exception {
+    public void onePerNode() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -118,7 +118,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void duplicateCategories() throws Exception {
+    public void duplicateCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -138,7 +138,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void undefinedCategories() throws Exception {
+    public void undefinedCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -155,7 +155,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void multipleCategories() throws Exception {
+    public void multipleCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -208,7 +208,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void onePerNodeParallel() throws Exception {
+    public void onePerNodeParallel() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -267,7 +267,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void twoTotal() throws Exception {
+    public void twoTotal() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -317,7 +317,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void interopWithFreestyle() throws Exception {
+    public void interopWithFreestyle() {
         final Semaphore semaphore = new Semaphore(1);
 
         story.addStep(new Statement() {
@@ -428,7 +428,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void snippetizer() throws Exception {
+    public void snippetizer() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {

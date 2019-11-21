@@ -16,6 +16,10 @@
  */
 package hudson.plugins.throttleconcurrents;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.gargoylesoftware.htmlunit.ElementNotFoundException;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlElement;
@@ -37,7 +41,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
 
 /**
  * This class initiates the testing of {@link hudson.plugins.throttleconcurrents.ThrottleQueueTaskDispatcher}.<br>
@@ -45,8 +51,7 @@ import org.jvnet.hudson.test.HudsonTestCase;
  * -Happens to test {@link hudson.plugins.throttleconcurrents.ThrottleQueueTaskDispatcher#getMaxConcurrentPerNodeBasedOnMatchingLabels(hudson.model.Node, hudson.plugins.throttleconcurrents.ThrottleJobProperty.ThrottleCategory, int)}.
  * @author marco.miller@ericsson.com
  */
-public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
-{
+public class ThrottleQueueTaskDispatcherTest {
     private static final String buttonsXPath = "//button[@tabindex='0']";
     private static final String configFormName = "config";
     private static final String configUrlSuffix = "configure";
@@ -73,20 +78,15 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
     private static final int someCategoryWideMaxConcurrentPerNode = 1;
     private static final int greaterCategoryWideMaxConcurrentPerNode = configureOneMaxLabelPair+1;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-    }
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
-    }
+    @Rule
+    public JenkinsRule r = new JenkinsRule();
 
     /**
      * @throws ExecutionException upon Jenkins project build scheduling issue.
      * @throws InterruptedException upon Jenkins global configuration issue.
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
+    @Test
     public void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPair()
     throws ExecutionException, InterruptedException, IOException
     {
@@ -102,6 +102,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
      * @throws InterruptedException upon Jenkins global configuration issue.
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
+    @Test
     public void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPairs()
     throws ExecutionException, InterruptedException, IOException
     {
@@ -117,6 +118,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
      * @throws InterruptedException upon Jenkins global configuration issue.
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
+    @Test
     public void testShouldConsiderTaskAsBlockableStillUponMatchingLabelPairWithLowestMax()
     throws ExecutionException, InterruptedException, IOException
     {
@@ -132,6 +134,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
      * @throws InterruptedException upon Jenkins global configuration issue.
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
+    @Test
     public void testShouldConsiderTaskAsBuildableStillUponMismatchingMaxLabelPairs()
     throws ExecutionException, InterruptedException, IOException
     {
@@ -147,6 +150,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
      * @throws InterruptedException upon Jenkins global configuration issue.
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
+    @Test
     public void testShouldConsiderTaskAsBuildableStillUponNoNodeLabel()
     throws ExecutionException, InterruptedException, IOException
     {
@@ -177,7 +181,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
         }
         configureGlobalThrottling(testCategoryLabel, targetedPairNumber, maxConcurrentPerNode);
 
-        FreeStyleProject project = createFreeStyleProject();
+        FreeStyleProject project = r.createFreeStyleProject();
         configureJobThrottling(project);
         String logger = configureLogger();
         project.scheduleBuild2(0).get();
@@ -196,8 +200,8 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
     private void configureGlobalThrottling(String labelRoot, int numberOfPairs, int maxConcurrentPerNode)
     throws InterruptedException, IOException, MalformedURLException
     {
-        URL url = new URL(getURL()+configUrlSuffix);
-        HtmlPage page = createWebClient().getPage(url);
+        URL url = new URL(r.getURL()+configUrlSuffix);
+        HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
         List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath+buttonsXPath);
         String buttonText = "Add Category";
@@ -257,8 +261,8 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
     private void configureJobThrottling(FreeStyleProject project)
     throws IOException, MalformedURLException
     {
-        URL url = new URL(getURL()+project.getUrl()+configUrlSuffix);
-        HtmlPage page = createWebClient().getPage(url);
+        URL url = new URL(r.getURL()+project.getUrl()+configUrlSuffix);
+        HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
         List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         String buttonText = saveButtonText;
@@ -290,8 +294,8 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
     private void configureNewNodeWithLabel(String label)
     throws IOException, MalformedURLException
     {
-        URL url = new URL(getURL()+"computer/new");
-        HtmlPage page = createWebClient().getPage(url);
+        URL url = new URL(r.getURL()+"computer/new");
+        HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName("createItem");
 
         HtmlInput input = form.getInputByName("name");
@@ -342,9 +346,9 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
     throws IOException, MalformedURLException
     {
         String logger = ThrottleQueueTaskDispatcher.class.getName();
-        jenkins.getLog().doNewLogRecorder(logger);
-        URL url = new URL(getURL()+logUrlPrefix+logger+"/"+configUrlSuffix);
-        HtmlPage page = createWebClient().getPage(url);
+        r.jenkins.getLog().doNewLogRecorder(logger);
+        URL url = new URL(r.getURL()+logUrlPrefix+logger+"/"+configUrlSuffix);
+        HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
         List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         String buttonText = "Add";
@@ -412,7 +416,7 @@ public class ThrottleQueueTaskDispatcherTest extends HudsonTestCase
     private HtmlPage getLoggerPage(String logger)
     throws IOException, MalformedURLException
     {
-        URL url = new URL(getURL()+logUrlPrefix+logger);
-        return createWebClient().getPage(url);
+        URL url = new URL(r.getURL()+logUrlPrefix+logger);
+        return r.createWebClient().getPage(url);
     }
 }

@@ -1,31 +1,43 @@
 package hudson.plugins.throttleconcurrents;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
 import hudson.model.Job;
 import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
-import org.jvnet.hudson.test.Bug;
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class ThrottleJobPropertyTest extends HudsonTestCase {
+public class ThrottleJobPropertyTest {
 
     private static final String THROTTLE_OPTION_CATEGORY = "category"; // TODO move this into ThrottleJobProperty and use consistently; same for "project"
     private final Random random = new Random(System.currentTimeMillis());
 
-    @Bug(19623)
+    @Rule
+    public JenkinsRule r = new JenkinsRule();
+
+    @Issue("JENKINS-19623")
+    @Test
     public void testGetCategoryProjects() throws Exception {
         String alpha = "alpha", beta = "beta", gamma = "gamma"; // category names
-        FreeStyleProject p1 = createFreeStyleProject("p1");
-        FreeStyleProject p2 = createFreeStyleProject("p2");
+        FreeStyleProject p1 = r.createFreeStyleProject("p1");
+        FreeStyleProject p2 = r.createFreeStyleProject("p2");
         p2.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(alpha), false, THROTTLE_OPTION_CATEGORY, false, "", ThrottleMatrixProjectOptions.DEFAULT));
-        FreeStyleProject p3 = createFreeStyleProject("p3");
+        FreeStyleProject p3 = r.createFreeStyleProject("p3");
         p3.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(alpha, beta), true, THROTTLE_OPTION_CATEGORY, false, "", ThrottleMatrixProjectOptions.DEFAULT));
-        FreeStyleProject p4 = createFreeStyleProject("p4");
+        FreeStyleProject p4 = r.createFreeStyleProject("p4");
         p4.addProperty(new ThrottleJobProperty(1, 1, Arrays.asList(beta, gamma), true, THROTTLE_OPTION_CATEGORY, false, "", ThrottleMatrixProjectOptions.DEFAULT));
         // TODO when core dep ≥1.480.3, add cloudbees-folder as a test dependency so we can check jobs inside folders
         assertProjects(alpha, p3);
@@ -36,7 +48,7 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertProjects(gamma, p4);
         p4.delete();
         assertProjects(gamma);
-        AbstractProject<?,?> p3b = jenkins.<AbstractProject<?,?>>copy(p3, "p3b");
+        AbstractProject<?,?> p3b = r.jenkins.<AbstractProject<?,?>>copy(p3, "p3b");
         assertProjects(beta, p3, p3b);
         p3.removeProperty(ThrottleJobProperty.class);
         assertProjects(beta, p3b);
@@ -44,11 +56,13 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
 
 
 
+    @Test
     public void testToString_withNulls(){
         ThrottleJobProperty tjp = new ThrottleJobProperty(0,0, null, false, null, false, "", ThrottleMatrixProjectOptions.DEFAULT);
         assertNotNull(tjp.toString());
     }
 
+    @Test
     public void testThrottleJob_constructor_should_store_arguments() {
         Integer expectedMaxConcurrentPerNode = anyInt();
         Integer expectedMaxConcurrentTotal = anyInt();
@@ -71,6 +85,7 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertEquals(expectedThrottleOption, property.getThrottleOption());
     }
 
+    @Test
     public void testThrottleJob_should_copy_categories_to_concurrency_safe_list() {
         final String category = anyString();
 
@@ -89,11 +104,14 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
 
         List<String> storedCategories = property.getCategories();
         assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
-        assertTrue("expected unsafe list to be converted to a converted to some other concurrency-safe impl",
-                unsafeList != storedCategories);
+        assertNotSame(
+                "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
+                unsafeList,
+                storedCategories);
         assertTrue(storedCategories instanceof CopyOnWriteArrayList);
     }
 
+    @Test
     public void testThrottleJob_constructor_handles_null_categories(){
         ThrottleJobProperty property = new ThrottleJobProperty(anyInt(),
                 anyInt(),
@@ -107,6 +125,7 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         assertEquals(Collections.<String>emptyList(), property.getCategories());
     }
 
+    @Test
     public void testDescriptorImpl_should_a_concurrency_safe_list_for_categories(){
         ThrottleJobProperty.DescriptorImpl descriptor = new ThrottleJobProperty.DescriptorImpl();
 
@@ -124,19 +143,21 @@ public class ThrottleJobPropertyTest extends HudsonTestCase {
         descriptor.setCategories(unsafeList);
         List<ThrottleJobProperty.ThrottleCategory> storedCategories = descriptor.getCategories();
         assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
-        assertTrue("expected unsafe list to be converted to a converted to some other concurrency-safe impl",
-                unsafeList != storedCategories);
+        assertNotSame(
+                "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
+                unsafeList,
+                storedCategories);
         assertTrue(storedCategories instanceof CopyOnWriteArrayList);
     }
 
 
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
-        jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
+        r.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
             assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<Queue.Task>
                     (ThrottleJobProperty.getCategoryTasks(category)));
         } finally {
-            jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete
+            r.jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete
         }
     }
     private static class RejectAllAuthorizationStrategy extends AuthorizationStrategy {
