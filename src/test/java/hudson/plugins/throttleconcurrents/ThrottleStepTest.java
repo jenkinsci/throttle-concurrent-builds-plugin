@@ -1,6 +1,5 @@
 package hudson.plugins.throttleconcurrents;
 
-import com.google.common.collect.Iterables;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -80,11 +79,10 @@ public class ThrottleStepTest {
         ThrottleJobProperty.DescriptorImpl descriptor = story.j.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
         assertNotNull(descriptor);
         descriptor.setCategories(Arrays.asList(firstCat, secondCat, thirdCat));
-        descriptor.save(); // required for tests that restart Jenkins
     }
 
     @Test
-    public void onePerNode() throws Exception {
+    public void onePerNode() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -120,14 +118,14 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void duplicateCategories() throws Exception {
+    public void duplicateCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
                 setupAgentsAndCategories();
 
                 WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", false));
+                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", true));
 
                 WorkflowRun b = j.scheduleBuild2(0).waitForStart();
 
@@ -140,12 +138,12 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void undefinedCategories() throws Exception {
+    public void undefinedCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
                 WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", false));
+                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", true));
 
                 WorkflowRun b = j.scheduleBuild2(0).waitForStart();
 
@@ -157,7 +155,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void multipleCategories() throws Exception {
+    public void multipleCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -210,7 +208,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void onePerNodeParallel() throws Exception {
+    public void onePerNodeParallel() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -220,7 +218,7 @@ public class ThrottleStepTest {
                         "  a: { " + getThrottleScript("first-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  b: { " + getThrottleScript("first-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  c: { " + getThrottleScript("first-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", false));
+                        ")\n", true));
 
                 WorkflowRun run1 = firstJob.scheduleBuild2(0).waitForStart();
                 SemaphoreStep.waitForStart("wait-first-branch-a-job/1", run1);
@@ -231,7 +229,7 @@ public class ThrottleStepTest {
                         "  a: { " + getThrottleScript("second-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  b: { " + getThrottleScript("second-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  c: { " + getThrottleScript("second-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", false));
+                        ")\n", true));
 
                 WorkflowRun run2 = secondJob.scheduleBuild2(0).waitForStart();
 
@@ -248,15 +246,15 @@ public class ThrottleStepTest {
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-first-branch-b-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-first-branch-c-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-second-branch-a-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-second-branch-b-job/1", null);
@@ -269,7 +267,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void twoTotalWithNodeLevelThrottling() throws Exception {
+    public void twoTotal() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -319,205 +317,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void twoTotalWithJobLevelThrottling() throws Exception {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                firstJob.setDefinition(getJobFlowWithoutThrottleStep("first", "first-agent", 1));
-                firstJob.addProperty(new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Arrays.asList(TWO_TOTAL), // categories
-                        true, // throttleEnabled
-                        "category", // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
-
-                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-0-first-job/1", firstJobFirstRun);
-
-                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(getJobFlowWithoutThrottleStep("second", "second-agent", 1));
-                secondJob.addProperty(new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Arrays.asList(TWO_TOTAL), // categories
-                        true, // throttleEnabled
-                        "category", // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
-
-                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-0-second-job/1", secondJobFirstRun);
-
-                WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
-                thirdJob.setDefinition(getJobFlowWithoutThrottleStep("third", "on-agent", 1));
-                thirdJob.addProperty(new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Arrays.asList(TWO_TOTAL), // categories
-                        true, // throttleEnabled
-                        "category", // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
-
-                QueueTaskFuture<WorkflowRun> thirdJobFirstRunFuture = thirdJob.scheduleBuild2(0);
-                story.j.jenkins.getQueue().maintain();
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-                Queue.Item queuedItem = Iterables.getOnlyElement(Arrays.asList(story.j.jenkins.getQueue().getItems()));
-                assertEquals(
-                        Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
-                        queuedItem.getCauseOfBlockage().getShortDescription());
-                Node n = story.j.jenkins.getNode("first-agent");
-                assertNotNull(n);
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, firstJobFirstRun);
-
-                Node n2 = story.j.jenkins.getNode("second-agent");
-                assertNotNull(n2);
-                assertEquals(1, n2.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
-
-                SemaphoreStep.success("wait-0-first-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
-                WorkflowRun thirdJobFirstRun = thirdJobFirstRunFuture.waitForStart();
-                SemaphoreStep.waitForStart("wait-0-third-job/1", thirdJobFirstRun);
-                assertTrue(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, thirdJobFirstRun);
-
-                SemaphoreStep.success("wait-0-second-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
-
-                SemaphoreStep.success("wait-0-third-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
-            }
-        });
-    }
-
-    @Test
-    public void twoTotalWithJobLevelThrottlingAndRestart() throws Exception {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                firstJob.setDefinition(getJobFlowWithoutThrottleStep("first", "first-agent", 3));
-                firstJob.addProperty(new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Arrays.asList(TWO_TOTAL), // categories
-                        true, // throttleEnabled
-                        "category", // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
-
-                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.success("wait-0-first-job/1", null);
-                SemaphoreStep.waitForStart("wait-1-first-job/1", firstJobFirstRun);
-
-                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(getJobFlowWithoutThrottleStep("second", "second-agent", 3));
-                secondJob.addProperty(new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Arrays.asList(TWO_TOTAL), // categories
-                        true, // throttleEnabled
-                        "category", // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
-
-                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.success("wait-0-second-job/1", null);
-                SemaphoreStep.waitForStart("wait-1-second-job/1", secondJobFirstRun);
-
-                WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
-                thirdJob.setDefinition(getJobFlowWithoutThrottleStep("third", "on-agent", 1));
-                thirdJob.addProperty(new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Arrays.asList(TWO_TOTAL), // categories
-                        true, // throttleEnabled
-                        "category", // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
-
-                QueueTaskFuture<WorkflowRun> thirdJobFirstRunFuture = thirdJob.scheduleBuild2(0);
-                story.j.jenkins.getQueue().maintain();
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-                Queue.Item queuedItem = Iterables.getOnlyElement(Arrays.asList(story.j.jenkins.getQueue().getItems()));
-                assertEquals(
-                        Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
-                        queuedItem.getCauseOfBlockage().getShortDescription());
-                Node n = story.j.jenkins.getNode("first-agent");
-                assertNotNull(n);
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, firstJobFirstRun);
-
-                Node n2 = story.j.jenkins.getNode("second-agent");
-                assertNotNull(n2);
-                assertEquals(1, n2.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
-            }
-        });
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                WorkflowRun firstJobFirstRun =
-                        story.j.jenkins.getItemByFullName("first-job", WorkflowJob.class).getLastBuild();
-                SemaphoreStep.success("wait-1-first-job/1", null);
-                SemaphoreStep.waitForStart("wait-2-first-job/1", firstJobFirstRun);
-
-                WorkflowRun secondJobFirstRun =
-                        story.j.jenkins.getItemByFullName("second-job", WorkflowJob.class).getLastBuild();
-                SemaphoreStep.success("wait-1-second-job/1", null);
-                SemaphoreStep.waitForStart("wait-2-second-job/1", secondJobFirstRun);
-
-                Node n = story.j.jenkins.getNode("first-agent");
-                assertNotNull(n);
-                Node n2 = story.j.jenkins.getNode("second-agent");
-                assertNotNull(n2);
-
-                story.j.jenkins.getQueue().maintain();
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-                Queue.Item queuedItem = Iterables.getOnlyElement(Arrays.asList(story.j.jenkins.getQueue().getItems()));
-                assertEquals(
-                        Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
-                        queuedItem.getCauseOfBlockage().getShortDescription());
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, firstJobFirstRun);
-
-                assertEquals(1, n2.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
-
-                SemaphoreStep.success("wait-2-first-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
-                SemaphoreStep.waitForStart("wait-0-third-job/1", null);
-                WorkflowRun thirdJobFirstRun =
-                        story.j.jenkins.getItemByFullName("third-job", WorkflowJob.class).getLastBuild();
-                assertTrue(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, thirdJobFirstRun);
-
-                SemaphoreStep.success("wait-2-second-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
-
-                SemaphoreStep.success("wait-0-third-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
-            }
-        });
-    }
-
-    @Test
-    public void interopWithFreestyle() throws Exception {
+    public void interopWithFreestyle() {
         final Semaphore semaphore = new Semaphore(1);
 
         story.addStep(new Statement() {
@@ -604,9 +404,7 @@ public class ThrottleStepTest {
     }
 
     private CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label) {
-        // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
-        // And I cannot figure out why. So for now...
-        return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), false);
+        return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), true);
     }
 
     private String getThrottleScript(String jobName, String category, String label) {
@@ -627,25 +425,8 @@ public class ThrottleStepTest {
                 "}\n";
     }
 
-    private CpsFlowDefinition getJobFlowWithoutThrottleStep(String jobName, String label, int numSemaphores) {
-        // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
-        // And I cannot figure out why. So for now...
-        return new CpsFlowDefinition(getThrottleScriptWithoutThrottleStep(jobName, label, numSemaphores), false);
-    }
-
-    private String getThrottleScriptWithoutThrottleStep(String jobName, String label, int numSemaphores) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("echo 'hi there'\n");
-        sb.append("node('" + label + "') {\n");
-        for (int i = 0; i < numSemaphores; i++) {
-            sb.append("  semaphore 'wait-" + i + "-" + jobName + "-job'\n");
-        }
-        sb.append("}\n");
-        return sb.toString();
-    }
-
     @Test
-    public void snippetizer() throws Exception {
+    public void snippetizer() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {

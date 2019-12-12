@@ -478,8 +478,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return 0;
         }
 
-        // Note that this counts flyweight executors in its calculation, which may be a problem if flyweight executors
-        // are being leaked by other plugins.
+        // Note that this counts flyweight executors in its calculation, which may be a problem if
+        // flyweight executors are being leaked by other plugins.
         return buildsOfProjectOnNodeImpl(node, task);
     }
 
@@ -506,7 +506,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     runCount++;
                 }
             } catch (IOException e) {
-                LOGGER.log(Level.WARNING, "Error getting number of builds for pipeline {0}: {1}", new Object[] {task.getDisplayName(), e});
+                LOGGER.log(
+                        Level.WARNING,
+                        "Error getting number of builds for pipeline {0}: {1}",
+                        new Object[] {task.getDisplayName(), e});
             }
         }
 
@@ -515,7 +518,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOfProjectOnNodeImpl(Node node, Task task) {
         int runCount = 0;
-
         LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
