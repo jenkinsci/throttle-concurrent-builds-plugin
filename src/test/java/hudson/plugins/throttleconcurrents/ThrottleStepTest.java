@@ -246,15 +246,15 @@ public class ThrottleStepTest {
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-first-branch-b-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-first-branch-c-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-second-branch-a-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-second-branch-b-job/1", null);
