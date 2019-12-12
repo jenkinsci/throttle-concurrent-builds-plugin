@@ -26,7 +26,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -417,7 +416,6 @@ public class ThrottleJobPropertyTest {
                 });
     }
 
-    @Ignore
     @Test
     public void twoTotalWithRestart() {
         story.then(
