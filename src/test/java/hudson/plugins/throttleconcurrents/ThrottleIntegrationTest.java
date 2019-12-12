@@ -129,7 +129,7 @@ public class ThrottleIntegrationTest {
     }
     
     @Test
-    public void testThrottlingWithCategory() throws Exception {
+    public void testThrottlingWithCategoryPerNode() throws Exception {
         final String category = "category";
         
         ThrottleJobProperty.DescriptorImpl descriptor
@@ -180,6 +180,58 @@ public class ThrottleIntegrationTest {
         assertEquals(1, waterMark.getExecutorWaterMark());
     }
     
+    @Test
+    public void testThrottlingWithCategoryTotal() throws Exception {
+        final String category = "category";
+
+        ThrottleJobProperty.DescriptorImpl descriptor =
+                (ThrottleJobProperty.DescriptorImpl)
+                        r.jenkins.getDescriptor(ThrottleJobProperty.class);
+        descriptor.setCategories(
+                Collections.singletonList(
+                        new ThrottleJobProperty.ThrottleCategory(
+                                category,
+                                null, // maxConcurrentPerNode
+                                1, // maxConcurrentTotal
+                                Collections.emptyList())));
+
+        FreeStyleProject p1 = r.createFreeStyleProject();
+        p1.setAssignedNode(slave);
+        p1.addProperty(
+                new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Collections.singletonList(category), // categories
+                        true, // throttleEnabled
+                        "category", // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+        p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+
+        FreeStyleProject p2 = r.createFreeStyleProject();
+        p2.setAssignedNode(slave);
+        p2.addProperty(
+                new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Collections.singletonList(category), // categories
+                        true, // throttleEnabled
+                        "category", // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+        p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+
+        p1.scheduleBuild2(0);
+        p2.scheduleBuild2(0);
+
+        r.waitUntilNoActivity();
+
+        // throttled, and only one build runs at the same time.
+        assertEquals(1, waterMark.getExecutorWaterMark());
+    }
+
     @Issue("JENKINS-25326")
     @Test
     public void testThrottlingWithCategoryInFolder() throws Exception {
