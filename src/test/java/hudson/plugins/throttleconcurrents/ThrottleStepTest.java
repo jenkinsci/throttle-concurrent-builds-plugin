@@ -125,7 +125,7 @@ public class ThrottleStepTest {
                 setupAgentsAndCategories();
 
                 WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", false));
+                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", true));
 
                 WorkflowRun b = j.scheduleBuild2(0).waitForStart();
 
@@ -143,7 +143,7 @@ public class ThrottleStepTest {
             @Override
             public void evaluate() throws Throwable {
                 WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", false));
+                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", true));
 
                 WorkflowRun b = j.scheduleBuild2(0).waitForStart();
 
@@ -218,7 +218,7 @@ public class ThrottleStepTest {
                         "  a: { " + getThrottleScript("first-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  b: { " + getThrottleScript("first-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  c: { " + getThrottleScript("first-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", false));
+                        ")\n", true));
 
                 WorkflowRun run1 = firstJob.scheduleBuild2(0).waitForStart();
                 SemaphoreStep.waitForStart("wait-first-branch-a-job/1", run1);
@@ -229,7 +229,7 @@ public class ThrottleStepTest {
                         "  a: { " + getThrottleScript("second-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  b: { " + getThrottleScript("second-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  c: { " + getThrottleScript("second-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", false));
+                        ")\n", true));
 
                 WorkflowRun run2 = secondJob.scheduleBuild2(0).waitForStart();
 
@@ -404,9 +404,7 @@ public class ThrottleStepTest {
     }
 
     private CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label) {
-        // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
-        // And I cannot figure out why. So for now...
-        return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), false);
+        return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), true);
     }
 
     private String getThrottleScript(String jobName, String category, String label) {
