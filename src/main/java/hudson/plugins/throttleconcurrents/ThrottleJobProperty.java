@@ -36,6 +36,7 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -360,6 +361,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
     
     @Extension
+    @Symbol("throttleJobProperty")
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         private static final Logger LOGGER = Logger.getLogger(DescriptorImpl.class.getName());
 
