@@ -37,20 +37,14 @@ import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
-
 import java.util.Arrays;
 import java.util.Collections;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SleepBuilder;
-
-/*
-import com.cloudbees.hudson.plugins.folder.Folder;
-*/
 
 /**
  * Tests that {@link ThrottleJobProperty} actually works for builds.
