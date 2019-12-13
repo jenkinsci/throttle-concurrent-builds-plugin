@@ -26,14 +26,15 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.26</version>
+    <version>3.51</version>
+    <relativePath />
   </parent>
 
   <artifactId>throttle-concurrents</artifactId>
   <packaging>hpi</packaging>
   <name>Jenkins Throttle Concurrent Builds Plug-in</name>
-  <version>2.0.2-SNAPSHOT</version>
-  <url>http://wiki.jenkins-ci.org/display/JENKINS/Throttle+Concurrent+Builds+Plugin</url>
+  <version>${revision}${changelist}</version>
+  <url>https://github.com/jenkinsci/throttle-concurrent-builds-plugin</url>
   <description>Plugin to throttle the number of concurrent builds of a single job per node.</description>
   
   <licenses>
@@ -44,11 +45,12 @@ THE SOFTWARE.
   </licenses>
     
   <properties>
-    <jenkins.version>1.642.3</jenkins.version>
-    <java.level>6</java.level>
-    <!--TODO: do not fail on errors-->
-    <findbugs.failOnError>false</findbugs.failOnError>
-    <java.level>7</java.level>
+    <revision>2.0.2</revision>
+    <changelist>-SNAPSHOT</changelist>
+    <jenkins.version>2.60.3</jenkins.version>
+    <java.level>8</java.level>
+    <workflow-cps-plugin.version>2.42</workflow-cps-plugin.version>
+    <workflow-support-plugin.version>2.16</workflow-support-plugin.version>
   </properties>
 
   <developers>
@@ -56,6 +58,12 @@ THE SOFTWARE.
       <id>abayer</id>
       <name>Andrew Bayer</name>
       <email>andrew.bayer@gmail.com</email>
+      <timezone>-8</timezone>
+    </developer>
+    <developer>
+      <id>basil</id>
+      <name>Basil Crow</name>
+      <email>me@basilcrow.com</email>
       <timezone>-8</timezone>
     </developer>
     <developer>
@@ -76,63 +84,68 @@ THE SOFTWARE.
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
+      <url>https://repo.jenkins-ci.org/public/</url>
     </repository>
   </repositories>
 
   <scm>
     <connection>scm:git:git://github.com/jenkinsci/throttle-concurrent-builds-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/throttle-concurrent-builds-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/throttle-concurrent-builds-plugin</url>
-    <tag>HEAD</tag>
+    <url>https://github.com/jenkinsci/throttle-concurrent-builds-plugin</url>
+    <tag>${scmTag}</tag>
   </scm>
 
 
     <pluginRepositories>
         <pluginRepository>
             <id>repo.jenkins-ci.org</id>
-            <url>http://repo.jenkins-ci.org/public/</url>
+            <url>https://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>script-security</artifactId>
+                <version>1.36</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-        <dependency>
-            <groupId>com.google.code.findbugs</groupId>
-            <artifactId>jsr305</artifactId>
-            <version>2.0.1</version>
-            <type>jar</type>
-        </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>matrix-project</artifactId>
-            <version>1.8</version>
+            <version>1.11</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-api</artifactId>
-            <version>2.12</version>
+            <version>2.24</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
-            <version>2.7</version>
+            <version>2.13</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-durable-task-step</artifactId>
-            <version>2.8</version>
+            <version>2.13</version>
         </dependency>
 
         <!-- Dependencies for test -->
         <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>cloudbees-folder</artifactId>
-          <version>6.0.2</version>
+          <version>6.2.0</version>
           <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>matrix-auth</artifactId>
-          <version>1.4</version>
+          <version>2.1</version>
           <scope>test</scope>
         </dependency>
         <dependency>
@@ -144,43 +157,43 @@ THE SOFTWARE.
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
-            <version>2.28</version>
+            <version>${workflow-cps-plugin.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
-            <version>2.28</version>
+            <version>${workflow-cps-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-job</artifactId>
-            <version>2.9</version>
+            <version>2.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-basic-steps</artifactId>
-            <version>2.3</version>
+            <version>2.6</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>junit</artifactId>
-            <version>1.15</version>
+            <version>1.20</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
-            <version>2.13</version>
+            <version>${workflow-support-plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
-            <version>2.13</version>
+            <version>${workflow-support-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
