@@ -358,9 +358,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     /**
      * Filter job parameters to only include parameters used for throttling
-     * @param params
-     * @param OriginalParams
-     * @return
      */
     private List<ParameterValue> doFilterParams(List<String> params, List<ParameterValue> OriginalParams) {
         if (params.isEmpty()) {
