@@ -1,5 +1,10 @@
 package hudson.plugins.throttleconcurrents;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -16,6 +21,12 @@ import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
@@ -31,18 +42,6 @@ import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.Semaphore;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 public class ThrottleStepTest {
     private static final String ONE_PER_NODE = "one_per_node";
@@ -82,7 +81,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void onePerNode() throws Exception {
+    public void onePerNode() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -118,14 +117,14 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void duplicateCategories() throws Exception {
+    public void duplicateCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
                 setupAgentsAndCategories();
 
                 WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", false));
+                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", true));
 
                 WorkflowRun b = j.scheduleBuild2(0).waitForStart();
 
@@ -138,12 +137,12 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void undefinedCategories() throws Exception {
+    public void undefinedCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
                 WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", false));
+                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", true));
 
                 WorkflowRun b = j.scheduleBuild2(0).waitForStart();
 
@@ -155,7 +154,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void multipleCategories() throws Exception {
+    public void multipleCategories() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -208,7 +207,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void onePerNodeParallel() throws Exception {
+    public void onePerNodeParallel() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -218,7 +217,7 @@ public class ThrottleStepTest {
                         "  a: { " + getThrottleScript("first-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  b: { " + getThrottleScript("first-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  c: { " + getThrottleScript("first-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", false));
+                        ")\n", true));
 
                 WorkflowRun run1 = firstJob.scheduleBuild2(0).waitForStart();
                 SemaphoreStep.waitForStart("wait-first-branch-a-job/1", run1);
@@ -229,7 +228,7 @@ public class ThrottleStepTest {
                         "  a: { " + getThrottleScript("second-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  b: { " + getThrottleScript("second-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
                         "  c: { " + getThrottleScript("second-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", false));
+                        ")\n", true));
 
                 WorkflowRun run2 = secondJob.scheduleBuild2(0).waitForStart();
 
@@ -246,15 +245,15 @@ public class ThrottleStepTest {
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-first-branch-b-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-first-branch-c-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-second-branch-a-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run1);
+                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run2);
                 assertEquals(1, first.countBusy());
                 assertEquals(1, second.countBusy());
                 SemaphoreStep.success("wait-second-branch-b-job/1", null);
@@ -267,7 +266,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void twoTotal() throws Exception {
+    public void twoTotal() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {
@@ -317,7 +316,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void interopWithFreestyle() throws Exception {
+    public void interopWithFreestyle() {
         final Semaphore semaphore = new Semaphore(1);
 
         story.addStep(new Statement() {
@@ -404,9 +403,7 @@ public class ThrottleStepTest {
     }
 
     private CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label) {
-        // This should be sandbox:true, but when I do that, I get org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod java.lang.String java.lang.Object
-        // And I cannot figure out why. So for now...
-        return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), false);
+        return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), true);
     }
 
     private String getThrottleScript(String jobName, String category, String label) {
@@ -428,7 +425,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void snippetizer() throws Exception {
+    public void snippetizer() {
         story.addStep(new Statement() {
             @Override
             public void evaluate() throws Throwable {

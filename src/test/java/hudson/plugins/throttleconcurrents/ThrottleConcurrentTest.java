@@ -1,5 +1,7 @@
 package hudson.plugins.throttleconcurrents;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -9,22 +11,35 @@ import com.tngtech.jgiven.annotation.BeforeStage;
 import com.tngtech.jgiven.annotation.ScenarioState;
 import com.tngtech.jgiven.junit.ScenarioTest;
 import hudson.Launcher;
-import hudson.model.*;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
+import hudson.model.Computer;
+import hudson.model.FreeStyleProject;
+import hudson.model.Node;
+import hudson.model.TaskListener;
 import hudson.slaves.ComputerListener;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
 import hudson.tasks.Builder;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import jenkins.model.Jenkins;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @Ignore("Depends on a newer version of Guava than can be used with Pipeline")
 public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.GivenStage, ThrottleConcurrentTest.WhenAction, ThrottleConcurrentTest.ThenSomeOutcome> {
