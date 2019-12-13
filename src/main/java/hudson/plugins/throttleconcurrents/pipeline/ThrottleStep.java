@@ -5,18 +5,17 @@ import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-
-import javax.annotation.Nonnull;
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 
 public class ThrottleStep extends Step implements Serializable {
     private List<String> categories;

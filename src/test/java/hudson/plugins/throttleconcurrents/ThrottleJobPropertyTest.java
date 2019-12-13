@@ -20,6 +20,14 @@ import hudson.security.AuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
 import hudson.util.RunList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -32,9 +40,7 @@ import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
-
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
+import org.jvnet.hudson.test.WithoutJenkins;
 
 public class ThrottleJobPropertyTest {
 
@@ -151,108 +157,93 @@ public class ThrottleJobPropertyTest {
 
 
     @Test
+    @WithoutJenkins
     public void testToStringWithNulls() {
-        story.then(
-                s -> {
-                    ThrottleJobProperty tjp =
-                            new ThrottleJobProperty(
-                                    0,
-                                    0,
-                                    null,
-                                    false,
-                                    null,
-                                    false,
-                                    "",
-                                    ThrottleMatrixProjectOptions.DEFAULT);
-                    assertNotNull(tjp.toString());
-                });
+        ThrottleJobProperty tjp =
+                new ThrottleJobProperty(
+                        0, 0, null, false, null, false, "", ThrottleMatrixProjectOptions.DEFAULT);
+        assertNotNull(tjp.toString());
     }
 
     @Test
+    @WithoutJenkins
     public void testThrottleJobConstructorShouldStoreArguments() {
-        story.then(
-                s -> {
-                    Integer expectedMaxConcurrentPerNode = anyInt();
-                    Integer expectedMaxConcurrentTotal = anyInt();
-                    List<String> expectedCategories = Collections.emptyList();
-                    boolean expectedThrottleEnabled = anyBoolean();
-                    String expectedThrottleOption = anyString();
-                    boolean expectedLimitOneJobWithMatchingParams = anyBoolean();
-                    String expectedParamsToUseForLimit = anyString();
+        Integer expectedMaxConcurrentPerNode = anyInt();
+        Integer expectedMaxConcurrentTotal = anyInt();
+        List<String> expectedCategories = Collections.emptyList();
+        boolean expectedThrottleEnabled = anyBoolean();
+        String expectedThrottleOption = anyString();
+        boolean expectedLimitOneJobWithMatchingParams = anyBoolean();
+        String expectedParamsToUseForLimit = anyString();
 
-                    ThrottleJobProperty property =
-                            new ThrottleJobProperty(
-                                    expectedMaxConcurrentPerNode,
-                                    expectedMaxConcurrentTotal,
-                                    expectedCategories,
-                                    expectedThrottleEnabled,
-                                    expectedThrottleOption,
-                                    expectedLimitOneJobWithMatchingParams,
-                                    expectedParamsToUseForLimit,
-                                    ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property =
+                new ThrottleJobProperty(
+                        expectedMaxConcurrentPerNode,
+                        expectedMaxConcurrentTotal,
+                        expectedCategories,
+                        expectedThrottleEnabled,
+                        expectedThrottleOption,
+                        expectedLimitOneJobWithMatchingParams,
+                        expectedParamsToUseForLimit,
+                        ThrottleMatrixProjectOptions.DEFAULT);
 
-                    assertEquals(expectedMaxConcurrentPerNode, property.getMaxConcurrentPerNode());
-                    assertEquals(expectedMaxConcurrentTotal, property.getMaxConcurrentTotal());
-                    assertEquals(expectedCategories, property.getCategories());
-                    assertEquals(expectedThrottleEnabled, property.getThrottleEnabled());
-                    assertEquals(expectedThrottleOption, property.getThrottleOption());
-                });
+        assertEquals(expectedMaxConcurrentPerNode, property.getMaxConcurrentPerNode());
+        assertEquals(expectedMaxConcurrentTotal, property.getMaxConcurrentTotal());
+        assertEquals(expectedCategories, property.getCategories());
+        assertEquals(expectedThrottleEnabled, property.getThrottleEnabled());
+        assertEquals(expectedThrottleOption, property.getThrottleOption());
     }
 
     @Test
+    @WithoutJenkins
     public void testThrottleJobShouldCopyCategoriesToConcurrencySafeList() {
-        story.then(
-                s -> {
-                    final String category = anyString();
+        final String category = anyString();
 
-                    ArrayList<String> unsafeList =
-                            new ArrayList<String>() {
-                                {
-                                    add(category);
-                                }
-                            };
+        ArrayList<String> unsafeList =
+                new ArrayList<String>() {
+                    {
+                        add(category);
+                    }
+                };
 
-                    ThrottleJobProperty property =
-                            new ThrottleJobProperty(
-                                    anyInt(),
-                                    anyInt(),
-                                    unsafeList,
-                                    anyBoolean(),
-                                    "throttle_option",
-                                    anyBoolean(),
-                                    anyString(),
-                                    ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property =
+                new ThrottleJobProperty(
+                        anyInt(),
+                        anyInt(),
+                        unsafeList,
+                        anyBoolean(),
+                        "throttle_option",
+                        anyBoolean(),
+                        anyString(),
+                        ThrottleMatrixProjectOptions.DEFAULT);
 
-                    List<String> storedCategories = property.getCategories();
-                    assertEquals(
-                            "contents of original and stored list should be the equal",
-                            unsafeList,
-                            storedCategories);
-                    assertNotSame(
-                            "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
-                            unsafeList,
-                            storedCategories);
-                    assertTrue(storedCategories instanceof CopyOnWriteArrayList);
-                });
+        List<String> storedCategories = property.getCategories();
+        assertEquals(
+                "contents of original and stored list should be the equal",
+                unsafeList,
+                storedCategories);
+        assertNotSame(
+                "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
+                unsafeList,
+                storedCategories);
+        assertTrue(storedCategories instanceof CopyOnWriteArrayList);
     }
 
     @Test
+    @WithoutJenkins
     public void testThrottleJobConstructorHandlesNullCategories() {
-        story.then(
-                s -> {
-                    ThrottleJobProperty property =
-                            new ThrottleJobProperty(
-                                    anyInt(),
-                                    anyInt(),
-                                    null,
-                                    anyBoolean(),
-                                    "throttle_option",
-                                    anyBoolean(),
-                                    anyString(),
-                                    ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property =
+                new ThrottleJobProperty(
+                        anyInt(),
+                        anyInt(),
+                        null,
+                        anyBoolean(),
+                        "throttle_option",
+                        anyBoolean(),
+                        anyString(),
+                        ThrottleMatrixProjectOptions.DEFAULT);
 
-                    assertEquals(Collections.<String>emptyList(), property.getCategories());
-                });
+        assertEquals(Collections.emptyList(), property.getCategories());
     }
 
     @Test

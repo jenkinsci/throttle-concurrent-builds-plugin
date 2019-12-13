@@ -24,9 +24,9 @@
 
 package hudson.plugins.throttleconcurrents.testutils;
 
-import hudson.model.ExecutorListener;
 import hudson.model.Computer;
 import hudson.model.Executor;
+import hudson.model.ExecutorListener;
 import hudson.model.OneOffExecutor;
 import hudson.model.Queue;
 import hudson.slaves.RetentionStrategy;
