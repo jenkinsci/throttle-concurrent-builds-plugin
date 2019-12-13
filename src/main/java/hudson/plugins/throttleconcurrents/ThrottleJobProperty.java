@@ -405,6 +405,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+            if (!formData.has("categories")) {
+                this.categories = null;
+            }
+
             req.bindJSON(this, formData);
             save();
             return true;
@@ -440,9 +444,11 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         public ThrottleCategory getCategoryByName(String categoryName) {
             ThrottleCategory category = null;
             
-            for (ThrottleCategory tc : categories) {
-                if (tc.getCategoryName().equals(categoryName)) {
-                    category = tc;
+            if (categories != null) {
+                for (ThrottleCategory tc : categories) {
+                    if (tc.getCategoryName().equals(categoryName)) {
+                        category = tc;
+                    }
                 }
             }
 

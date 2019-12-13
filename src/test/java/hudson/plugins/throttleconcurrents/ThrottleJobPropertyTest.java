@@ -7,6 +7,10 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.gargoylesoftware.htmlunit.WebClientUtil;
+import com.gargoylesoftware.htmlunit.html.HtmlButton;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.collect.Iterables;
 import hudson.model.AbstractProject;
 import hudson.model.Executor;
@@ -39,6 +43,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
 
@@ -281,6 +286,44 @@ public class ThrottleJobPropertyTest {
                 });
     }
 
+    @Issue("JENKINS-54578")
+    @Test
+    public void clearConfiguredCategories() throws Exception {
+        story.then(
+                s -> {
+                    ThrottleJobProperty.DescriptorImpl descriptor =
+                            story.j.jenkins.getDescriptorByType(
+                                    ThrottleJobProperty.DescriptorImpl.class);
+                    assertNotNull(descriptor);
+
+                    // Ensure there are no categories.
+                    assertTrue(descriptor.getCategories().isEmpty());
+
+                    // Create a category and save.
+                    ThrottleJobProperty.ThrottleCategory cat =
+                            new ThrottleJobProperty.ThrottleCategory(
+                                    anyString(), anyInt(), anyInt(), null);
+                    descriptor.setCategories(Collections.singletonList(cat));
+                    assertFalse(descriptor.getCategories().isEmpty());
+                    descriptor.save();
+
+                    // Delete the category via the UI and save.
+                    JenkinsRule.WebClient webClient = story.j.createWebClient();
+                    HtmlPage page = webClient.goTo("configure");
+                    WebClientUtil.waitForJSExec(page.getWebClient());
+                    HtmlForm config = page.getFormByName("config");
+                    List<HtmlButton> deleteButtons =
+                            config.getByXPath(
+                                    "//td[@class='setting-name' and text()='Multi-Project Throttle Categories']/../td[@class='setting-main']//button[text()='Delete']");
+                    assertEquals(1, deleteButtons.size());
+                    deleteButtons.get(0).click();
+                    WebClientUtil.waitForJSExec(page.getWebClient());
+                    story.j.submit(config);
+
+                    // Ensure the category was deleted.
+                    assertTrue(descriptor.getCategories().isEmpty());
+                });
+    }
 
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
         story.j.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
