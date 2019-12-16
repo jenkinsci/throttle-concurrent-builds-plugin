@@ -3,25 +3,24 @@ package hudson.plugins.throttleconcurrents;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
-import hudson.model.ParameterValue;
+import hudson.model.Action;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Job;
 import hudson.model.Node;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
 import hudson.model.Queue;
 import hudson.model.Queue.Task;
 import hudson.model.Run;
-import hudson.model.queue.WorkUnit;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.model.queue.QueueTaskDispatcher;
+import hudson.model.queue.SubTask;
+import hudson.model.queue.WorkUnit;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.security.ACL;
 import hudson.security.NotSerilizableSecurityContext;
-import hudson.model.Action;
-import hudson.model.ParametersAction;
-import hudson.model.queue.SubTask;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,12 +31,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-
+import jenkins.model.Jenkins;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
-
-import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.actions.BodyInvocationAction;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionList;
 import org.jenkinsci.plugins.workflow.graph.BlockStartNode;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
@@ -526,6 +525,45 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return 0;
         }
 
+        // Note that this counts flyweight executors in its calculation, which may be a problem if
+        // flyweight executors are being leaked by other plugins.
+        return buildsOfProjectOnNodeImpl(node, task);
+    }
+
+    private int buildsOfProjectOnAllNodes(Task task) {
+        if (!shouldBeThrottled(task, getThrottleJobProperty(task))) {
+            return 0;
+        }
+
+        // Note that we can't use WorkflowJob.class because it is not on this plugin's classpath.
+        if (task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+            return buildsOfPipelineJob(task);
+        } else {
+            return buildsOfProjectOnAllNodesImpl(task);
+        }
+    }
+
+    private int buildsOfPipelineJob(Task task) {
+        int runCount = 0;
+
+        for (FlowExecution flowExecution : FlowExecutionList.get()) {
+            try {
+                final Queue.Executable executable = flowExecution.getOwner().getExecutable();
+                if (executable != null && task.equals(executable.getParent())) {
+                    runCount++;
+                }
+            } catch (IOException e) {
+                LOGGER.log(
+                        Level.WARNING,
+                        "Error getting number of builds for pipeline {0}: {1}",
+                        new Object[] {task.getDisplayName(), e});
+            }
+        }
+
+        return runCount;
+    }
+
+    private int buildsOfProjectOnNodeImpl(Node node, Task task) {
         int runCount = 0;
         LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
 
@@ -546,12 +584,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
-    private int buildsOfProjectOnAllNodes(Task task) {
+    private int buildsOfProjectOnAllNodesImpl(Task task) {
         final Jenkins jenkins = Jenkins.getActiveInstance();
         int totalRunCount = buildsOfProjectOnNode(jenkins, task);
 
         for (Node node : jenkins.getNodes()) {
-            totalRunCount += buildsOfProjectOnNode(node, task);
+            totalRunCount += buildsOfProjectOnNodeImpl(node, task);
         }
         return totalRunCount;
     }
