@@ -333,7 +333,7 @@ public class ThrottleStepTest {
                 freeStyleProject.addProperty(new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Arrays.asList(ONE_PER_NODE),      // categories
+                        Collections.singletonList(ONE_PER_NODE),      // categories
                         true,   // throttleEnabled
                         "category",     // throttleOption
                         false,

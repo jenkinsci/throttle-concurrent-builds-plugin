@@ -128,7 +128,7 @@ public class ThrottleIntegrationTest {
         
         ThrottleJobProperty.DescriptorImpl descriptor
             = (ThrottleJobProperty.DescriptorImpl)r.jenkins.getDescriptor(ThrottleJobProperty.class);
-        descriptor.setCategories(Arrays.asList(
+        descriptor.setCategories(Collections.singletonList(
                 new ThrottleJobProperty.ThrottleCategory(
                         category,
                         1,      // maxConcurrentPerNode
@@ -142,7 +142,7 @@ public class ThrottleIntegrationTest {
         p1.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,
@@ -156,7 +156,7 @@ public class ThrottleIntegrationTest {
         p2.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,
@@ -233,7 +233,7 @@ public class ThrottleIntegrationTest {
         
         ThrottleJobProperty.DescriptorImpl descriptor
             = (ThrottleJobProperty.DescriptorImpl)r.jenkins.getDescriptor(ThrottleJobProperty.class);
-        descriptor.setCategories(Arrays.asList(
+        descriptor.setCategories(Collections.singletonList(
                 new ThrottleJobProperty.ThrottleCategory(
                         category,
                         1,      // maxConcurrentPerNode
@@ -248,7 +248,7 @@ public class ThrottleIntegrationTest {
         p1.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,  // limitOneJobWithMatchingParams
@@ -263,7 +263,7 @@ public class ThrottleIntegrationTest {
         p2.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,  // limitOneJobWithMatchingParams
