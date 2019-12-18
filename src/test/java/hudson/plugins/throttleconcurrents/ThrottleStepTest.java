@@ -21,7 +21,6 @@ import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,11 +61,11 @@ public class ThrottleStepTest {
     public void setupAgentsAndCategories() throws Exception {
         DumbSlave firstAgent = new DumbSlave("first-agent", "dummy agent", firstAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         DumbSlave secondAgent = new DumbSlave("second-agent", "dummy agent", secondAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         story.j.jenkins.addNode(firstAgent);
         story.j.jenkins.addNode(secondAgent);
@@ -333,7 +332,7 @@ public class ThrottleStepTest {
                 freeStyleProject.addProperty(new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Arrays.asList(ONE_PER_NODE),      // categories
+                        Collections.singletonList(ONE_PER_NODE),      // categories
                         true,   // throttleEnabled
                         "category",     // throttleOption
                         false,
@@ -343,7 +342,7 @@ public class ThrottleStepTest {
                 freeStyleProject.setAssignedLabel(Label.get("first-agent"));
                 freeStyleProject.getBuildersList().add(new TestBuilder() {
                     @Override
-                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
                         semaphore.acquire();
                         return true;
                     }
@@ -437,7 +436,7 @@ public class ThrottleStepTest {
         });
     }
 
-    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
+    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) {
         for (Executor exec : n.toComputer().getExecutors()) {
             if (exec.getCurrentExecutable() != null) {
                 assertTrue(exec.getCurrentExecutable().getParent() instanceof ExecutorStepExecution.PlaceholderTask);

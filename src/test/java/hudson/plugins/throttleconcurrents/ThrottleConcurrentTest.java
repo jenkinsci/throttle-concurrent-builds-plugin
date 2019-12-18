@@ -2,7 +2,6 @@ package hudson.plugins.throttleconcurrents;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.tngtech.jgiven.Stage;
@@ -27,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -96,7 +96,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         public JenkinsRule j;
 
         @ScenarioState
-        private List<RunProject> projects = new ArrayList<RunProject>();
+        private List<RunProject> projects = new ArrayList<>();
 
         private int numNodes = 2;
         private int numExecutorsPerNode = 10;
@@ -107,12 +107,12 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             return self();
         }
 
-        public GivenStage maxConcurrentPerNode(int maxConcurrentPerNode) throws IOException {
+        public GivenStage maxConcurrentPerNode(int maxConcurrentPerNode) {
             currentCategory.maxConcurrentPerNode(maxConcurrentPerNode);
             return self();
         }
 
-        public GivenStage maxConcurrentTotal(int maxConcurrentTotal) throws IOException {
+        public GivenStage maxConcurrentTotal(int maxConcurrentTotal) {
             currentCategory.maxConcurrentTotal = maxConcurrentTotal;
             return self();
         }
@@ -125,7 +125,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             return self();
         }
 
-        public GivenStage $_nodes(int i) throws Exception {
+        public GivenStage $_nodes(int i) {
             numNodes = i;
             return self();
         }
@@ -145,7 +145,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                 this.j = j;
             }
 
-            public CategorySpec maxConcurrentPerNode(int maxConcurrentPerNode) throws IOException {
+            public CategorySpec maxConcurrentPerNode(int maxConcurrentPerNode) {
                 this.maxConcurrentPerNode = maxConcurrentPerNode;
                 return this;
             }
@@ -179,7 +179,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                 Jenkins jenkins = j.getInstance();
                 synchronized (jenkins) {
                     DumbSlave slave = new DumbSlave("slave" + jenkins.getNodes().size(), "dummy",
-                            j.createTmpDir().getPath(), Integer.toString(numExecutorsPerNode), Node.Mode.NORMAL, "", j.createComputerLauncher(null), RetentionStrategy.NOOP, Collections.EMPTY_LIST);
+                            j.createTmpDir().getPath(), Integer.toString(numExecutorsPerNode), Node.Mode.NORMAL, "", j.createComputerLauncher(null), RetentionStrategy.NOOP, Collections.emptyList());
                     jenkins.addNode(slave);
                 }
                 latch.await();
@@ -204,7 +204,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         public WhenAction each_project_is_built_$_times(int i) throws InterruptedException {
-            List<RunProject> projectsToBeBuilt = new ArrayList<RunProject>();
+            List<RunProject> projectsToBeBuilt = new ArrayList<>();
             for (RunProject project : projects) {
                 projectsToBeBuilt.addAll(Collections.nCopies(i, project));
             }
@@ -222,23 +222,23 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
         @AfterStage
         private void calculateConcurrentBuilds() throws ExecutionException, InterruptedException {
-            buildingChanges = new TreeMap<Long, Integer>();
-            buildsPerNode = new TreeMap<Long, Map<String, Integer>>();
+            buildingChanges = new TreeMap<>();
+            buildsPerNode = new TreeMap<>();
             for (Future<AbstractBuild<?, ?>> buildFuture : builds) {
                 AbstractBuild<?, ?> build = buildFuture.get();
                 long startTimeInMillis = build.getStartTimeInMillis();
-                buildingChanges.put(startTimeInMillis, Optional.fromNullable(buildingChanges.get(startTimeInMillis)).or(0) + 1);
+                buildingChanges.put(startTimeInMillis, Optional.ofNullable(buildingChanges.get(startTimeInMillis)).orElse(0) + 1);
                 long endTimeInMillis = startTimeInMillis + build.getDuration();
-                buildingChanges.put(endTimeInMillis, Optional.fromNullable(buildingChanges.get(endTimeInMillis)).or(0) - 1);
+                buildingChanges.put(endTimeInMillis, Optional.ofNullable(buildingChanges.get(endTimeInMillis)).orElse(0) - 1);
 
                 String nodeName = build.getBuiltOnStr();
-                Map<String, Integer> nodeChanges = Optional.fromNullable(buildsPerNode.get(startTimeInMillis)).or(new HashMap<String, Integer>());
-                nodeChanges.put(nodeName, Optional.fromNullable(nodeChanges.get(nodeName)).or(0) + 1);
+                Map<String, Integer> nodeChanges = Optional.ofNullable(buildsPerNode.get(startTimeInMillis)).orElse(new HashMap<>());
+                nodeChanges.put(nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) + 1);
                 buildsPerNode.put(startTimeInMillis,
                         nodeChanges);
 
-                nodeChanges = Optional.fromNullable(buildsPerNode.get(endTimeInMillis)).or(new HashMap<String, Integer>());
-                nodeChanges.put(nodeName, Optional.fromNullable(nodeChanges.get(nodeName)).or(0) - 1);
+                nodeChanges = Optional.ofNullable(buildsPerNode.get(endTimeInMillis)).orElse(new HashMap<>());
+                nodeChanges.put(nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) - 1);
                 buildsPerNode.put(endTimeInMillis,
                         nodeChanges);
 
@@ -269,15 +269,15 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         public ThenSomeOutcome at_most_$_concurrent_builds_per_node(int maxConcurrentPerNode) {
-            Map<String, Integer> numberOfConcurrentBuilds = new HashMap<String, Integer>();
-            Map<String, Integer> maxConcurrentBuilds = new HashMap<String, Integer>();
+            Map<String, Integer> numberOfConcurrentBuilds = new HashMap<>();
+            Map<String, Integer> maxConcurrentBuilds = new HashMap<>();
             for (Map.Entry<Long, Map<String, Integer>> changePerNodePerTime : buildsPerNode.entrySet()) {
                 for (Map.Entry<String, Integer> changesPerNode : changePerNodePerTime.getValue().entrySet()) {
                     String nodeName = changesPerNode.getKey();
-                    int newValue = Optional.fromNullable(numberOfConcurrentBuilds.get(nodeName)).or(0) +
+                    int newValue = Optional.ofNullable(numberOfConcurrentBuilds.get(nodeName)).orElse(0) +
                             changesPerNode.getValue();
                     numberOfConcurrentBuilds.put(nodeName, newValue);
-                    if (newValue > Optional.fromNullable(maxConcurrentBuilds.get(nodeName)).or(0)) {
+                    if (newValue > Optional.ofNullable(maxConcurrentBuilds.get(nodeName)).orElse(0)) {
                         maxConcurrentBuilds.put(nodeName, newValue);
                     }
                 }
@@ -322,7 +322,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         @Override
-        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
             inBuild.release();
             Thread.sleep(100);
             return true;

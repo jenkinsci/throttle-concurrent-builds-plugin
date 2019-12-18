@@ -264,12 +264,7 @@ public class ThrottleJobPropertyTest {
                             new ThrottleJobProperty.ThrottleCategory(
                                     anyString(), anyInt(), anyInt(), null);
 
-                    ArrayList<ThrottleJobProperty.ThrottleCategory> unsafeList =
-                            new ArrayList<ThrottleJobProperty.ThrottleCategory>() {
-                                {
-                                    add(category);
-                                }
-                            };
+                    List<ThrottleJobProperty.ThrottleCategory> unsafeList = Collections.singletonList(category);
 
                     descriptor.setCategories(unsafeList);
                     List<ThrottleJobProperty.ThrottleCategory> storedCategories =
@@ -288,7 +283,7 @@ public class ThrottleJobPropertyTest {
 
     @Issue("JENKINS-54578")
     @Test
-    public void clearConfiguredCategories() throws Exception {
+    public void clearConfiguredCategories() {
         story.then(
                 s -> {
                     ThrottleJobProperty.DescriptorImpl descriptor =
@@ -328,7 +323,7 @@ public class ThrottleJobPropertyTest {
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
         story.j.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
-            assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<Queue.Task>
+            assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<>
                     (ThrottleJobProperty.getCategoryTasks(category)));
         } finally {
             story.j.jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete
