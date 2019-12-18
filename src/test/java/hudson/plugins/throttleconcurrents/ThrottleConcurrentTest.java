@@ -107,12 +107,12 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             return self();
         }
 
-        public GivenStage maxConcurrentPerNode(int maxConcurrentPerNode) throws IOException {
+        public GivenStage maxConcurrentPerNode(int maxConcurrentPerNode) {
             currentCategory.maxConcurrentPerNode(maxConcurrentPerNode);
             return self();
         }
 
-        public GivenStage maxConcurrentTotal(int maxConcurrentTotal) throws IOException {
+        public GivenStage maxConcurrentTotal(int maxConcurrentTotal) {
             currentCategory.maxConcurrentTotal = maxConcurrentTotal;
             return self();
         }
@@ -125,7 +125,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             return self();
         }
 
-        public GivenStage $_nodes(int i) throws Exception {
+        public GivenStage $_nodes(int i) {
             numNodes = i;
             return self();
         }
@@ -145,7 +145,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                 this.j = j;
             }
 
-            public CategorySpec maxConcurrentPerNode(int maxConcurrentPerNode) throws IOException {
+            public CategorySpec maxConcurrentPerNode(int maxConcurrentPerNode) {
                 this.maxConcurrentPerNode = maxConcurrentPerNode;
                 return this;
             }
@@ -322,7 +322,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         @Override
-        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
             inBuild.release();
             Thread.sleep(100);
             return true;

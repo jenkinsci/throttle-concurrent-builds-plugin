@@ -343,7 +343,7 @@ public class ThrottleStepTest {
                 freeStyleProject.setAssignedLabel(Label.get("first-agent"));
                 freeStyleProject.getBuildersList().add(new TestBuilder() {
                     @Override
-                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
                         semaphore.acquire();
                         return true;
                     }
@@ -437,7 +437,7 @@ public class ThrottleStepTest {
         });
     }
 
-    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
+    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) {
         for (Executor exec : n.toComputer().getExecutors()) {
             if (exec.getCurrentExecutable() != null) {
                 assertTrue(exec.getCurrentExecutable().getParent() instanceof ExecutorStepExecution.PlaceholderTask);

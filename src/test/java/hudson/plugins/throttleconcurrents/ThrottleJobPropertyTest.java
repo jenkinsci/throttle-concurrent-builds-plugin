@@ -288,7 +288,7 @@ public class ThrottleJobPropertyTest {
 
     @Issue("JENKINS-54578")
     @Test
-    public void clearConfiguredCategories() throws Exception {
+    public void clearConfiguredCategories() {
         story.then(
                 s -> {
                     ThrottleJobProperty.DescriptorImpl descriptor =

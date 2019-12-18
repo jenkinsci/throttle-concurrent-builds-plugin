@@ -194,8 +194,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private void configureGlobalThrottling(String labelRoot, int numberOfPairs, int maxConcurrentPerNode)
-    throws InterruptedException, IOException, MalformedURLException
-    {
+    throws InterruptedException, IOException {
         URL url = new URL(r.getURL()+configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
@@ -255,8 +254,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private void configureJobThrottling(FreeStyleProject project)
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         URL url = new URL(r.getURL()+project.getUrl()+configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
@@ -288,8 +286,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private void configureNewNodeWithLabel(String label)
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         URL url = new URL(r.getURL()+"computer/new");
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName("createItem");
@@ -339,8 +336,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private String configureLogger()
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         String logger = ThrottleQueueTaskDispatcher.class.getName();
         r.jenkins.getLog().doNewLogRecorder(logger);
         URL url = new URL(r.getURL()+logUrlPrefix+logger+"/"+configUrlSuffix);
@@ -410,8 +406,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private HtmlPage getLoggerPage(String logger)
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         URL url = new URL(r.getURL()+logUrlPrefix+logger);
         return r.createWebClient().getPage(url);
     }
