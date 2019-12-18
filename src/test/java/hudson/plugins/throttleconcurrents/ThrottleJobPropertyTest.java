@@ -328,7 +328,7 @@ public class ThrottleJobPropertyTest {
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
         story.j.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
-            assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<Queue.Task>
+            assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<>
                     (ThrottleJobProperty.getCategoryTasks(category)));
         } finally {
             story.j.jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete

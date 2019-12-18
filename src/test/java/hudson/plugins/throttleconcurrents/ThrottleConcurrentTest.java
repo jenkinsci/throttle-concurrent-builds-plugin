@@ -96,7 +96,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         public JenkinsRule j;
 
         @ScenarioState
-        private List<RunProject> projects = new ArrayList<RunProject>();
+        private List<RunProject> projects = new ArrayList<>();
 
         private int numNodes = 2;
         private int numExecutorsPerNode = 10;
@@ -204,7 +204,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         public WhenAction each_project_is_built_$_times(int i) throws InterruptedException {
-            List<RunProject> projectsToBeBuilt = new ArrayList<RunProject>();
+            List<RunProject> projectsToBeBuilt = new ArrayList<>();
             for (RunProject project : projects) {
                 projectsToBeBuilt.addAll(Collections.nCopies(i, project));
             }
@@ -222,8 +222,8 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
         @AfterStage
         private void calculateConcurrentBuilds() throws ExecutionException, InterruptedException {
-            buildingChanges = new TreeMap<Long, Integer>();
-            buildsPerNode = new TreeMap<Long, Map<String, Integer>>();
+            buildingChanges = new TreeMap<>();
+            buildsPerNode = new TreeMap<>();
             for (Future<AbstractBuild<?, ?>> buildFuture : builds) {
                 AbstractBuild<?, ?> build = buildFuture.get();
                 long startTimeInMillis = build.getStartTimeInMillis();
@@ -232,12 +232,12 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                 buildingChanges.put(endTimeInMillis, Optional.fromNullable(buildingChanges.get(endTimeInMillis)).or(0) - 1);
 
                 String nodeName = build.getBuiltOnStr();
-                Map<String, Integer> nodeChanges = Optional.fromNullable(buildsPerNode.get(startTimeInMillis)).or(new HashMap<String, Integer>());
+                Map<String, Integer> nodeChanges = Optional.fromNullable(buildsPerNode.get(startTimeInMillis)).or(new HashMap<>());
                 nodeChanges.put(nodeName, Optional.fromNullable(nodeChanges.get(nodeName)).or(0) + 1);
                 buildsPerNode.put(startTimeInMillis,
                         nodeChanges);
 
-                nodeChanges = Optional.fromNullable(buildsPerNode.get(endTimeInMillis)).or(new HashMap<String, Integer>());
+                nodeChanges = Optional.fromNullable(buildsPerNode.get(endTimeInMillis)).or(new HashMap<>());
                 nodeChanges.put(nodeName, Optional.fromNullable(nodeChanges.get(nodeName)).or(0) - 1);
                 buildsPerNode.put(endTimeInMillis,
                         nodeChanges);
@@ -269,8 +269,8 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         public ThenSomeOutcome at_most_$_concurrent_builds_per_node(int maxConcurrentPerNode) {
-            Map<String, Integer> numberOfConcurrentBuilds = new HashMap<String, Integer>();
-            Map<String, Integer> maxConcurrentBuilds = new HashMap<String, Integer>();
+            Map<String, Integer> numberOfConcurrentBuilds = new HashMap<>();
+            Map<String, Integer> maxConcurrentBuilds = new HashMap<>();
             for (Map.Entry<Long, Map<String, Integer>> changePerNodePerTime : buildsPerNode.entrySet()) {
                 for (Map.Entry<String, Integer> changesPerNode : changePerNodePerTime.getValue().entrySet()) {
                     String nodeName = changesPerNode.getKey();
