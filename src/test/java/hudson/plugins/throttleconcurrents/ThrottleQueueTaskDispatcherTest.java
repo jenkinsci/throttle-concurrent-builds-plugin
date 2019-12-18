@@ -32,7 +32,6 @@ import com.gargoylesoftware.htmlunit.html.HtmlSelect;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.throttleconcurrents.testutils.HtmlUnitHelper;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;

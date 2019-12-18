@@ -37,7 +37,6 @@ import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
-import java.util.Arrays;
 import java.util.Collections;
 import org.junit.Before;
 import org.junit.Rule;
