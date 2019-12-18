@@ -179,7 +179,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                 Jenkins jenkins = j.getInstance();
                 synchronized (jenkins) {
                     DumbSlave slave = new DumbSlave("slave" + jenkins.getNodes().size(), "dummy",
-                            j.createTmpDir().getPath(), Integer.toString(numExecutorsPerNode), Node.Mode.NORMAL, "", j.createComputerLauncher(null), RetentionStrategy.NOOP, Collections.EMPTY_LIST);
+                            j.createTmpDir().getPath(), Integer.toString(numExecutorsPerNode), Node.Mode.NORMAL, "", j.createComputerLauncher(null), RetentionStrategy.NOOP, Collections.emptyList());
                     jenkins.addNode(slave);
                 }
                 latch.await();
