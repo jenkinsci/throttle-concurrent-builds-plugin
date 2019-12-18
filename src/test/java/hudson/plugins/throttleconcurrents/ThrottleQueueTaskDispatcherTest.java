@@ -226,7 +226,7 @@ public class ThrottleQueueTaskDispatcherTest {
                             List<HtmlInput> inputs;
                             int clickThenWaitForMaxTries = 3;
                             do {
-                                page = (HtmlPage)deeperButton.click();
+                                page = deeperButton.click();
                                 TimeUnit.SECONDS.sleep(1);
                                 form = page.getFormByName(configFormName);
                                 inputs = form.getInputsByName("_.throttledNodeLabel");
