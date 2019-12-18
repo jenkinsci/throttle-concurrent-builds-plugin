@@ -393,7 +393,7 @@ public class ThrottleQueueTaskDispatcherTest {
 
     private String expectedTracesMessage(String traceKind, boolean assertingTrue)
     {
-        StringBuffer messagePrefix = new StringBuffer("log shall");
+        StringBuilder messagePrefix = new StringBuilder("log shall");
         if(!assertingTrue) {
             messagePrefix.append(" not");
         }
