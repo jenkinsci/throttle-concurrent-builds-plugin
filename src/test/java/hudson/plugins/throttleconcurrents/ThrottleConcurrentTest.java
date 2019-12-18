@@ -2,7 +2,6 @@ package hudson.plugins.throttleconcurrents;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.tngtech.jgiven.Stage;
@@ -27,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -227,18 +227,18 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             for (Future<AbstractBuild<?, ?>> buildFuture : builds) {
                 AbstractBuild<?, ?> build = buildFuture.get();
                 long startTimeInMillis = build.getStartTimeInMillis();
-                buildingChanges.put(startTimeInMillis, Optional.fromNullable(buildingChanges.get(startTimeInMillis)).or(0) + 1);
+                buildingChanges.put(startTimeInMillis, Optional.ofNullable(buildingChanges.get(startTimeInMillis)).orElse(0) + 1);
                 long endTimeInMillis = startTimeInMillis + build.getDuration();
-                buildingChanges.put(endTimeInMillis, Optional.fromNullable(buildingChanges.get(endTimeInMillis)).or(0) - 1);
+                buildingChanges.put(endTimeInMillis, Optional.ofNullable(buildingChanges.get(endTimeInMillis)).orElse(0) - 1);
 
                 String nodeName = build.getBuiltOnStr();
-                Map<String, Integer> nodeChanges = Optional.fromNullable(buildsPerNode.get(startTimeInMillis)).or(new HashMap<>());
-                nodeChanges.put(nodeName, Optional.fromNullable(nodeChanges.get(nodeName)).or(0) + 1);
+                Map<String, Integer> nodeChanges = Optional.ofNullable(buildsPerNode.get(startTimeInMillis)).orElse(new HashMap<>());
+                nodeChanges.put(nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) + 1);
                 buildsPerNode.put(startTimeInMillis,
                         nodeChanges);
 
-                nodeChanges = Optional.fromNullable(buildsPerNode.get(endTimeInMillis)).or(new HashMap<>());
-                nodeChanges.put(nodeName, Optional.fromNullable(nodeChanges.get(nodeName)).or(0) - 1);
+                nodeChanges = Optional.ofNullable(buildsPerNode.get(endTimeInMillis)).orElse(new HashMap<>());
+                nodeChanges.put(nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) - 1);
                 buildsPerNode.put(endTimeInMillis,
                         nodeChanges);
 
@@ -274,10 +274,10 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             for (Map.Entry<Long, Map<String, Integer>> changePerNodePerTime : buildsPerNode.entrySet()) {
                 for (Map.Entry<String, Integer> changesPerNode : changePerNodePerTime.getValue().entrySet()) {
                     String nodeName = changesPerNode.getKey();
-                    int newValue = Optional.fromNullable(numberOfConcurrentBuilds.get(nodeName)).or(0) +
+                    int newValue = Optional.ofNullable(numberOfConcurrentBuilds.get(nodeName)).orElse(0) +
                             changesPerNode.getValue();
                     numberOfConcurrentBuilds.put(nodeName, newValue);
-                    if (newValue > Optional.fromNullable(maxConcurrentBuilds.get(nodeName)).or(0)) {
+                    if (newValue > Optional.ofNullable(maxConcurrentBuilds.get(nodeName)).orElse(0)) {
                         maxConcurrentBuilds.put(nodeName, newValue);
                     }
                 }
