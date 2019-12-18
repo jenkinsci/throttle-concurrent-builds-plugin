@@ -264,12 +264,7 @@ public class ThrottleJobPropertyTest {
                             new ThrottleJobProperty.ThrottleCategory(
                                     anyString(), anyInt(), anyInt(), null);
 
-                    ArrayList<ThrottleJobProperty.ThrottleCategory> unsafeList =
-                            new ArrayList<ThrottleJobProperty.ThrottleCategory>() {
-                                {
-                                    add(category);
-                                }
-                            };
+                    List<ThrottleJobProperty.ThrottleCategory> unsafeList = Collections.singletonList(category);
 
                     descriptor.setCategories(unsafeList);
                     List<ThrottleJobProperty.ThrottleCategory> storedCategories =
