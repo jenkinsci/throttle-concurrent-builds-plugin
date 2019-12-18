@@ -73,7 +73,7 @@ public class ThrottleIntegrationTest {
                     labels==null?"":labels,
                     r.createComputerLauncher(env),
                     RetentionStrategy.NOOP,
-                    Collections.<NodeProperty<?>>emptyList()
+                    Collections.emptyList()
             );
             r.jenkins.addNode(slave);
             return slave;
@@ -133,7 +133,7 @@ public class ThrottleIntegrationTest {
                         category,
                         1,      // maxConcurrentPerNode
                         null,   // maxConcurrentTotal
-                        Collections.<NodeLabeledPair>emptyList()
+                        Collections.emptyList()
                 )
         ));
         
@@ -238,7 +238,7 @@ public class ThrottleIntegrationTest {
                         category,
                         1,      // maxConcurrentPerNode
                         null,   // maxConcurrentTotal
-                        Collections.<NodeLabeledPair>emptyList()
+                        Collections.emptyList()
                 )
         ));
         

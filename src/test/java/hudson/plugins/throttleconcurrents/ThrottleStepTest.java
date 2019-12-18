@@ -62,11 +62,11 @@ public class ThrottleStepTest {
     public void setupAgentsAndCategories() throws Exception {
         DumbSlave firstAgent = new DumbSlave("first-agent", "dummy agent", firstAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         DumbSlave secondAgent = new DumbSlave("second-agent", "dummy agent", secondAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         story.j.jenkins.addNode(firstAgent);
         story.j.jenkins.addNode(secondAgent);
