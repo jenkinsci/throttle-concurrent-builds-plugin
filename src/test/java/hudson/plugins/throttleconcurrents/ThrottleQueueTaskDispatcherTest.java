@@ -223,7 +223,7 @@ public class ThrottleQueueTaskDispatcherTest {
                         buttonFound = true;
                         for(int i=0; i<numberOfPairs; i++)
                         {
-                            List<HtmlInput> inputs = null;
+                            List<HtmlInput> inputs;
                             int clickThenWaitForMaxTries = 3;
                             do {
                                 page = (HtmlPage)deeperButton.click();
