@@ -4,9 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-import hudson.Functions;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -525,9 +523,6 @@ public class ThrottleStepTest {
                         assertTrue(flowNodes instanceof CopyOnWriteArrayList);
                         assertEquals(1, flowNodes.size());
                         assertEquals("3", flowNodes.get(0));
-                    }
-                    if (Functions.isWindows()) {
-                        fail("fail to see log output to verify that Descriptor#save didn't log an error");
                     }
                 });
     }
