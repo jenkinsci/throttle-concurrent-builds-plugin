@@ -433,9 +433,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             if (throttledPipelinesByCategory.entrySet().stream()
                     .anyMatch(e -> !(e.getValue() instanceof CopyOnWriteMap.Tree))) {
                 LOGGER.log(
-                        Level.FINE,
-                        "Migrating throttled pipelines by category to copy-on-write data structures. Original values: [{0}]",
-                        throttledPipelinesByCategory);
+                        Level.INFO,
+                        "Migrating throttled pipelines by category to copy-on-write data structures.");
+                LOGGER.log(Level.FINE, "Original values: {0}", throttledPipelinesByCategory);
                 // For consistency, the type of map returned below should match that of the
                 // initThrottledPipelines method.
                 throttledPipelinesByCategory =
@@ -451,10 +451,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
                 LOGGER.log(
                         Level.INFO,
-                        "Finished migrating throttled pipelines by category to copy-on-write data structures: {0}. Immediately persisting migrated state.",
-                        throttledPipelinesByCategory);
+                        "Finished migrating throttled pipelines by category to copy-on-write data structures. Immediately persisting migrated state.");
+                LOGGER.log(Level.FINE, "New values: {0}", throttledPipelinesByCategory);
+
                 // persist state, now that the data structures have been converted.
                 save();
+
+                LOGGER.log(Level.INFO, "Migrated state persisted successfully.");
             }
             return this;
         }
