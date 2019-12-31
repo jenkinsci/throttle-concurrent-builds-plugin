@@ -421,81 +421,6 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return true;
         }
 
-        /**
-         * This is used when Jenkins is reading the plugin state.
-         *
-         * @return the plugin state
-         */
-        @SuppressWarnings("unused")
-        public synchronized DescriptorImpl readResolve() {
-            // if any of the nested maps are not copy-on-write tree maps, convert the whole data
-            // structure.
-            if (throttledPipelinesByCategory.entrySet().stream()
-                    .anyMatch(e -> !(e.getValue() instanceof CopyOnWriteMap.Tree))) {
-                LOGGER.log(
-                        Level.INFO,
-                        "Migrating throttled pipelines by category to copy-on-write data structures.");
-                LOGGER.log(Level.FINE, "Original values: {0}", throttledPipelinesByCategory);
-                // For consistency, the type of map returned below should match that of the
-                // initThrottledPipelines method.
-                throttledPipelinesByCategory =
-                        throttledPipelinesByCategory.entrySet().stream()
-                                .collect(
-                                        Collectors.toMap(
-                                                Map.Entry::getKey,
-                                                e ->
-                                                        convertToCopyOnWriteDataStructures(
-                                                                e.getValue()),
-                                                throwingMerger(),
-                                                TreeMap::new));
-
-                LOGGER.log(
-                        Level.INFO,
-                        "Finished migrating throttled pipelines by category to copy-on-write data structures. Immediately persisting migrated state.");
-                LOGGER.log(Level.FINE, "New values: {0}", throttledPipelinesByCategory);
-
-                // persist state, now that the data structures have been converted.
-                save();
-
-                LOGGER.log(Level.INFO, "Migrated state persisted successfully.");
-            }
-            return this;
-        }
-
-        /**
-         * Converts a map of string list to use copy-on-write data structures for both the map and
-         * contained lists.
-         *
-         * @param original map of keys to array lists
-         * @return the same map as a copy-on-write tree map with copy-on-write array lists as
-         *     values.
-         */
-        private static Map<String, List<String>> convertToCopyOnWriteDataStructures(
-                Map<String, List<String>> original) {
-            return original.entrySet().stream()
-                    .collect(
-                            Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    e -> new CopyOnWriteArrayList<>(e.getValue()),
-                                    throwingMerger(),
-                                    CopyOnWriteMap.Tree::new));
-        }
-
-        /**
-         * Returns a merge function, suitable for use in {@link Map#merge(Object, Object,
-         * BiFunction) Map.merge()} or {@link Collectors#toMap(Function, Function, BinaryOperator)
-         * toMap()}, which always throws {@code IllegalStateException}. This can be used to enforce
-         * the assumption that the elements being collected are distinct.
-         *
-         * @param <T> the type of input arguments to the merge function
-         * @return a merge function which always throw {@code IllegalStateException}
-         */
-        private static <T> BinaryOperator<T> throwingMerger() {
-            return (u, v) -> {
-                throw new IllegalStateException(String.format("Duplicate key %s", u));
-            };
-        }
-
         public FormValidation doCheckCategoryName(@QueryParameter String value) {
             if (Util.fixEmptyAndTrim(value) == null) {
                 return FormValidation.error("Empty category names are not allowed.");
@@ -571,7 +496,71 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         private synchronized void initThrottledPipelines() {
             if (throttledPipelinesByCategory == null) {
                 throttledPipelinesByCategory = new TreeMap<>();
+            } else if (throttledPipelinesByCategory.entrySet().stream()
+                    .anyMatch(e -> !(e.getValue() instanceof CopyOnWriteMap.Tree))) {
+                // if any of the nested maps are not copy-on-write tree maps, convert the whole data
+                // structure.
+                LOGGER.log(
+                        Level.INFO,
+                        "Migrating throttled pipelines by category to copy-on-write data structures.");
+                LOGGER.log(Level.FINE, "Original values: {0}", throttledPipelinesByCategory);
+                // For consistency, the type of map returned below should match that of the
+                // initThrottledPipelines method.
+                throttledPipelinesByCategory =
+                        throttledPipelinesByCategory.entrySet().stream()
+                                .collect(
+                                        Collectors.toMap(
+                                                Map.Entry::getKey,
+                                                e ->
+                                                        convertToCopyOnWriteDataStructures(
+                                                                e.getValue()),
+                                                throwingMerger(),
+                                                TreeMap::new));
+
+                LOGGER.log(
+                        Level.INFO,
+                        "Finished migrating throttled pipelines by category to copy-on-write data structures. Immediately persisting migrated state.");
+                LOGGER.log(Level.FINE, "New values: {0}", throttledPipelinesByCategory);
+
+                // persist state, now that the data structures have been converted.
+                save();
+
+                LOGGER.log(Level.INFO, "Migrated state persisted successfully.");
             }
+        }
+
+        /**
+         * Converts a map of string list to use copy-on-write data structures for both the map and
+         * contained lists.
+         *
+         * @param original map of keys to array lists
+         * @return the same map as a copy-on-write tree map with copy-on-write array lists as
+         *     values.
+         */
+        private static Map<String, List<String>> convertToCopyOnWriteDataStructures(
+                Map<String, List<String>> original) {
+            return original.entrySet().stream()
+                    .collect(
+                            Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    e -> new CopyOnWriteArrayList<>(e.getValue()),
+                                    throwingMerger(),
+                                    CopyOnWriteMap.Tree::new));
+        }
+
+        /**
+         * Returns a merge function, suitable for use in {@link Map#merge(Object, Object,
+         * BiFunction) Map.merge()} or {@link Collectors#toMap(Function, Function, BinaryOperator)
+         * toMap()}, which always throws {@code IllegalStateException}. This can be used to enforce
+         * the assumption that the elements being collected are distinct.
+         *
+         * @param <T> the type of input arguments to the merge function
+         * @return a merge function which always throw {@code IllegalStateException}
+         */
+        private static <T> BinaryOperator<T> throwingMerger() {
+            return (u, v) -> {
+                throw new IllegalStateException(String.format("Duplicate key %s", u));
+            };
         }
 
         @Override
