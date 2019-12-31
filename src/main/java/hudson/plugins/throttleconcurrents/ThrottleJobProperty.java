@@ -1,5 +1,37 @@
 package hudson.plugins.throttleconcurrents;
 
+import java.io.IOException;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.WeakHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BinaryOperator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.workflow.flow.FlowExecution;
+import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+
+import net.sf.json.JSONObject;
+
 import hudson.Extension;
 import hudson.Util;
 import hudson.matrix.MatrixConfiguration;
@@ -18,32 +50,7 @@ import hudson.model.TaskListener;
 import hudson.util.CopyOnWriteMap;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.WeakHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.Symbol;
-import org.jenkinsci.plugins.workflow.flow.FlowExecution;
-import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
-import org.jenkinsci.plugins.workflow.graph.FlowNode;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // Replaced by categories, to support, well, multiple categories per job (starting from 1.3)
@@ -415,6 +422,57 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             req.bindJSON(this, formData);
             save();
             return true;
+        }
+
+        /**
+         * This is used when Jenkins is reading the plugin state.
+         * @return the plugin state
+         */
+        @SuppressWarnings("unused")
+        public DescriptorImpl readResolve() {
+            // if any of the nested maps are not copy on write tree maps, convert the whole data structure.
+            if (throttledPipelinesByCategory.entrySet().stream()
+                                                 .anyMatch(e -> !(e.getValue() instanceof CopyOnWriteMap.Tree))) {
+                LOGGER.log(Level.FINE, "Migrating throttled pipelines by category to CopyOnWrite data structures. Original values: [{0}]", this.throttledPipelinesByCategory);
+                // This can remain a hash map
+                throttledPipelinesByCategory =
+                        this.throttledPipelinesByCategory.entrySet()
+                                                         .stream()
+                                                         .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(),
+                                                                                                 convertToCopyOnWriteDataStructures(
+                                                                                                         e.getValue())))
+                                                         .collect(Collectors.toMap(Map.Entry::getKey,
+                                                                                   Map.Entry::getValue));
+                LOGGER.log(Level.INFO, "Finished migrating throttled pipelines by category to copy on write data structures: {0}. Immediately persisting migrated state.", this.throttledPipelinesByCategory);
+                // persist state, now that the data structures have been converted.
+                save();
+            }
+            return this;
+        }
+
+        /**
+         * Converts a map of string list to use copy on write data structures for both the map and contained lists.
+         *
+         * @param original map of keys to array lists
+         * @return the same map as a copy on write tree map with copy on write array lists as values.
+         */
+        private Map<String, List<String>> convertToCopyOnWriteDataStructures(Map<String,List<String>> original) {
+            return original.entrySet().stream()
+                    .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), new CopyOnWriteArrayList<>(e.getValue())))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, mergeValues(), CopyOnWriteMap.Tree::new));
+        }
+
+        /**
+         * If there are duplicates, which there should not be, simply combine the lists for the new value.
+         * @return the binary operator that handles merging the values.
+         */
+        private static BinaryOperator<List<String>> mergeValues() {
+            return (u,v) -> {
+                // add all values of v
+                u.addAll(v);
+                // return the merged list.
+                return u;
+            };
         }
 
         public FormValidation doCheckCategoryName(@QueryParameter String value) {

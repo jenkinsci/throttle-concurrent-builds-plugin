@@ -505,7 +505,6 @@ public class ThrottleStepTest {
      * Ensures that data serialized prior to the fix for JENKINS-49006 is correctly converted to
      * copy-on-write data structures upon deserialization.
      */
-    @Ignore("Currently fails because ThrottleJobProperty.DescriptorImpl is missing a readResolve() method.")
     @Issue("JENKINS-49006")
     @LocalData
     @Test
