@@ -509,7 +509,7 @@ public class ThrottleStepTest {
         story.then(
                 s -> {
                     ThrottleJobProperty.DescriptorImpl descriptor =
-                            new ThrottleJobProperty.DescriptorImpl();
+                            ThrottleJobProperty.fetchDescriptor();
 
                     Map<String, List<String>> throttledPipelinesByCategory =
                             descriptor.getThrottledPipelinesForCategory(TWO_TOTAL);
