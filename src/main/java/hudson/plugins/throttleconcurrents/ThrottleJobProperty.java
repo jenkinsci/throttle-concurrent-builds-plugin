@@ -427,13 +427,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
          */
         @SuppressWarnings("unused")
         public synchronized DescriptorImpl readResolve() {
-            // if any of the nested maps are not copy on write tree maps, convert the whole data
+            // if any of the nested maps are not copy-on-write tree maps, convert the whole data
             // structure.
             if (throttledPipelinesByCategory.entrySet().stream()
                     .anyMatch(e -> !(e.getValue() instanceof CopyOnWriteMap.Tree))) {
                 LOGGER.log(
                         Level.FINE,
-                        "Migrating throttled pipelines by category to CopyOnWrite data structures. Original values: [{0}]",
+                        "Migrating throttled pipelines by category to copy-on-write data structures. Original values: [{0}]",
                         this.throttledPipelinesByCategory);
                 // This can remain a hash map
                 throttledPipelinesByCategory =
@@ -447,7 +447,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
                 LOGGER.log(
                         Level.INFO,
-                        "Finished migrating throttled pipelines by category to copy on write data structures: {0}. Immediately persisting migrated state.",
+                        "Finished migrating throttled pipelines by category to copy-on-write data structures: {0}. Immediately persisting migrated state.",
                         this.throttledPipelinesByCategory);
                 // persist state, now that the data structures have been converted.
                 save();
@@ -456,11 +456,11 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         }
 
         /**
-         * Converts a map of string list to use copy on write data structures for both the map and
+         * Converts a map of string list to use copy-on-write data structures for both the map and
          * contained lists.
          *
          * @param original map of keys to array lists
-         * @return the same map as a copy on write tree map with copy on write array lists as
+         * @return the same map as a copy-on-write tree map with copy-on-write array lists as
          *     values.
          */
         private Map<String, List<String>> convertToCopyOnWriteDataStructures(
