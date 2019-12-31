@@ -19,7 +19,6 @@ import hudson.util.CopyOnWriteMap;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -441,16 +440,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 // initThrottledPipelines method.
                 throttledPipelinesByCategory =
                         throttledPipelinesByCategory.entrySet().stream()
-                                .map(
-                                        e ->
-                                                new AbstractMap.SimpleEntry<>(
-                                                        e.getKey(),
-                                                        convertToCopyOnWriteDataStructures(
-                                                                e.getValue())))
                                 .collect(
                                         Collectors.toMap(
                                                 Map.Entry::getKey,
-                                                Map.Entry::getValue,
+                                                e ->
+                                                        convertToCopyOnWriteDataStructures(
+                                                                e.getValue()),
                                                 throwingMerger(),
                                                 TreeMap::new));
 
@@ -475,14 +470,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         private static Map<String, List<String>> convertToCopyOnWriteDataStructures(
                 Map<String, List<String>> original) {
             return original.entrySet().stream()
-                    .map(
-                            e ->
-                                    new AbstractMap.SimpleEntry<>(
-                                            e.getKey(), new CopyOnWriteArrayList<>(e.getValue())))
                     .collect(
                             Collectors.toMap(
                                     Map.Entry::getKey,
-                                    Map.Entry::getValue,
+                                    e -> new CopyOnWriteArrayList<>(e.getValue()),
                                     throwingMerger(),
                                     CopyOnWriteMap.Tree::new));
         }
