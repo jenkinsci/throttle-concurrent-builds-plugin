@@ -434,10 +434,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 LOGGER.log(
                         Level.FINE,
                         "Migrating throttled pipelines by category to copy-on-write data structures. Original values: [{0}]",
-                        this.throttledPipelinesByCategory);
+                        throttledPipelinesByCategory);
                 // This can remain a hash map
                 throttledPipelinesByCategory =
-                        this.throttledPipelinesByCategory.entrySet().stream()
+                        throttledPipelinesByCategory.entrySet().stream()
                                 .map(
                                         e ->
                                                 new AbstractMap.SimpleEntry<>(
@@ -448,7 +448,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 LOGGER.log(
                         Level.INFO,
                         "Finished migrating throttled pipelines by category to copy-on-write data structures: {0}. Immediately persisting migrated state.",
-                        this.throttledPipelinesByCategory);
+                        throttledPipelinesByCategory);
                 // persist state, now that the data structures have been converted.
                 save();
             }
@@ -463,7 +463,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
          * @return the same map as a copy-on-write tree map with copy-on-write array lists as
          *     values.
          */
-        private Map<String, List<String>> convertToCopyOnWriteDataStructures(
+        private static Map<String, List<String>> convertToCopyOnWriteDataStructures(
                 Map<String, List<String>> original) {
             return original.entrySet().stream()
                     .map(
