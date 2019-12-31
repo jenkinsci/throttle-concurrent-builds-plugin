@@ -1,4 +1,4 @@
-/**
+/*
  * MIT License
  * Copyright (c) 2013, Ericsson
  *
@@ -16,10 +16,10 @@
  */
 package hudson.plugins.throttleconcurrents;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
-
 import org.junit.Test;
 
 /**
@@ -44,7 +44,7 @@ public class ThrottleCategoryTest
     public void shouldGetNonEmptyNodeLabeledPairsListThatWasSet()
     {
         String expectedLabel = "aLabel";
-        Integer expectedMax = new Integer(1);
+        Integer expectedMax = 1;
 
         ThrottleJobProperty.ThrottleCategory category =
             new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null);

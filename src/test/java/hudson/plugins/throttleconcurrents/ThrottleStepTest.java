@@ -1,22 +1,19 @@
 package hudson.plugins.throttleconcurrents;
 
-import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
-import hudson.model.Computer;
-import hudson.model.Executor;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.Label;
-import hudson.model.Node;
-import hudson.model.Queue;
-import hudson.model.Result;
-import hudson.model.queue.QueueTaskFuture;
-import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
-import hudson.slaves.DumbSlave;
-import hudson.slaves.NodeProperty;
-import hudson.slaves.RetentionStrategy;
-import hudson.util.CopyOnWriteMap;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Semaphore;
+
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
@@ -36,20 +33,22 @@ import org.jvnet.hudson.test.RestartableJenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Semaphore;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
+import hudson.model.Computer;
+import hudson.model.Executor;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.Label;
+import hudson.model.Node;
+import hudson.model.Queue;
+import hudson.model.Result;
+import hudson.model.queue.QueueTaskFuture;
+import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
+import hudson.slaves.DumbSlave;
+import hudson.slaves.RetentionStrategy;
+import hudson.util.CopyOnWriteMap;
 
 public class ThrottleStepTest {
     private static final String ONE_PER_NODE = "one_per_node";
@@ -70,11 +69,11 @@ public class ThrottleStepTest {
     public void setupAgentsAndCategories() throws Exception {
         DumbSlave firstAgent = new DumbSlave("first-agent", "dummy agent", firstAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         DumbSlave secondAgent = new DumbSlave("second-agent", "dummy agent", secondAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         story.j.jenkins.addNode(firstAgent);
         story.j.jenkins.addNode(secondAgent);
@@ -341,7 +340,7 @@ public class ThrottleStepTest {
                 freeStyleProject.addProperty(new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Arrays.asList(ONE_PER_NODE),      // categories
+                        Collections.singletonList(ONE_PER_NODE),      // categories
                         true,   // throttleEnabled
                         "category",     // throttleOption
                         false,
@@ -351,7 +350,7 @@ public class ThrottleStepTest {
                 freeStyleProject.setAssignedLabel(Label.get("first-agent"));
                 freeStyleProject.getBuildersList().add(new TestBuilder() {
                     @Override
-                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
                         semaphore.acquire();
                         return true;
                     }
@@ -532,7 +531,7 @@ public class ThrottleStepTest {
                 });
     }
 
-    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
+    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) {
         for (Executor exec : n.toComputer().getExecutors()) {
             if (exec.getCurrentExecutable() != null) {
                 assertTrue(exec.getCurrentExecutable().getParent() instanceof ExecutorStepExecution.PlaceholderTask);

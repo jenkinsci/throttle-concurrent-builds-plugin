@@ -1,4 +1,4 @@
-/**
+/*
  * MIT License
  * Copyright (c) 2013, Ericsson
  *
@@ -29,18 +29,13 @@ import com.gargoylesoftware.htmlunit.html.HtmlOption;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlRadioButtonInput;
 import com.gargoylesoftware.htmlunit.html.HtmlSelect;
-
 import hudson.model.FreeStyleProject;
 import hudson.plugins.throttleconcurrents.testutils.HtmlUnitHelper;
-
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -198,8 +193,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private void configureGlobalThrottling(String labelRoot, int numberOfPairs, int maxConcurrentPerNode)
-    throws InterruptedException, IOException, MalformedURLException
-    {
+    throws InterruptedException, IOException {
         URL url = new URL(r.getURL()+configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
@@ -228,10 +222,10 @@ public class ThrottleQueueTaskDispatcherTest {
                         buttonFound = true;
                         for(int i=0; i<numberOfPairs; i++)
                         {
-                            List<HtmlInput> inputs = null;
+                            List<HtmlInput> inputs;
                             int clickThenWaitForMaxTries = 3;
                             do {
-                                page = (HtmlPage)deeperButton.click();
+                                page = deeperButton.click();
                                 TimeUnit.SECONDS.sleep(1);
                                 form = page.getFormByName(configFormName);
                                 inputs = form.getInputsByName("_.throttledNodeLabel");
@@ -259,8 +253,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private void configureJobThrottling(FreeStyleProject project)
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         URL url = new URL(r.getURL()+project.getUrl()+configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
@@ -292,8 +285,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private void configureNewNodeWithLabel(String label)
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         URL url = new URL(r.getURL()+"computer/new");
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName("createItem");
@@ -343,8 +335,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private String configureLogger()
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         String logger = ThrottleQueueTaskDispatcher.class.getName();
         r.jenkins.getLog().doNewLogRecorder(logger);
         URL url = new URL(r.getURL()+logUrlPrefix+logger+"/"+configUrlSuffix);
@@ -401,7 +392,7 @@ public class ThrottleQueueTaskDispatcherTest {
 
     private String expectedTracesMessage(String traceKind, boolean assertingTrue)
     {
-        StringBuffer messagePrefix = new StringBuffer("log shall");
+        StringBuilder messagePrefix = new StringBuilder("log shall");
         if(!assertingTrue) {
             messagePrefix.append(" not");
         }
@@ -414,8 +405,7 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private HtmlPage getLoggerPage(String logger)
-    throws IOException, MalformedURLException
-    {
+    throws IOException {
         URL url = new URL(r.getURL()+logUrlPrefix+logger);
         return r.createWebClient().getPage(url);
     }

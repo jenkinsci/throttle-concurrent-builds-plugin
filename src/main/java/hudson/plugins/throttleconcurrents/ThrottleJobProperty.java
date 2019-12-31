@@ -1,7 +1,10 @@
 package hudson.plugins.throttleconcurrents;
 
 import hudson.Extension;
+import hudson.Util;
 import hudson.matrix.MatrixConfiguration;
+import hudson.matrix.MatrixProject;
+import hudson.matrix.MatrixRun;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.Item;
@@ -15,13 +18,9 @@ import hudson.model.TaskListener;
 import hudson.util.CopyOnWriteMap;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import hudson.Util;
-import hudson.matrix.MatrixProject;
-import hudson.matrix.MatrixRun;
-
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,13 +33,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-
 import jenkins.model.Jenkins;
-
 import net.sf.json.JSONObject;
-
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -365,6 +362,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
     
     @Extension
+    @Symbol("throttleJobProperty")
     public static final class DescriptorImpl extends JobPropertyDescriptor {
         private static final Logger LOGGER = Logger.getLogger(DescriptorImpl.class.getName());
 
@@ -410,6 +408,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+            if (!formData.has("categories")) {
+                this.categories = null;
+            }
+
             req.bindJSON(this, formData);
             save();
             return true;
@@ -445,9 +447,11 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         public ThrottleCategory getCategoryByName(String categoryName) {
             ThrottleCategory category = null;
             
-            for (ThrottleCategory tc : categories) {
-                if (tc.getCategoryName().equals(categoryName)) {
-                    category = tc;
+            if (categories != null) {
+                for (ThrottleCategory tc : categories) {
+                    if (tc.getCategoryName().equals(categoryName)) {
+                        category = tc;
+                    }
                 }
             }
 

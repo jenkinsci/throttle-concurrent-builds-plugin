@@ -37,20 +37,13 @@ import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
-
-import java.util.Arrays;
 import java.util.Collections;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SleepBuilder;
-
-/*
-import com.cloudbees.hudson.plugins.folder.Folder;
-*/
 
 /**
  * Tests that {@link ThrottleJobProperty} actually works for builds.
@@ -79,7 +72,7 @@ public class ThrottleIntegrationTest {
                     labels==null?"":labels,
                     r.createComputerLauncher(env),
                     RetentionStrategy.NOOP,
-                    Collections.<NodeProperty<?>>emptyList()
+                    Collections.emptyList()
             );
             r.jenkins.addNode(slave);
             return slave;
@@ -134,12 +127,12 @@ public class ThrottleIntegrationTest {
         
         ThrottleJobProperty.DescriptorImpl descriptor
             = (ThrottleJobProperty.DescriptorImpl)r.jenkins.getDescriptor(ThrottleJobProperty.class);
-        descriptor.setCategories(Arrays.asList(
+        descriptor.setCategories(Collections.singletonList(
                 new ThrottleJobProperty.ThrottleCategory(
                         category,
                         1,      // maxConcurrentPerNode
                         null,   // maxConcurrentTotal
-                        Collections.<NodeLabeledPair>emptyList()
+                        Collections.emptyList()
                 )
         ));
         
@@ -148,7 +141,7 @@ public class ThrottleIntegrationTest {
         p1.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,
@@ -162,7 +155,7 @@ public class ThrottleIntegrationTest {
         p2.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,
@@ -239,12 +232,12 @@ public class ThrottleIntegrationTest {
         
         ThrottleJobProperty.DescriptorImpl descriptor
             = (ThrottleJobProperty.DescriptorImpl)r.jenkins.getDescriptor(ThrottleJobProperty.class);
-        descriptor.setCategories(Arrays.asList(
+        descriptor.setCategories(Collections.singletonList(
                 new ThrottleJobProperty.ThrottleCategory(
                         category,
                         1,      // maxConcurrentPerNode
                         null,   // maxConcurrentTotal
-                        Collections.<NodeLabeledPair>emptyList()
+                        Collections.emptyList()
                 )
         ));
         
@@ -254,7 +247,7 @@ public class ThrottleIntegrationTest {
         p1.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,  // limitOneJobWithMatchingParams
@@ -269,7 +262,7 @@ public class ThrottleIntegrationTest {
         p2.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
-                Arrays.asList(category),      // categories
+                Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
                 "category",     // throttleOption
                 false,  // limitOneJobWithMatchingParams

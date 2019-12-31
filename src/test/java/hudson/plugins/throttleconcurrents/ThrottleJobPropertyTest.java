@@ -7,6 +7,10 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import com.gargoylesoftware.htmlunit.WebClientUtil;
+import com.gargoylesoftware.htmlunit.html.HtmlButton;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.collect.Iterables;
 import hudson.model.AbstractProject;
 import hudson.model.Executor;
@@ -20,6 +24,14 @@ import hudson.security.AuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
 import hudson.util.RunList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -31,10 +43,9 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
-
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
+import org.jvnet.hudson.test.WithoutJenkins;
 
 public class ThrottleJobPropertyTest {
 
@@ -151,108 +162,93 @@ public class ThrottleJobPropertyTest {
 
 
     @Test
+    @WithoutJenkins
     public void testToStringWithNulls() {
-        story.then(
-                s -> {
-                    ThrottleJobProperty tjp =
-                            new ThrottleJobProperty(
-                                    0,
-                                    0,
-                                    null,
-                                    false,
-                                    null,
-                                    false,
-                                    "",
-                                    ThrottleMatrixProjectOptions.DEFAULT);
-                    assertNotNull(tjp.toString());
-                });
+        ThrottleJobProperty tjp =
+                new ThrottleJobProperty(
+                        0, 0, null, false, null, false, "", ThrottleMatrixProjectOptions.DEFAULT);
+        assertNotNull(tjp.toString());
     }
 
     @Test
+    @WithoutJenkins
     public void testThrottleJobConstructorShouldStoreArguments() {
-        story.then(
-                s -> {
-                    Integer expectedMaxConcurrentPerNode = anyInt();
-                    Integer expectedMaxConcurrentTotal = anyInt();
-                    List<String> expectedCategories = Collections.emptyList();
-                    boolean expectedThrottleEnabled = anyBoolean();
-                    String expectedThrottleOption = anyString();
-                    boolean expectedLimitOneJobWithMatchingParams = anyBoolean();
-                    String expectedParamsToUseForLimit = anyString();
+        Integer expectedMaxConcurrentPerNode = anyInt();
+        Integer expectedMaxConcurrentTotal = anyInt();
+        List<String> expectedCategories = Collections.emptyList();
+        boolean expectedThrottleEnabled = anyBoolean();
+        String expectedThrottleOption = anyString();
+        boolean expectedLimitOneJobWithMatchingParams = anyBoolean();
+        String expectedParamsToUseForLimit = anyString();
 
-                    ThrottleJobProperty property =
-                            new ThrottleJobProperty(
-                                    expectedMaxConcurrentPerNode,
-                                    expectedMaxConcurrentTotal,
-                                    expectedCategories,
-                                    expectedThrottleEnabled,
-                                    expectedThrottleOption,
-                                    expectedLimitOneJobWithMatchingParams,
-                                    expectedParamsToUseForLimit,
-                                    ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property =
+                new ThrottleJobProperty(
+                        expectedMaxConcurrentPerNode,
+                        expectedMaxConcurrentTotal,
+                        expectedCategories,
+                        expectedThrottleEnabled,
+                        expectedThrottleOption,
+                        expectedLimitOneJobWithMatchingParams,
+                        expectedParamsToUseForLimit,
+                        ThrottleMatrixProjectOptions.DEFAULT);
 
-                    assertEquals(expectedMaxConcurrentPerNode, property.getMaxConcurrentPerNode());
-                    assertEquals(expectedMaxConcurrentTotal, property.getMaxConcurrentTotal());
-                    assertEquals(expectedCategories, property.getCategories());
-                    assertEquals(expectedThrottleEnabled, property.getThrottleEnabled());
-                    assertEquals(expectedThrottleOption, property.getThrottleOption());
-                });
+        assertEquals(expectedMaxConcurrentPerNode, property.getMaxConcurrentPerNode());
+        assertEquals(expectedMaxConcurrentTotal, property.getMaxConcurrentTotal());
+        assertEquals(expectedCategories, property.getCategories());
+        assertEquals(expectedThrottleEnabled, property.getThrottleEnabled());
+        assertEquals(expectedThrottleOption, property.getThrottleOption());
     }
 
     @Test
+    @WithoutJenkins
     public void testThrottleJobShouldCopyCategoriesToConcurrencySafeList() {
-        story.then(
-                s -> {
-                    final String category = anyString();
+        final String category = anyString();
 
-                    ArrayList<String> unsafeList =
-                            new ArrayList<String>() {
-                                {
-                                    add(category);
-                                }
-                            };
+        ArrayList<String> unsafeList =
+                new ArrayList<String>() {
+                    {
+                        add(category);
+                    }
+                };
 
-                    ThrottleJobProperty property =
-                            new ThrottleJobProperty(
-                                    anyInt(),
-                                    anyInt(),
-                                    unsafeList,
-                                    anyBoolean(),
-                                    "throttle_option",
-                                    anyBoolean(),
-                                    anyString(),
-                                    ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property =
+                new ThrottleJobProperty(
+                        anyInt(),
+                        anyInt(),
+                        unsafeList,
+                        anyBoolean(),
+                        "throttle_option",
+                        anyBoolean(),
+                        anyString(),
+                        ThrottleMatrixProjectOptions.DEFAULT);
 
-                    List<String> storedCategories = property.getCategories();
-                    assertEquals(
-                            "contents of original and stored list should be the equal",
-                            unsafeList,
-                            storedCategories);
-                    assertNotSame(
-                            "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
-                            unsafeList,
-                            storedCategories);
-                    assertTrue(storedCategories instanceof CopyOnWriteArrayList);
-                });
+        List<String> storedCategories = property.getCategories();
+        assertEquals(
+                "contents of original and stored list should be the equal",
+                unsafeList,
+                storedCategories);
+        assertNotSame(
+                "expected unsafe list to be converted to a converted to some other concurrency-safe impl",
+                unsafeList,
+                storedCategories);
+        assertTrue(storedCategories instanceof CopyOnWriteArrayList);
     }
 
     @Test
+    @WithoutJenkins
     public void testThrottleJobConstructorHandlesNullCategories() {
-        story.then(
-                s -> {
-                    ThrottleJobProperty property =
-                            new ThrottleJobProperty(
-                                    anyInt(),
-                                    anyInt(),
-                                    null,
-                                    anyBoolean(),
-                                    "throttle_option",
-                                    anyBoolean(),
-                                    anyString(),
-                                    ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property =
+                new ThrottleJobProperty(
+                        anyInt(),
+                        anyInt(),
+                        null,
+                        anyBoolean(),
+                        "throttle_option",
+                        anyBoolean(),
+                        anyString(),
+                        ThrottleMatrixProjectOptions.DEFAULT);
 
-                    assertEquals(Collections.<String>emptyList(), property.getCategories());
-                });
+        assertEquals(Collections.emptyList(), property.getCategories());
     }
 
     @Test
@@ -268,12 +264,7 @@ public class ThrottleJobPropertyTest {
                             new ThrottleJobProperty.ThrottleCategory(
                                     anyString(), anyInt(), anyInt(), null);
 
-                    ArrayList<ThrottleJobProperty.ThrottleCategory> unsafeList =
-                            new ArrayList<ThrottleJobProperty.ThrottleCategory>() {
-                                {
-                                    add(category);
-                                }
-                            };
+                    List<ThrottleJobProperty.ThrottleCategory> unsafeList = Collections.singletonList(category);
 
                     descriptor.setCategories(unsafeList);
                     List<ThrottleJobProperty.ThrottleCategory> storedCategories =
@@ -290,11 +281,49 @@ public class ThrottleJobPropertyTest {
                 });
     }
 
+    @Issue("JENKINS-54578")
+    @Test
+    public void clearConfiguredCategories() {
+        story.then(
+                s -> {
+                    ThrottleJobProperty.DescriptorImpl descriptor =
+                            story.j.jenkins.getDescriptorByType(
+                                    ThrottleJobProperty.DescriptorImpl.class);
+                    assertNotNull(descriptor);
+
+                    // Ensure there are no categories.
+                    assertTrue(descriptor.getCategories().isEmpty());
+
+                    // Create a category and save.
+                    ThrottleJobProperty.ThrottleCategory cat =
+                            new ThrottleJobProperty.ThrottleCategory(
+                                    anyString(), anyInt(), anyInt(), null);
+                    descriptor.setCategories(Collections.singletonList(cat));
+                    assertFalse(descriptor.getCategories().isEmpty());
+                    descriptor.save();
+
+                    // Delete the category via the UI and save.
+                    JenkinsRule.WebClient webClient = story.j.createWebClient();
+                    HtmlPage page = webClient.goTo("configure");
+                    WebClientUtil.waitForJSExec(page.getWebClient());
+                    HtmlForm config = page.getFormByName("config");
+                    List<HtmlButton> deleteButtons =
+                            config.getByXPath(
+                                    "//td[@class='setting-name' and text()='Multi-Project Throttle Categories']/../td[@class='setting-main']//button[text()='Delete']");
+                    assertEquals(1, deleteButtons.size());
+                    deleteButtons.get(0).click();
+                    WebClientUtil.waitForJSExec(page.getWebClient());
+                    story.j.submit(config);
+
+                    // Ensure the category was deleted.
+                    assertTrue(descriptor.getCategories().isEmpty());
+                });
+    }
 
     private void assertProjects(String category, AbstractProject<?,?>... projects) {
         story.j.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
-            assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<Queue.Task>
+            assertEquals(new HashSet<Queue.Task>(Arrays.asList(projects)), new HashSet<>
                     (ThrottleJobProperty.getCategoryTasks(category)));
         } finally {
             story.j.jenkins.setAuthorizationStrategy(AuthorizationStrategy.UNSECURED); // do not check during e.g. rebuildDependencyGraph from delete
