@@ -437,7 +437,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                         Level.FINE,
                         "Migrating throttled pipelines by category to copy-on-write data structures. Original values: [{0}]",
                         throttledPipelinesByCategory);
-                // This can remain a hash map
+                // For consistency, the type of map returned below should match that of the
+                // initThrottledPipelines method.
                 throttledPipelinesByCategory =
                         throttledPipelinesByCategory.entrySet().stream()
                                 .map(
@@ -450,7 +451,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                         Collectors.toMap(
                                                 Map.Entry::getKey,
                                                 Map.Entry::getValue,
-                                                throwingMerger()));
+                                                throwingMerger(),
+                                                TreeMap::new));
 
                 LOGGER.log(
                         Level.INFO,
