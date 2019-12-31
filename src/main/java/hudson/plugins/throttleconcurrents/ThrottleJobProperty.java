@@ -30,7 +30,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -444,7 +446,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                                         e.getKey(),
                                                         convertToCopyOnWriteDataStructures(
                                                                 e.getValue())))
-                                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                                .collect(
+                                        Collectors.toMap(
+                                                Map.Entry::getKey,
+                                                Map.Entry::getValue,
+                                                throwingMerger()));
+
                 LOGGER.log(
                         Level.INFO,
                         "Finished migrating throttled pipelines by category to copy-on-write data structures: {0}. Immediately persisting migrated state.",
@@ -474,22 +481,22 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                             Collectors.toMap(
                                     Map.Entry::getKey,
                                     Map.Entry::getValue,
-                                    mergeValues(),
+                                    throwingMerger(),
                                     CopyOnWriteMap.Tree::new));
         }
 
         /**
-         * If there are duplicates, which there should not be, simply combine the lists for the new
-         * value.
+         * Returns a merge function, suitable for use in {@link Map#merge(Object, Object,
+         * BiFunction) Map.merge()} or {@link Collectors#toMap(Function, Function, BinaryOperator)
+         * toMap()}, which always throws {@code IllegalStateException}. This can be used to enforce
+         * the assumption that the elements being collected are distinct.
          *
-         * @return the binary operator that handles merging the values.
+         * @param <T> the type of input arguments to the merge function
+         * @return a merge function which always throw {@code IllegalStateException}
          */
-        private static BinaryOperator<List<String>> mergeValues() {
+        private static <T> BinaryOperator<T> throwingMerger() {
             return (u, v) -> {
-                // add all values of v
-                u.addAll(v);
-                // return the merged list.
-                return u;
+                throw new IllegalStateException(String.format("Duplicate key %s", u));
             };
         }
 
