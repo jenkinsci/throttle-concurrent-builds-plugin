@@ -429,7 +429,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
          * @return the plugin state
          */
         @SuppressWarnings("unused")
-        public DescriptorImpl readResolve() {
+        public synchronized DescriptorImpl readResolve() {
             // if any of the nested maps are not copy on write tree maps, convert the whole data structure.
             if (throttledPipelinesByCategory.entrySet().stream()
                                                  .anyMatch(e -> !(e.getValue() instanceof CopyOnWriteMap.Tree))) {
