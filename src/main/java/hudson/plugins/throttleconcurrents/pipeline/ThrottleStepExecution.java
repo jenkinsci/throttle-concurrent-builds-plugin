@@ -67,16 +67,20 @@ public class ThrottleStepExecution extends StepExecution {
         TaskListener listener = getContext().get(TaskListener.class);
         FlowNode flowNode = getContext().get(FlowNode.class);
 
-        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
-
         String runId = null;
         String flowNodeId = null;
 
         if (r != null && flowNode != null) {
             runId = r.getExternalizableId();
             flowNodeId = flowNode.getId();
+            ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+            boolean needsSave = false;
             for (String category : validateCategories(descriptor, listener)) {
                 descriptor.addThrottledPipelineForCategory(runId, flowNodeId, category, listener);
+                needsSave = true;
+            }
+            if (needsSave) {
+                descriptor.save();
             }
         }
 
@@ -109,11 +113,17 @@ public class ThrottleStepExecution extends StepExecution {
 
         @Override protected void finished(StepContext context) throws Exception {
             if (runId != null && flowNodeId != null) {
+                ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+                boolean needsSave = false;
                 for (String category : categories) {
-                    ThrottleJobProperty.fetchDescriptor().removeThrottledPipelineForCategory(runId,
+                    descriptor.removeThrottledPipelineForCategory(runId,
                             flowNodeId,
                             category,
                             context.get(TaskListener.class));
+                    needsSave = true;
+                }
+                if (needsSave) {
+                    descriptor.save();
                 }
             }
         }
