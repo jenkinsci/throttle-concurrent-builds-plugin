@@ -511,9 +511,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                                 .collect(
                                         Collectors.toMap(
                                                 Map.Entry::getKey,
-                                                e ->
-                                                        convertToCopyOnWriteDataStructures(
-                                                                e.getValue()),
+                                                DescriptorImpl::convertValueToCopyOnWriteDataStructures,
                                                 throwingMerger(),
                                                 TreeMap::new));
 
@@ -530,16 +528,16 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         }
 
         /**
-         * Converts a map of string list to use copy-on-write data structures for both the map and
-         * contained lists.
+         * Converts a map entry's value of a map of string list to use copy-on-write data structures
+         * for both the map and contained lists.
          *
-         * @param original map of keys to array lists
-         * @return the same map as a copy-on-write tree map with copy-on-write array lists as
-         *     values.
+         * @param original map entry of the map of keys to array lists
+         * @return the same map entry's value as a copy-on-write tree map with copy-on-write
+         *     array lists as values.
          */
-        private static Map<String, List<String>> convertToCopyOnWriteDataStructures(
-                Map<String, List<String>> original) {
-            return original.entrySet().stream()
+        private static Map<String, List<String>> convertValueToCopyOnWriteDataStructures(
+                Map.Entry<String, Map<String, List<String>>> original) {
+            return original.getValue().entrySet().stream()
                     .collect(
                             Collectors.toMap(
                                     Map.Entry::getKey,
