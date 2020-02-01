@@ -333,6 +333,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
 
+        if (itemParams.size() == 0) {
+            return false;
+        }
+
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
                 // TODO: refactor into a nameEquals helper method
@@ -343,7 +347,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                     executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
-                    if (executingUnitParams.containsAll(itemParams)) {
+                    if (executingUnitParams.size() > 0 && executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
                                 ") with identical parameters (" +
                                 executingUnitParams + ") is already running.");
