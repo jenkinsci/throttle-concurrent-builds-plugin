@@ -1,5 +1,6 @@
 package hudson.plugins.throttleconcurrents;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
@@ -47,6 +48,14 @@ import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.Placeh
 
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
+
+    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "deliberately mutable")
+    public static boolean USE_FLOW_EXECUTION_LIST =
+            Boolean.parseBoolean(
+                    System.getProperty(
+                            ThrottleQueueTaskDispatcher.class.getName()
+                                    + ".USE_FLOW_EXECUTION_LIST",
+                            "true"));
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
@@ -483,7 +492,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         // Note that we can't use WorkflowJob.class because it is not on this plugin's classpath.
-        if (task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+        if (USE_FLOW_EXECUTION_LIST
+                && task.getClass()
+                        .getName()
+                        .equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
             return buildsOfPipelineJob(task);
         } else {
             return buildsOfProjectOnAllNodesImpl(task);
