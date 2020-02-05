@@ -15,6 +15,7 @@ import hudson.model.JobPropertyDescriptor;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.util.CopyOnWriteMap;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
@@ -28,8 +29,12 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
@@ -491,7 +496,69 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         private synchronized void initThrottledPipelines() {
             if (throttledPipelinesByCategory == null) {
                 throttledPipelinesByCategory = new TreeMap<>();
+            } else if (throttledPipelinesByCategory.entrySet().stream()
+                    .anyMatch(e -> !(e.getValue() instanceof CopyOnWriteMap.Tree))) {
+                // if any of the nested maps are not copy-on-write tree maps, convert the whole data
+                // structure.
+                LOGGER.log(
+                        Level.INFO,
+                        "Migrating throttled pipelines by category to copy-on-write data structures.");
+                LOGGER.log(Level.FINE, "Original values: {0}", throttledPipelinesByCategory);
+                // For consistency, the type of map returned below should match that of the
+                // initThrottledPipelines method.
+                throttledPipelinesByCategory =
+                        throttledPipelinesByCategory.entrySet().stream()
+                                .collect(
+                                        Collectors.toMap(
+                                                Map.Entry::getKey,
+                                                DescriptorImpl::convertValueToCopyOnWriteDataStructures,
+                                                throwingMerger(),
+                                                TreeMap::new));
+
+                LOGGER.log(
+                        Level.INFO,
+                        "Finished migrating throttled pipelines by category to copy-on-write data structures. Immediately persisting migrated state.");
+                LOGGER.log(Level.FINE, "New values: {0}", throttledPipelinesByCategory);
+
+                // persist state, now that the data structures have been converted.
+                save();
+
+                LOGGER.log(Level.INFO, "Migrated state persisted successfully.");
             }
+        }
+
+        /**
+         * Converts a map entry's value of a map of string list to use copy-on-write data structures
+         * for both the map and contained lists.
+         *
+         * @param original map entry of the map of keys to array lists
+         * @return the same map entry's value as a copy-on-write tree map with copy-on-write
+         *     array lists as values.
+         */
+        private static Map<String, List<String>> convertValueToCopyOnWriteDataStructures(
+                Map.Entry<String, Map<String, List<String>>> original) {
+            return original.getValue().entrySet().stream()
+                    .collect(
+                            Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    e -> new CopyOnWriteArrayList<>(e.getValue()),
+                                    throwingMerger(),
+                                    CopyOnWriteMap.Tree::new));
+        }
+
+        /**
+         * Returns a merge function, suitable for use in {@link Map#merge(Object, Object,
+         * BiFunction) Map.merge()} or {@link Collectors#toMap(Function, Function, BinaryOperator)
+         * toMap()}, which always throws {@code IllegalStateException}. This can be used to enforce
+         * the assumption that the elements being collected are distinct.
+         *
+         * @param <T> the type of input arguments to the merge function
+         * @return a merge function which always throw {@code IllegalStateException}
+         */
+        private static <T> BinaryOperator<T> throwingMerger() {
+            return (u, v) -> {
+                throw new IllegalStateException(String.format("Duplicate key %s", u));
+            };
         }
 
         @Override
@@ -512,7 +579,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                     return throttledPipelinesByCategory.get(category);
                 }
             }
-            return new TreeMap<>();
+            return new CopyOnWriteMap.Tree<>();
         }
 
         public synchronized void addThrottledPipelineForCategory(@Nonnull String runId,
@@ -528,7 +595,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
                 List<String> flowNodes = currentPipelines.get(runId);
                 if (flowNodes == null) {
-                    flowNodes = new ArrayList<>();
+                    flowNodes = new CopyOnWriteArrayList<>();
                 }
                 flowNodes.add(flowNodeId);
                 currentPipelines.put(runId, flowNodes);
