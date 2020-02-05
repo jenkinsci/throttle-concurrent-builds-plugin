@@ -1,5 +1,6 @@
 package hudson.plugins.throttleconcurrents;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
@@ -48,6 +49,7 @@ import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.Placeh
 @Extension
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
+    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "deliberately mutable")
     public static boolean USE_FLOW_EXECUTION_LIST =
             Boolean.parseBoolean(
                     System.getProperty(
