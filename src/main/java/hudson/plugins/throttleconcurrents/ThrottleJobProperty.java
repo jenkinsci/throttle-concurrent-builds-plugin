@@ -52,7 +52,7 @@ import org.kohsuke.stapler.StaplerRequest;
 public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // Replaced by categories, to support, well, multiple categories per job (starting from 1.3)
     @Deprecated transient String category;
-    
+
     private Integer maxConcurrentPerNode;
     private Integer maxConcurrentTotal;
     private List<String> categories;
@@ -70,6 +70,10 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // list entry, processed from paramsToUseForLimit.
     private String paramsToUseForLimit;
     private transient List<String> paramsToCompare;
+
+    // Documentation only stated "," but its use was broken for so long,
+    // that probably people used de-facto working whitespace instead.
+    private final static String PARAMS_LIMIT_SEPARATOR = ",\\s*|\\s+";
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -97,17 +101,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.matrixOptions = matrixOptions;
         this.paramsToUseForLimit = paramsToUseForLimit;
-        if ((this.paramsToUseForLimit != null)) {
-            if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(this.paramsToUseForLimit)));
-            }
-            else {
-                this.paramsToCompare = new ArrayList<String>();
-            }
-        }
-        else {
-            this.paramsToCompare = new ArrayList<String>();
-        }
+        this.setParamsToCompare(this.paramsToUseForLimit);
     }
 
 
@@ -226,19 +220,53 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 : ThrottleMatrixProjectOptions.DEFAULT.isThrottleMatrixConfigurations();
     }
 
-    public List<String> getParamsToCompare() {
-        if (paramsToCompare == null) {
-            if ((paramsToUseForLimit != null)) {
-                if ((paramsToUseForLimit.length() > 0)) {
-                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-                }
-                else {
-                    paramsToCompare = new ArrayList<String>();
-                }
+    /**
+     * @param paramsToUseForLimit   Set the paramsToCompare list
+     * of Strings from the user-input token-separated String.
+     *
+     * There is no return, but the this.paramsToCompare will be a
+     * valid non-null populated or empty array after this call.
+     */
+    public void setParamsToCompare(String paramsToUseForLimit) {
+        // If there is any contents, tell GC that it is reapable
+        this.paramsToCompare = null;
+
+        if ((paramsToUseForLimit != null)) {
+            if ((paramsToUseForLimit.length() > 0)) {
+                List<String> list = new ArrayList<String>(Arrays.asList(ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR))));
+                // Due to type casting, DO NOT MERGE with the line above
+                // in accordance with https://stackoverflow.com/a/5520808/4715872
+                // Logically, we should only remove all blanks "" and the
+                // split() should have taken care of other chars... but
+                // better safe than sorry. Also remove("") did not seem
+                // to cut it for more than one blank entry in the List.
+                list.removeAll(Arrays.asList("", " ", "\n", "\t", ","));
+                this.paramsToCompare = list;
             }
             else {
-                paramsToCompare = new ArrayList<String>();
+                this.paramsToCompare = new ArrayList<String>();
             }
+        }
+        else {
+            this.paramsToCompare = new ArrayList<String>();
+        }
+    }
+
+    /**
+     * Returns a copy of this.paramsToCompare, and (unlike a proper getter)
+     * if it was not set yet, make sure first to populate this array from
+     * the user-provided this.paramsToUseForLimit string. Note that this
+     * call only re-synchronizes paramsToCompare from paramsToUseForLimit
+     * if paramsToCompare was null, so that normally should not happen. This
+     * logic was present here before refactoring it into setParamsToCompare()
+     * above which allows to actually update the cached array on demand if
+     * needed later (e.g. when/if a setParamsToUseForLimit() is introduced).
+     *
+     * @return A populated or empty array (not a null) after this call.
+     */
+    public List<String> getParamsToCompare() {
+        if (paramsToCompare == null) {
+            this.setParamsToCompare(this.paramsToUseForLimit);
         }
         return paramsToCompare;
     }

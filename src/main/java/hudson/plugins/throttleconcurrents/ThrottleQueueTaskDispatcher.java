@@ -336,16 +336,19 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         Computer computer = node.toComputer();
         List<String> paramsToCompare = tjp.getParamsToCompare();
+        Integer paramsToCompareSize = paramsToCompare.size();
         List<ParameterValue> itemParams = getParametersFromQueueItem(item);
 
-        if (paramsToCompare.size() > 0) {
+        if (paramsToCompareSize > 0) {
             LOGGER.log(Level.FINER, "filter itemParams " + itemParams +
-                    " (from queue) to only pick up to " + paramsToCompare.size() +
+                    " (from queue) to only pick up to " + paramsToCompareSize +
                     ": " + paramsToCompare + " (from throttle config)");
             itemParams = doFilterParams(paramsToCompare, itemParams);
             LOGGER.log(Level.FINE, "filtering got " + itemParams.size() +
                     " itemParams : " + itemParams );
         }
+
+        String itemTaskName = item.task.getName();
 
         // Look at all executors of specified node => computer,
         // and what work units they are busy with (if any) - and
@@ -357,20 +360,22 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 final Queue.Executable currentExecutable = exec.getCurrentExecutable();
                 final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
                 if (currentExecutable != null &&
-                        parentTask.getOwnerTask().getName().equals(item.task.getName())) {
+                        parentTask.getOwnerTask().getName().equals(itemTaskName)) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
 
-                    LOGGER.log(Level.FINER, "filter executingUnitParams" +
+                    if (paramsToCompareSize > 0) {
+                        LOGGER.log(Level.FINER, "filter executingUnitParams" +
                                 " on " + computer.getDisplayName() + "#" + exec.getNumber() +
                                 " in build (" + exec.getCurrentWorkUnit() + ") from original " +
                                 executingUnitParams + " to only pick up to " +
-                                paramsToCompare.size() + ": " + paramsToCompare);
-                    executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
-                    LOGGER.log(Level.FINE, "filtering got " + executingUnitParams.size() +
+                                paramsToCompareSize + ": " + paramsToCompare);
+                        executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
+                        LOGGER.log(Level.FINE, "filtering got " + executingUnitParams.size() +
                                 " executingUnitParams : " + executingUnitParams +
                                 " on " + computer.getDisplayName() + "#" + exec.getNumber() +
                                 " in build (" + exec.getCurrentWorkUnit() + ")");
-                    // if nothing filtered away, we'll compare all params, not a subset
+                    } // if nothing filtered away, or empty list was specified,
+                      // we'll compare all params, not a subset
 
                     // An already executing work unit (of the same name) can have more
                     // parameters than the queued item, e.g. due to env injection or by
