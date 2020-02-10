@@ -361,6 +361,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     // unfiltered inheritance of "unsupported officially" from a caller.
                     // Note that similar inheritance can also get more parameters into
                     // the queued item than is visibly declared in its job configuration.
+                    // Normally the job configuration should declare all params that are
+                    // listed in its throttle configuration. Jenkins may forbid passing
+                    // undeclared parameters anyway, due to security concerns by default.
                     // We check here whether the interesting (or all, if not filtered)
                     // specified params of the queued item are same (glorified key=value
                     // entries) as ones used in a running work unit, in any order.
