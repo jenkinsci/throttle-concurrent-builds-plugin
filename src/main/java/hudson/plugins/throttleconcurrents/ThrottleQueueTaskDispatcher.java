@@ -349,6 +349,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         String itemTaskName = item.task.getName();
+
         // Look at all executors of specified node => computer,
         // and what work units they are busy with (if any) - and
         // whether one of these executing units is an instance
@@ -361,6 +362,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 if (currentExecutable != null &&
                         parentTask.getOwnerTask().getName().equals(itemTaskName)) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
+
                     if (paramsToCompareSize > 0) {
                         LOGGER.log(Level.FINER, "filter executingUnitParams" +
                                 " on " + computer.getDisplayName() + "#" + exec.getNumber() +
@@ -372,7 +374,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 " executingUnitParams : " + executingUnitParams +
                                 " on " + computer.getDisplayName() + "#" + exec.getNumber() +
                                 " in build (" + exec.getCurrentWorkUnit() + ")");
-                    } // else we'll compare all params, not a subset
+                    } // if nothing filtered away, or empty list was specified,
+                      // we'll compare all params, not a subset
 
                     // An already executing work unit (of the same name) can have more
                     // parameters than the queued item, e.g. due to env injection or by
@@ -402,7 +405,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     /**
      * Filter job parameters to only include parameters used for throttling
-     * @param paramsToCompare - a list of Strings with parameter names
+     * @param paramsToCompare - a list of Strings with parameter names to compare
      * @param OriginalParams - a list of ParameterValue descendants whose name fields should match
      * @return a list of ParameterValue descendants whose name fields did match, entries copied from OriginalParams
      */
