@@ -200,7 +200,8 @@ public class ThrottleJobPropertyTest {
     }
 
     @Test
-    public void testThrottleJob_constructor_should_parse_paramsToUseForLimit() {
+    @WithoutJenkins
+    public void testThrottleJobConstructorShouldParseParamsToUseForLimit() {
         // We just set these values but do not test much, see above for that
         Integer expectedMaxConcurrentPerNode = anyInt();
         Integer expectedMaxConcurrentTotal = anyInt();
