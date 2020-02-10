@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<hudson.plugins.throttleconcurrents.ThrottleJobProperty_-DescriptorImpl>
+  <categories class="java.util.concurrent.CopyOnWriteArrayList">
+    <hudson.plugins.throttleconcurrents.ThrottleJobProperty_-ThrottleCategory>
+      <maxConcurrentPerNode>1</maxConcurrentPerNode>
+      <maxConcurrentTotal>0</maxConcurrentTotal>
+      <categoryName>one_per_node</categoryName>
+      <nodeLabeledPairs/>
+    </hudson.plugins.throttleconcurrents.ThrottleJobProperty_-ThrottleCategory>
+    <hudson.plugins.throttleconcurrents.ThrottleJobProperty_-ThrottleCategory>
+      <maxConcurrentPerNode>0</maxConcurrentPerNode>
+      <maxConcurrentTotal>2</maxConcurrentTotal>
+      <categoryName>two_total</categoryName>
+      <nodeLabeledPairs/>
+    </hudson.plugins.throttleconcurrents.ThrottleJobProperty_-ThrottleCategory>
+    <hudson.plugins.throttleconcurrents.ThrottleJobProperty_-ThrottleCategory>
+      <maxConcurrentPerNode>1</maxConcurrentPerNode>
+      <maxConcurrentTotal>0</maxConcurrentTotal>
+      <categoryName>other_one_per_node</categoryName>
+      <nodeLabeledPairs/>
+    </hudson.plugins.throttleconcurrents.ThrottleJobProperty_-ThrottleCategory>
+  </categories>
+  <throttledPipelinesByCategory class="tree-map">
+    <entry>
+      <string>two_total</string>
+      <tree-map>
+        <entry>
+          <string>first-job#1</string>
+          <list>
+            <string>3</string>
+          </list>
+        </entry>
+        <entry>
+          <string>second-job#1</string>
+          <list>
+            <string>3</string>
+          </list>
+        </entry>
+        <entry>
+          <string>third-job#1</string>
+          <list>
+            <string>3</string>
+          </list>
+        </entry>
+      </tree-map>
+    </entry>
+  </throttledPipelinesByCategory>
+</hudson.plugins.throttleconcurrents.ThrottleJobProperty_-DescriptorImpl>

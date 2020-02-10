@@ -19,13 +19,15 @@ import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.slaves.DumbSlave;
-import hudson.slaves.NodeProperty;
 import hudson.slaves.RetentionStrategy;
-import java.io.IOException;
+import hudson.util.CopyOnWriteMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -40,8 +42,10 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 public class ThrottleStepTest {
     private static final String ONE_PER_NODE = "one_per_node";
@@ -62,11 +66,11 @@ public class ThrottleStepTest {
     public void setupAgentsAndCategories() throws Exception {
         DumbSlave firstAgent = new DumbSlave("first-agent", "dummy agent", firstAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         DumbSlave secondAgent = new DumbSlave("second-agent", "dummy agent", secondAgentTmp.getRoot().getAbsolutePath(),
                 "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.<NodeProperty<?>>emptyList());
+                RetentionStrategy.NOOP, Collections.emptyList());
 
         story.j.jenkins.addNode(firstAgent);
         story.j.jenkins.addNode(secondAgent);
@@ -333,7 +337,7 @@ public class ThrottleStepTest {
                 freeStyleProject.addProperty(new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Arrays.asList(ONE_PER_NODE),      // categories
+                        Collections.singletonList(ONE_PER_NODE),      // categories
                         true,   // throttleEnabled
                         "category",     // throttleOption
                         false,
@@ -343,7 +347,7 @@ public class ThrottleStepTest {
                 freeStyleProject.setAssignedLabel(Label.get("first-agent"));
                 freeStyleProject.getBuildersList().add(new TestBuilder() {
                     @Override
-                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
                         semaphore.acquire();
                         return true;
                     }
@@ -437,7 +441,93 @@ public class ThrottleStepTest {
         });
     }
 
-    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
+    /**
+     * A variant of {@link ThrottleStepTest#onePerNode} that also ensures that {@link
+     * ThrottleJobProperty.DescriptorImpl#throttledPipelinesByCategory} contains copy-on-write data
+     * structures.
+     */
+    @Issue("JENKINS-49006")
+    @Test
+    public void throttledPipelinesByCategoryCopyOnWrite() {
+        story.addStep(
+                new Statement() {
+                    @Override
+                    public void evaluate() throws Throwable {
+                        setupAgentsAndCategories();
+                        WorkflowJob firstJob =
+                                story.j.jenkins.createProject(WorkflowJob.class, "first-job");
+                        firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
+
+                        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+                        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+
+                        WorkflowJob secondJob =
+                                story.j.jenkins.createProject(WorkflowJob.class, "second-job");
+                        secondJob.setDefinition(getJobFlow("second", ONE_PER_NODE, "first-agent"));
+
+                        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+                        story.j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
+                        assertFalse(story.j.jenkins.getQueue().isEmpty());
+                        Node n = story.j.jenkins.getNode("first-agent");
+                        assertNotNull(n);
+                        assertEquals(1, n.toComputer().countBusy());
+                        hasPlaceholderTaskForRun(n, firstJobFirstRun);
+
+                        ThrottleJobProperty.DescriptorImpl descriptor =
+                                ThrottleJobProperty.fetchDescriptor();
+                        Map<String, List<String>> throttledPipelinesByCategory =
+                                descriptor.getThrottledPipelinesForCategory(ONE_PER_NODE);
+                        assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
+                        assertEquals(2, throttledPipelinesByCategory.size());
+                        for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
+                            assertTrue(flowNodes instanceof CopyOnWriteArrayList);
+                            assertEquals(1, flowNodes.size());
+                        }
+
+                        SemaphoreStep.success("wait-first-job/1", null);
+                        story.j.assertBuildStatusSuccess(
+                                story.j.waitForCompletion(firstJobFirstRun));
+                        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+                        assertTrue(story.j.jenkins.getQueue().isEmpty());
+                        assertEquals(1, n.toComputer().countBusy());
+                        hasPlaceholderTaskForRun(n, secondJobFirstRun);
+                        SemaphoreStep.success("wait-second-job/1", null);
+                        story.j.assertBuildStatusSuccess(
+                                story.j.waitForCompletion(secondJobFirstRun));
+                    }
+                });
+    }
+
+    /**
+     * Ensures that data serialized prior to the fix for JENKINS-49006 is correctly converted to
+     * copy-on-write data structures upon deserialization.
+     */
+    @Issue("JENKINS-49006")
+    @LocalData
+    @Test
+    public void throttledPipelinesByCategoryMigratesOldData() throws Exception {
+        story.then(
+                s -> {
+                    ThrottleJobProperty.DescriptorImpl descriptor =
+                            ThrottleJobProperty.fetchDescriptor();
+
+                    Map<String, List<String>> throttledPipelinesByCategory =
+                            descriptor.getThrottledPipelinesForCategory(TWO_TOTAL);
+                    assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
+                    assertEquals(3, throttledPipelinesByCategory.size());
+                    assertEquals(
+                            new HashSet<>(
+                                    Arrays.asList("first-job#1", "second-job#1", "third-job#1")),
+                            throttledPipelinesByCategory.keySet());
+                    for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
+                        assertTrue(flowNodes instanceof CopyOnWriteArrayList);
+                        assertEquals(1, flowNodes.size());
+                        assertEquals("3", flowNodes.get(0));
+                    }
+                });
+    }
+
+    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) {
         for (Executor exec : n.toComputer().getExecutors()) {
             if (exec.getCurrentExecutable() != null) {
                 assertTrue(exec.getCurrentExecutable().getParent() instanceof ExecutorStepExecution.PlaceholderTask);
