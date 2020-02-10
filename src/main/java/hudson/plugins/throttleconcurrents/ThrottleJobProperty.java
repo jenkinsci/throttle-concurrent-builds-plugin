@@ -65,7 +65,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // The paramsToUseForLimit is assigned by end-user configuration and
     // is generally a string with names of build arguments to consider,
     // and is empty, or has one arg name, or a token-separated list of
-    // such names (see PARAMS_LIMIT_SEPARATOR) below.
+    // such names.
     // The paramsToCompare is an array of arg name strings, one per
     // list entry, processed from paramsToUseForLimit.
     private String paramsToUseForLimit;
