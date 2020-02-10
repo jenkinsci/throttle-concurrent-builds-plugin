@@ -380,25 +380,25 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     /**
      * Filter job parameters to only include parameters used for throttling
      */
-    private List<ParameterValue> doFilterParams(List<String> params, List<ParameterValue> OriginalParams) {
-        if (params.isEmpty()) {
+    private List<ParameterValue> doFilterParams(List<String> paramsToCompare, List<ParameterValue> OriginalParams) {
+        if (paramsToCompare.isEmpty()) {
             return OriginalParams;
         }
 
         List<ParameterValue> newParams = new ArrayList<ParameterValue>();
 
         for (ParameterValue p : OriginalParams) {
-            if (params.contains(p.getName())) {
+            if (paramsToCompare.contains(p.getName())) {
                 newParams.add(p);
             }
         }
         if (newParams.size() == 0 ) {
             LOGGER.log(Level.WARNING, "Error selecting params, got no hits of " +
-                    params + " in " + OriginalParams +
+                    paramsToCompare + " in " + OriginalParams +
                     " : is the job configuration valid?");
-        } else if (newParams.size() < params.size() ) {
+        } else if (newParams.size() < paramsToCompare.size() ) {
             LOGGER.log(Level.WARNING, "Error selecting params, not all of " +
-                    params + " were present in " + OriginalParams +
+                    paramsToCompare + " were present in " + OriginalParams +
                     " : is the job configuration valid?");
         }
 
