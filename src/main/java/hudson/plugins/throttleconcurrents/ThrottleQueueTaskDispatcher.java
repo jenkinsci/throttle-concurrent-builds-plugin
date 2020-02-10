@@ -347,6 +347,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     " itemParams : " + itemParams );
         }
 
+        // Look at all executors of specified node => computer,
+        // and what work units they are busy with (if any) - and
+        // whether one of these executing units is an instance
+        // of the queued item we were asked to compare to.
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
                 // TODO: refactor into a nameEquals helper method
@@ -368,6 +372,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                 " in build (" + exec.getCurrentWorkUnit() + ")");
                     // if nothing filtered away, we'll compare all params, not a subset
 
+                    // An already executing work unit (of the same name) can have more
+                    // parameters than the queued item, e.g. due to env injection or by
+                    // unfiltered inheritance of "unsupported officially" from a caller.
+                    // Note that similar inheritance can also get more parameters into
+                    // the queued item than is visibly declared in its job configuration.
+                    // Normally the job configuration should declare all params that are
+                    // listed in its throttle configuration. Jenkins may forbid passing
+                    // undeclared parameters anyway, due to security concerns by default.
+                    // We check here whether the interesting (or all, if not filtered)
+                    // specified params of the queued item are same (glorified key=value
+                    // entries) as ones used in a running work unit, in any order.
                     if (executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
                                 ") with identical parameters (" +
@@ -385,7 +400,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     /**
      * Filter job parameters to only include parameters used for throttling
-     * @param paramsToCompare - a list of Strings with parameter names
+     * @param paramsToCompare - a list of Strings with parameter names to compare
      * @param OriginalParams - a list of ParameterValue descendants whose name fields should match
      * @return a list of ParameterValue descendants whose name fields did match, entries copied from OriginalParams
      */
