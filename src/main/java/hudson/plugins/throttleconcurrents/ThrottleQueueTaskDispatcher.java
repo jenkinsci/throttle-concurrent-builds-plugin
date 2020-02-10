@@ -62,20 +62,20 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (Jenkins.getAuthentication() == ACL.SYSTEM) {
             return canTakeImpl(node, task);
         }
-        
+
         // Throttle-concurrent-builds requires READ permissions for all projects.
         SecurityContext orig = SecurityContextHolder.getContext();
         NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
         auth.setAuthentication(ACL.SYSTEM);
         SecurityContextHolder.setContext(auth);
-        
+
         try {
             return canTakeImpl(node, task);
         } finally {
             SecurityContextHolder.setContext(orig);
         }
     }
-    
+
     private CauseOfBlockage canTakeImpl(Node node, Task task) {
         final Jenkins jenkins = Jenkins.getActiveInstance();
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
@@ -89,7 +89,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (!pipelineCategories.isEmpty() || (tjp!=null && tjp.getThrottleEnabled())) {
             CauseOfBlockage cause = canRunImpl(task, tjp, pipelineCategories);
             if (cause != null) {
-            	return cause;
+                return cause;
             }
             if (tjp != null) {
                 if (tjp.getThrottleOption().equals("project")) {
@@ -185,60 +185,60 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         return null;
     }
-    
+
     @Nonnull
     private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
 
         if (tjp == null){
-        	return ThrottleMatrixProjectOptions.DEFAULT;       
+                return ThrottleMatrixProjectOptions.DEFAULT;
         }
         ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
-    
+
     private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
-       if (tjp == null) {
-    	   return false;
-       }
-       if (!tjp.getThrottleEnabled()) { 
-    	   return false;
-       }
-       
-       // Handle matrix options
-       ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
-       if (matrixOptions == null) {
-    	   matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
-       }
-       if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
+        if (tjp == null) {
             return false;
-       } 
-       if (!matrixOptions.isThrottleMatrixBuilds()&& task instanceof MatrixProject) {
+        }
+        if (!tjp.getThrottleEnabled()) {
             return false;
-       }
-       
-       // Allow throttling by default
-       return true;
+        }
+
+        // Handle matrix options
+        ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
+        if (matrixOptions == null) {
+            matrixOptions = ThrottleMatrixProjectOptions.DEFAULT;
+        }
+        if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
+            return false;
+        }
+        if (!matrixOptions.isThrottleMatrixBuilds()&& task instanceof MatrixProject) {
+            return false;
+        }
+
+        // Allow throttling by default
+        return true;
     }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
         if (Jenkins.getAuthentication() == ACL.SYSTEM) {
             return canRunImpl(task, tjp, pipelineCategories);
         }
-        
+
         // Throttle-concurrent-builds requires READ permissions for all projects.
         SecurityContext orig = SecurityContextHolder.getContext();
         NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
         auth.setAuthentication(ACL.SYSTEM);
         SecurityContextHolder.setContext(auth);
-        
+
         try {
             return canRunImpl(task, tjp, pipelineCategories);
         } finally {
             SecurityContextHolder.setContext(orig);
         }
     }
-    
+
     private CauseOfBlockage canRunImpl(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
         final Jenkins jenkins = Jenkins.getActiveInstance();
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
@@ -330,7 +330,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp == null) {
-            // If the property has been ocasionally deleted by this call, 
+            // If the property has been ocasionally deleted by this call,
             // it does not make sense to limit the throttling by parameter.
             return false;
         }
@@ -342,6 +342,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             itemParams = doFilterParams(paramsToCompare, itemParams);
         }
 
+        // Look at all executors of specified node => computer,
+        // and what work units they are busy with (if any) - and
+        // whether one of these executing units is an instance
+        // of the queued item we were asked to compare to.
         if (computer != null) {
             for (Executor exec : computer.getExecutors()) {
                 // TODO: refactor into a nameEquals helper method
@@ -352,6 +356,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                     executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
+                    // An already executing work unit (of the same name) can have more
+                    // parameters than the queued item, e.g. due to env injection or by
+                    // unfiltered inheritance of "unsupported officially" from a caller.
+                    // Note that similar inheritance can also get more parameters into
+                    // the queued item than is visibly declared in its job configuration.
+                    // Normally the job configuration should declare all params that are
+                    // listed in its throttle configuration. Jenkins may forbid passing
+                    // undeclared parameters anyway, due to security concerns by default.
+                    // We check here whether the interesting (or all, if not filtered)
+                    // specified params of the queued item are same (glorified key=value
+                    // entries) as ones used in a running work unit, in any order.
                     if (executingUnitParams.containsAll(itemParams)) {
                         LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
                                 ") with identical parameters (" +
@@ -367,6 +382,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     /**
      * Filter job parameters to only include parameters used for throttling
+     * @param params - a list of Strings with parameter names to compare
+     * @param OriginalParams - a list of ParameterValue descendants whose name fields should match
+     * @return a list of ParameterValue descendants whose name fields did match, entries copied from OriginalParams
      */
     private List<ParameterValue> doFilterParams(List<String> params, List<ParameterValue> OriginalParams) {
         if (params.isEmpty()) {
