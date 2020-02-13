@@ -1,5 +1,8 @@
-Changelog
-===
+# Changelog
+
+## 2.0.2 and later
+
+Changelog moved to [GitHub Releases](https://github.com/jenkinsci/throttle-concurrent-builds-plugin/releases).
 
 ## 2.0.1
 
