@@ -1,96 +1,124 @@
-Throttle Concurrent Builds Plugin
-=== 
+# Throttle Concurrent Builds Plugin
 
-This plugin allows for throttling the number of concurrent builds of a project running per node or globally.
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/throttle-concurrent-builds-plugin/master)](https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/)
+[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/throttle-concurrents)](https://plugins.jenkins.io/throttle-concurrents)
+[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/throttle-concurrents)](https://plugins.jenkins.io/throttle-concurrents)
 
-# Usage
+This plugin allows for throttling the number of concurrent builds of a
+project running per node or globally.
 
-The plugin supports two modes:
+## Usage
 
-* Throttling of runs in Jenkins by one or multiple category
-* Throttling of multiple runs of a same `AbstractProject` job (not recommended)
+This plugin supports three modes:
+
+* Throttling of runs by one or multiple category
+* Throttling of multiple runs of the same `AbstractProject` job (not
+  recommended)
 * Throttling of runs by parameter values
 
-For each mode it is possible to setup global, label-specific, and node-specific limit of concurrent runs.
-If multiple throttling categories defined, each requirement needs to be satisfied in order to pick the task from the queue.
+For each mode it is possible to setup global, label-specific, and
+node-specific limits for concurrent runs. If multiple throttling
+categories are defined, each requirement needs to be satisfied in order
+for the task to be taken off the queue.
 
 Usage specifics:
 
-* If throttling category cannot be satisfied, the task submission stays in queue until
-the locked category becomes available. 
-The submission can be terminated manually or by timeout.
-* The plugin throttles tasks only only on common executors. 
-Flyweight tasks will not be throttled.
-* If the jobs are organized into a chain (e.g. via Parameterized Trigger build steps), each run in the chain is being counted independently.
-E.g. if _ProjectA_ and _ProjectB_ use category `cat_A` on the same node, 2 executors will be required from the category pool.
-Improper configuration of categories/jobs may cause deadlock of such build chains due to consumption of ll executors and waiting for downstream executions blocked in the queue.
+* If the throttling category cannot be satisfied, the task submission
+  stays in the queue until the locked category becomes available. The
+  submission can be terminated manually or by timeout.
+* This plugin throttles tasks only only on common executors. Flyweight
+  tasks are not throttled.
+* If the jobs are organized into a chain (e.g., via Parameterized Trigger
+  build steps), each run in the chain is counted independently. For
+  example, if _ProjectA_ and _ProjectB_ use category `cat_A` on the same
+  node, two executors are required from the category pool. Improper
+  configuration of categories/jobs may result in a deadlock of such build
+  chains due to consumption of all executors and waiting for downstream
+  executions blocked in the queue.
 
-## Global configuration
+### Global configuration
 
-Global configuration allows defining global categories.
-For each category you can setup global, label-specific, and node-specific restrictions for executor numbers.
-After the configuration, it will be possible to select and use the categories in job configurations.
-
-Configuration example:
+Global configuration allows defining global categories. For each category
+you can set up global, label-specific, and node-specific restrictions for
+executor numbers. After configuration, it is possible to select and use
+the categories in job configurations. For example:
 
 ![Global Category Configuration](doc/images/global_categoryConfig.png)
 
-To set an unlimited value of concurrent builds for a restriction, use `0`.
+To set an unlimited value of concurrent builds for a restriction, use
+`0`.
 
-## Throttling of classic job types
+### Throttling of classic job types
 
-Classic job types (FreeStyle, Matrix, JobDSL) can be configured via job properties in the job configuration screen. 
-Below you can find the configuration example:
+Classic job types (e.g., Freestyle, Matrix, and Job DSL) can be
+configured via job properties in the job configuration screen. For
+example:
 
 ![Throttle Job Property](doc/images/abstractProject_jobProperty.png)
 
-* There are two modes: _Throttle This Project Alone_ and _Throttle this project as part of one or more categories_. 
-Only one mode can be enabled. 
-* _Throttle This Project Alone_
-  * For this option you should configure _Maximum Total Concurrent Builds_ and/or _Maximum Concurrent Builds Per Node_
-  * To set an unlimited value of concurrent builds for a restriction, use `0`
-  * With this setting categories will be ignored
-* _Throttle this project as part of one or more categories_
-  * For this option you should specify enabled categories using checkboxes
-  * _Maximum Total Concurrent Builds_ and _Maximum Concurrent Builds Per Node_ fields will be ignored
-* _Prevent multiple jobs with identical parameters from running concurrently_
-  * Adds additional throttling by parameter values
+There are two modes: _Throttle this project alone_ and _Throttle this
+project as part of one or more categories_. Only one mode can be
+enabled.
 
-For _Matrix projects_ the property offers two additional checkboxes, 
-which define throttling behavior for Matrix master run and configuration runs. 
+* _Throttle this project alone_
+  * For this option you should configure _Maximum Total Concurrent
+    Builds_ and/or _Maximum Concurrent Builds Per Node_.
+  * To set an unlimited value of concurrent builds for a restriction,
+    use `0`.
+  * With this option categories are ignored.
+* _Throttle this project as part of one or more categories_
+  * For this option you should specify enabled categories using
+    checkboxes.
+  * With this option the _Maximum Total Concurrent Builds_ and _Maximum
+    Concurrent Builds Per Node_ fields are ignored.
+* _Prevent multiple jobs with identical parameters from running
+  concurrently_
+  * This option adds additional throttling by parameter values.
+
+For Matrix projects the property offers two additional checkboxes, which
+define throttling behavior for Matrix master runs and configuration
+runs. For example:
 
 ![Throttle Job Property for Matrix](doc/images/abstractProject_matrixFlags.png)
 
-## Throttling in Jenkins Pipeline
+### Throttling of Pipeline jobs
 
 <!--TODO: Remove warning once JENKINS-31801 is integrated-->
 
-### throttle() step
+#### throttle() step
 
-Starting from `throttle-concurrents-2.0` the plugin allows throttling particular Pipeline blocks by categories.
-For this purpose you can use the `throttle()` step.
+Starting in `throttle-concurrents-2.0`, this plugin allows throttling of
+particular Pipeline blocks by categories. For this purpose you can use the
+`throttle()` step.
 
 How does it work?
 
-* If `throttle()` step is defined, all explicit and implicit `node()` invocations within this step will be throttled.
-* If `node()` step is defined within the `parallel()` block, each parallel branch will be throttled separately.
-* Throttling of Pipeline steps in `throttle()` will take other throttling logic like job properties in Pipeline and other job types.
-* If the specified category is missing, `throttle()` execution will fail the run.
+* If a `throttle()` step is used, all explicit and implicit `node()`
+  invocations within this step are throttled.
+* If a `node()` step is used within a `parallel()` block, each parallel
+  branch is throttled separately.
+* Throttling of Pipeline steps in `throttle()` takes precedence over
+  other throttling logic, such as job properties in Pipeline and other
+  job types.
+* If the specified category is missing, `throttle()` execution fails the
+  run.
 
-#### Warning regarding restarting master
+#### Warning regarding restarting the Jenkins master
 
-:exclamation: Due to a deadlock (as described in [JENKINS-44747](https://issues.jenkins-ci.org/browse/JENKINS-44747)), a 
-change has been made which can theoretically result in throttle categories being ignored in running Pipelines 
-immediately after the Jenkins master has been restarted. This will be investigated further in 
-[JENKINS-44756](https://issues.jenkins-ci.org/browse/JENKINS-44756), but was considered a necessary change in order to 
-resolve the deadlock scenario.
+:exclamation: Due to a deadlock (as described in
+[JENKINS-44747](https://issues.jenkins-ci.org/browse/JENKINS-44747)), a
+change has been made which can theoretically result in throttle
+categories being ignored in running Pipelines immediately after the
+Jenkins master has been restarted. This will be investigated further in
+[JENKINS-44756](https://issues.jenkins-ci.org/browse/JENKINS-44756) but
+was considered necessary in order to resolve the deadlock scenario.
 
-#### Examples
+## Examples
 
-**Example 1**: Throttling of node() runs
+### Example 1: Throttling of node() runs
 
 ```groovy
-// Throttle of a single operation
+// Throttle a single operation
 throttle(['test_2']) {
     node() {
         sh "sleep 500"
@@ -99,15 +127,15 @@ throttle(['test_2']) {
 }
 ```
 
-**Example 2**: Throttling of parallel steps
+### Example 2: Throttling of parallel steps
 
 ```groovy
 // The script below triggers 6 subtasks in parallel.
-// Then tasks will be throttled according to the category settings.
-def labels = ['1', '2', '3', '4', '5', '6'] 
+// Then tasks are throttled according to the category settings.
+def labels = ['1', '2', '3', '4', '5', '6']
 def builders = [:]
 for (x in labels) {
-    def label = x // Need to bind the label variable before the closure 
+    def label = x // Need to bind the label variable before the closure
 
     // Create a map to pass in to the 'parallel' step so we can fire all the builds at once
     builders[label] = {
@@ -122,44 +150,50 @@ throttle(['myThrottleCategory1', 'myThrottleCategory2']) {
 }
 ```
 
-##### Unsupported use-cases
+## Unsupported use cases
 
-This section contains links to the use-cases which **are not supported**
+This section contains links to the use cases which **are not
+supported**.
 
-* Throttling of code blocks without `node()` definition.
-Feature request:   [JENKINS-44411](https://issues.jenkins-ci.org/browse/JENKINS-44411).
+### Throttling of code blocks without a `node()` definition
 
+A feature request is logged as
+[JENKINS-44411](https://issues.jenkins-ci.org/browse/JENKINS-44411).
 
 ### Throttling Pipeline via Job properties
 
-:exclamation: **Warning!** It is not recommended to use this option starting from `throttle-concurrents-2.0`.
-Use the `throttle()` step instead.
+:exclamation: **Warning!** Starting in `throttle-concurrents-2.0`, using
+this option is not recommended. Use the `throttle()` step instead.
 
-Plugin supports definition of throttling settings via job properties starting from `throttle-concurrents-1.8.5`. 
-The behavior of such definition **may differ** from your expectation and **may change** in new plugin versions.
+Starting in `throttle-concurrents-1.8.5`, this plugin supports the
+definition of throttling settings via job properties. The behavior of
+such definition **may differ** from your expectation and **may change**
+in new plugin versions.
 
 Current behavior:
 
-* If the property is defined, Pipeline jobs will be throttled as any other project.
-* Pipeline job will be throttled on the top level as a single instance, it will be considered as a single job even is there are declarations like `parallel()`.
-* Node requirements will be considered for the Root Pipeline task only, so effectively only the master node will be checked
+* If the property is defined, Pipeline jobs are throttled as any
+  other project.
+* Pipeline jobs are throttled on the top level as a single instance. They
+  are considered a single job even if there are declarations like
+  `parallel()`.
+* Node requirements are considered for the root Pipeline task only,
+  so effectively only the master node is checked.
 
 Use this option at your own risk.
 
-# License
+## License
 
 [MIT License](http://www.opensource.org/licenses/mit-license.php)
 
+## Changelog
 
-# Changelog
+* [Changelog](CHANGELOG.md)
 
-See [this page](CHANGELOG.md).
+## Reporting issues
 
-# Reporting issues
-
-All issues should be reported to [Jenkins Issue Tracker](https://issues.jenkins-ci.org/secure/Dashboard.jspa).
-Use the `throttle-concurrent-builds-plugin` component in the `JENKINS` project.
-For more information about reporting issues to Jenkins see [this guide](https://wiki.jenkins-ci.org/display/JENKINS/How+to+report+an+issue).
-
-
-
+All issues should be reported via the [Jenkins issue
+tracker](https://issues.jenkins-ci.org/). Use the
+`throttle-concurrent-builds-plugin` component in the `JENKINS` project.
+For more information about reporting issues to Jenkins, see [this
+guide](https://wiki.jenkins-ci.org/display/JENKINS/How+to+report+an+issue).
