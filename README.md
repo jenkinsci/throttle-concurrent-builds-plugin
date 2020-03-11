@@ -155,11 +155,14 @@ throttle(['myThrottleCategory1', 'myThrottleCategory2']) {
 ```groovy
 pipeline {
     agent any
+
     // Throttle a declarative pipeline via options
-    options { throttle(['test_3']) }
-    
+    options {
+        throttle(['test_3'])
+    }
+
     stages {
-        stage ('sleep') {
+        stage('sleep') {
             steps {
                 sh "sleep 500"
                 echo "Done"
