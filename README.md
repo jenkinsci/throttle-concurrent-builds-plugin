@@ -150,6 +150,25 @@ throttle(['myThrottleCategory1', 'myThrottleCategory2']) {
 }
 ```
 
+### Example 3: Throttling of declarative pipelines
+
+```groovy
+pipeline {
+    agent any
+    // Throttle a declarative pipeline via options
+    options { throttle(['test_3']) }
+    
+    stages {
+        stage ('sleep') {
+            steps {
+                sh "sleep 500"
+                echo "Done"
+            }
+        }
+    }
+}
+```
+
 ## Unsupported use cases
 
 This section contains links to the use cases which **are not
