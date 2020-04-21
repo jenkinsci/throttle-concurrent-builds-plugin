@@ -368,7 +368,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
 
     public static DescriptorImpl fetchDescriptor() {
-        return Jenkins.getActiveInstance().getDescriptorByType(DescriptorImpl.class);
+        return Jenkins.get().getDescriptorByType(DescriptorImpl.class);
     }
     
     @Extension
