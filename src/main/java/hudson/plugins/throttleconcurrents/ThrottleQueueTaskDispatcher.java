@@ -21,7 +21,6 @@ import hudson.model.queue.SubTask;
 import hudson.model.queue.WorkUnit;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.security.ACL;
-import hudson.security.NotSerilizableSecurityContext;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +32,7 @@ import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
+import jenkins.security.NonSerializableSecurityContext;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.jenkinsci.plugins.workflow.actions.BodyInvocationAction;
@@ -65,7 +65,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         // Throttle-concurrent-builds requires READ permissions for all projects.
         SecurityContext orig = SecurityContextHolder.getContext();
-        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
+        NonSerializableSecurityContext auth = new NonSerializableSecurityContext();
         auth.setAuthentication(ACL.SYSTEM);
         SecurityContextHolder.setContext(auth);
 
@@ -77,7 +77,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private CauseOfBlockage canTakeImpl(Node node, Task task) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         List<String> pipelineCategories = categoriesForPipeline(task);
 
@@ -163,7 +163,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean hasPendingPipelineForCategory(List<FlowNode> flowNodes) {
-        for (Queue.BuildableItem pending : Jenkins.getActiveInstance().getQueue().getPendingItems()) {
+        for (Queue.BuildableItem pending : Jenkins.get().getQueue().getPendingItems()) {
             if (isTaskThrottledPipeline(pending.task, flowNodes)) {
                 return true;
             }
@@ -228,7 +228,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         // Throttle-concurrent-builds requires READ permissions for all projects.
         SecurityContext orig = SecurityContextHolder.getContext();
-        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
+        NonSerializableSecurityContext auth = new NonSerializableSecurityContext();
         auth.setAuthentication(ACL.SYSTEM);
         SecurityContextHolder.setContext(auth);
 
@@ -240,7 +240,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private CauseOfBlockage canRunImpl(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
             return null;
         }
@@ -314,7 +314,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         if (isAnotherBuildWithSameParametersRunningOnNode(jenkins, item)) {
             return true;
         }
@@ -485,7 +485,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int pipelinesOnAllNodes(@Nonnull Run<?,?> run, @Nonnull List<FlowNode> flowNodes) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         int totalRunCount = pipelinesOnNode(jenkins, run, flowNodes);
 
         for (Node node : jenkins.getNodes()) {
@@ -562,7 +562,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int buildsOfProjectOnAllNodesImpl(Task task) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         int totalRunCount = buildsOfProjectOnNode(jenkins, task);
 
         for (Node node : jenkins.getNodes()) {
