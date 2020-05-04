@@ -1,8 +1,9 @@
 # Throttle Concurrent Builds Plugin
 
 [![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/throttle-concurrent-builds-plugin/master)](https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/)
-[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/throttle-concurrents)](https://plugins.jenkins.io/throttle-concurrents)
-[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/throttle-concurrents)](https://plugins.jenkins.io/throttle-concurrents)
+[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/throttle-concurrents.svg)](https://plugins.jenkins.io/throttle-concurrents/)
+[![GitHub Release](https://img.shields.io/github/release/jenkinsci/throttle-concurrent-builds-plugin.svg?label=changelog)](https://github.com/jenkinsci/throttle-concurrent-builds-plugin/releases/latest)
+[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/throttle-concurrents.svg?color=blue)](https://plugins.jenkins.io/throttle-concurrents/)
 
 This plugin allows for throttling the number of concurrent builds of a
 project running per node or globally.
