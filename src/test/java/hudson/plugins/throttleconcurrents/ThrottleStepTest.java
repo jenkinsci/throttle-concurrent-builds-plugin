@@ -307,7 +307,7 @@ public class ThrottleStepTest {
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
                 SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
                 assertTrue(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, n.toComputer().countBusy());
+                assertEquals(2, n.toComputer().countBusy() + n2.toComputer().countBusy());
                 hasPlaceholderTaskForRun(n, thirdJobFirstRun);
 
                 SemaphoreStep.success("wait-second-job/1", null);
