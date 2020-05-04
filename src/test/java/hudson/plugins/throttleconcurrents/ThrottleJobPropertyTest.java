@@ -434,7 +434,7 @@ public class ThrottleJobPropertyTest {
                     WorkflowRun thirdJobFirstRun = thirdJobFirstRunFuture.waitForStart();
                     SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
                     assertTrue(story.j.jenkins.getQueue().isEmpty());
-                    assertEquals(1, n.toComputer().countBusy());
+                    assertEquals(2, n.toComputer().countBusy() + n2.toComputer().countBusy());
                     hasPlaceholderTaskForRun(n, thirdJobFirstRun);
 
                     SemaphoreStep.success("wait-second-job/1", null);
@@ -568,7 +568,7 @@ public class ThrottleJobPropertyTest {
                             (WorkflowRun) queuedItem.getFuture().waitForStart();
                     SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
                     assertTrue(story.j.jenkins.getQueue().isEmpty());
-                    assertEquals(1, n.toComputer().countBusy());
+                    assertEquals(2, n.toComputer().countBusy() + n2.toComputer().countBusy());
                     hasPlaceholderTaskForRun(n, thirdJobFirstRun);
 
                     SemaphoreStep.success("wait-second-job/1", null);
