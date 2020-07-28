@@ -21,6 +21,7 @@ import hudson.model.queue.SubTask;
 import hudson.model.queue.WorkUnit;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,9 +33,6 @@ import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
-import jenkins.security.NonSerializableSecurityContext;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
 import org.jenkinsci.plugins.workflow.actions.BodyInvocationAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionList;
@@ -59,20 +57,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @Override
     public CauseOfBlockage canTake(Node node, Task task) {
-        if (Jenkins.getAuthentication() == ACL.SYSTEM) {
+        if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
             return canTakeImpl(node, task);
         }
 
         // Throttle-concurrent-builds requires READ permissions for all projects.
-        SecurityContext orig = SecurityContextHolder.getContext();
-        NonSerializableSecurityContext auth = new NonSerializableSecurityContext();
-        auth.setAuthentication(ACL.SYSTEM);
-        SecurityContextHolder.setContext(auth);
-
-        try {
+        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
             return canTakeImpl(node, task);
-        } finally {
-            SecurityContextHolder.setContext(orig);
         }
     }
 
@@ -222,20 +213,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
-        if (Jenkins.getAuthentication() == ACL.SYSTEM) {
+        if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
             return canRunImpl(task, tjp, pipelineCategories);
         }
 
         // Throttle-concurrent-builds requires READ permissions for all projects.
-        SecurityContext orig = SecurityContextHolder.getContext();
-        NonSerializableSecurityContext auth = new NonSerializableSecurityContext();
-        auth.setAuthentication(ACL.SYSTEM);
-        SecurityContextHolder.setContext(auth);
-
-        try {
+        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
             return canRunImpl(task, tjp, pipelineCategories);
-        } finally {
-            SecurityContextHolder.setContext(orig);
         }
     }
 
