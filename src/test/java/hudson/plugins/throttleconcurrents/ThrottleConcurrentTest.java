@@ -1,6 +1,8 @@
 package hudson.plugins.throttleconcurrents;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -264,7 +266,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                     maxConcurrentBuilds = numberOfConcurrentBuilds;
                 }
             }
-            assertThat(maxConcurrentBuilds).isEqualTo(i);
+            assertEquals(i, maxConcurrentBuilds);
             return self();
         }
 
@@ -282,7 +284,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                     }
                 }
             }
-            assertThat(ImmutableSet.copyOf(maxConcurrentBuilds.values())).containsExactly(maxConcurrentPerNode);
+            assertThat(ImmutableSet.copyOf(maxConcurrentBuilds.values()), contains(maxConcurrentPerNode));
             return self();
         }
     }
