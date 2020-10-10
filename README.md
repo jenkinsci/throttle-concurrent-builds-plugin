@@ -1,14 +1,17 @@
 # Throttle Concurrent Builds Plugin
 
-[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/throttle-concurrent-builds-plugin/master)](https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/)
-[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/throttle-concurrents.svg)](https://plugins.jenkins.io/throttle-concurrents/)
-[![GitHub Release](https://img.shields.io/github/release/jenkinsci/throttle-concurrent-builds-plugin.svg?label=changelog)](https://github.com/jenkinsci/throttle-concurrent-builds-plugin/releases/latest)
-[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/throttle-concurrents.svg?color=blue)](https://plugins.jenkins.io/throttle-concurrents/)
+[![Build Status](https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/)
+[![Contributors](https://img.shields.io/github/contributors/jenkinsci/throttle-concurrent-builds-plugin.svg)](https://github.com/jenkinsci/throttle-concurrent-builds-plugin/graphs/contributors)
+[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/throttle-concurrents.svg)](https://plugins.jenkins.io/throttle-concurrents)
+[![GitHub release](https://img.shields.io/github/release/jenkinsci/throttle-concurrent-builds-plugin.svg?label=changelog)](https://github.com/jenkinsci/throttle-concurrent-builds-plugin/releases/latest)
+[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/throttle-concurrents.svg?color=blue)](https://plugins.jenkins.io/throttle-concurrents)
+
+## Introduction
 
 This plugin allows for throttling the number of concurrent builds of a
 project running per node or globally.
 
-## Usage
+## Getting started
 
 This plugin supports three modes:
 
@@ -213,10 +216,11 @@ Use this option at your own risk.
 
 * [Changelog](CHANGELOG.md)
 
-## Reporting issues
+## Issues
 
-All issues should be reported via the [Jenkins issue
-tracker](https://issues.jenkins-ci.org/). Use the
-`throttle-concurrent-builds-plugin` component in the `JENKINS` project.
-For more information about reporting issues to Jenkins, see [this
-guide](https://wiki.jenkins-ci.org/display/JENKINS/How+to+report+an+issue).
+Report issues and enhancements in the [Jenkins issue tracker](https://issues.jenkins-ci.org/).
+Use the `throttle-concurrent-builds-plugin` component in the `JENKINS` project.
+
+## Contributing
+
+Refer to our [contribution guidelines](https://github.com/jenkinsci/.github/blob/master/CONTRIBUTING.md).
