@@ -51,6 +51,7 @@ THE SOFTWARE.
     <changelist>-SNAPSHOT</changelist>
     <jenkins.version>2.164.3</jenkins.version>
     <java.level>8</java.level>
+    <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
   </properties>
 
   <developers>
@@ -89,9 +90,9 @@ THE SOFTWARE.
   </repositories>
 
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/throttle-concurrent-builds-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/throttle-concurrent-builds-plugin.git</developerConnection>
-    <url>https://github.com/jenkinsci/throttle-concurrent-builds-plugin</url>
+    <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
+    <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+    <url>https://github.com/${gitHubRepo}</url>
     <tag>${scmTag}</tag>
   </scm>
 
