@@ -116,7 +116,7 @@ THE SOFTWARE.
             <dependency>
                 <groupId>org.fusesource.jansi</groupId>
                 <artifactId>jansi</artifactId>
-                <version>1.15</version>
+                <version>1.18</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
