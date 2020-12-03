@@ -4,7 +4,7 @@
   <f:section title="Throttle Concurrent Builds">
     <f:entry title="Multi-Project Throttle Categories" field="categories">
       <f:repeatable field="categories" add="${%Add Category}" minimum="0">
-        <div width="100%">
+        <div style="width:100%">
           <f:entry title="Category Name" field="categoryName">
             <f:textbox />
           </f:entry>
@@ -16,7 +16,7 @@
           </f:entry>
         </div>
         <f:repeatable field="nodeLabeledPairs" add="${%Add Maximum Per Labeled Node}" minimum="0" header="${%Maximum Per Labeled Node}">
-          <div width="100%">
+          <div style="width:100%">
             <f:entry title="${%Throttled Node Label}" field="throttledNodeLabel">
               <f:textbox />
             </f:entry>
