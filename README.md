@@ -156,13 +156,21 @@ throttle(['myThrottleCategory1', 'myThrottleCategory2']) {
 
 ### Example 3: Throttling of declarative pipelines
 
+To throttle concurrent builds to 1, configure a global category.
+
+![Global Category Configuration Test3](doc/images/global_categoryConfig3.png)
+
 ```groovy
 pipeline {
     agent any
 
     // Throttle a declarative pipeline via options
     options {
-        throttle(['test_3'])
+      throttleJobProperty(
+          categories: ['test_3'],
+          throttleEnabled: true,
+          throttleOption: 'category'
+      )  
     }
 
     stages {
