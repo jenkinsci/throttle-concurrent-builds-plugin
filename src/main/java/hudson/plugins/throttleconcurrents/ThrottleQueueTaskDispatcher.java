@@ -447,8 +447,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             if (task instanceof MatrixConfiguration) {
                 p = ((MatrixConfiguration)task).getParent();
             }
-            ThrottleJobProperty tjp = p.getProperty(ThrottleJobProperty.class);
-            return tjp;
+            return p.getProperty(ThrottleJobProperty.class);
         }
         return null;
     }
