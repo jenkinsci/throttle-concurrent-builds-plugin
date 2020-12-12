@@ -156,7 +156,7 @@ throttle(['myThrottleCategory1', 'myThrottleCategory2']) {
 
 ### Example 3: Throttling of declarative pipelines
 
-To throttle concurrent builds to 1, configure a global category.
+To throttle concurrent builds to 1, configure a global category and add an options property to the pipeline.
 
 ![Global Category Configuration Test3](doc/images/global_categoryConfig3.png)
 
