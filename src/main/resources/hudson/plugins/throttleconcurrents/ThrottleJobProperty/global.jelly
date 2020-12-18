@@ -1,10 +1,10 @@
-<?jelly escape-by-default='true'?> 
+<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:tc="/lib/throttleconcurrents">
   <f:section title="Throttle Concurrent Builds">
     <f:entry title="Multi-Project Throttle Categories" field="categories">
       <f:repeatable field="categories" add="${%Add Category}" minimum="0">
-        <table width="100%">
+        <tc:blockWrapper>
           <f:entry title="Category Name" field="categoryName">
             <f:textbox />
           </f:entry>
@@ -14,16 +14,16 @@
           <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
             <f:textbox />
           </f:entry>
-        </table>
+        </tc:blockWrapper>
         <f:repeatable field="nodeLabeledPairs" add="${%Add Maximum Per Labeled Node}" minimum="0" header="${%Maximum Per Labeled Node}">
-          <table width="100%">
+          <tc:blockWrapper>
             <f:entry title="${%Throttled Node Label}" field="throttledNodeLabel">
               <f:textbox />
             </f:entry>
             <f:entry title="${%Maximum Concurrent Builds Per Node Labeled As Above}" field="maxConcurrentPerNodeLabeled">
               <f:textbox />
             </f:entry>
-          </table>
+          </tc:blockWrapper>
           <div align="right">
             <f:repeatableDeleteButton/>
           </div>
