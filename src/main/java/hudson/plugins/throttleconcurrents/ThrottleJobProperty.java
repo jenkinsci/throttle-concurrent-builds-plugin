@@ -631,7 +631,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
                 if (!currentPipelines.isEmpty()) {
                     List<String> flowNodes = currentPipelines.get(runId);
-                    if (flowNodes != null && flowNodes.contains(flowNodeId)) {
+                    if (flowNodes != null) {
                         flowNodes.remove(flowNodeId);
                     }
                     if (flowNodes != null && !flowNodes.isEmpty()) {
@@ -660,9 +660,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 Map<String,List<String>> currentPipelines = internalGetThrottledPipelinesForCategory(category);
 
                 if (!currentPipelines.isEmpty()) {
-                    if (currentPipelines.containsKey(runId)) {
-                        currentPipelines.remove(runId);
-                    }
+                    currentPipelines.remove(runId);
                 }
                 if (currentPipelines.isEmpty()) {
                     throttledPipelinesByCategory.remove(category);
