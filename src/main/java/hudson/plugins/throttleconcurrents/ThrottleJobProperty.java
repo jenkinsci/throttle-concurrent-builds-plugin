@@ -65,11 +65,17 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // The paramsToUseForLimit is assigned by end-user configuration and
     // is generally a string with names of build arguments to consider,
     // and is empty, or has one arg name, or a token-separated list of
-    // such names.
+    // such names (see PARAMS_LIMIT_SEPARATOR below).
     // The paramsToCompare is an array of arg name strings, one per
     // list entry, processed from paramsToUseForLimit.
     private String paramsToUseForLimit;
     private transient List<String> paramsToCompare;
+
+    /*
+     * Documentation only stated "," but its use was broken for so long that probably people used
+     * the de-facto working whitespace instead.
+     */
+    private static final String PARAMS_LIMIT_SEPARATOR = "[\\s,]+";
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -97,19 +103,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.matrixOptions = matrixOptions;
         this.paramsToUseForLimit = paramsToUseForLimit;
-        if ((this.paramsToUseForLimit != null)) {
-            if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(this.paramsToUseForLimit)));
-            }
-            else {
-                this.paramsToCompare = new ArrayList<String>();
-            }
-        }
-        else {
-            this.paramsToCompare = new ArrayList<String>();
-        }
+        this.paramsToCompare = parseParamsToUseForLimit(this.paramsToUseForLimit);
     }
-
 
     /**
      * Migrates deprecated/obsolete data.
@@ -228,19 +223,33 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
     public List<String> getParamsToCompare() {
         if (paramsToCompare == null) {
-            if ((paramsToUseForLimit != null)) {
-                if ((paramsToUseForLimit.length() > 0)) {
-                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-                }
-                else {
-                    paramsToCompare = new ArrayList<String>();
-                }
-            }
-            else {
-                paramsToCompare = new ArrayList<String>();
-            }
+            paramsToCompare = parseParamsToUseForLimit(paramsToUseForLimit);
         }
         return paramsToCompare;
+    }
+
+    /**
+     * Compute the parameters to use for the comparison when checking when another build with the
+     * same parameters is running on a node.
+     *
+     * @param paramsToUseForLimit A user-provided list of parameters, separated either by commas or
+     *     whitespace.
+     * @return A parsed representation of the user-provided list of parameters.
+     */
+    private static List<String> parseParamsToUseForLimit(String paramsToUseForLimit) {
+        if (paramsToUseForLimit != null) {
+            if (!paramsToUseForLimit.isEmpty()) {
+                String[] split =
+                        ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR));
+                List<String> result = new ArrayList<>(Arrays.asList(split));
+                result.removeAll(Collections.singletonList(""));
+                return result;
+            } else {
+                return new ArrayList<>();
+            }
+        } else {
+            return new ArrayList<>();
+        }
     }
 
     /**
