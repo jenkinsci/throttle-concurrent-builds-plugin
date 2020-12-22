@@ -149,11 +149,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();    
             synchronized (descriptor.propertiesByCategoryLock) {
                 for (String c : categories) {
-                    Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(c);
-                    if (properties == null) {
-                        properties = new WeakHashMap<>();
-                        descriptor.propertiesByCategory.put(c, properties);
-                    }
+                    Map<ThrottleJobProperty, Void> properties = descriptor.propertiesByCategory.computeIfAbsent(c, k -> new WeakHashMap<>());
                     properties.put(this, null);
                 }
             }
@@ -269,11 +265,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             List<String> nodeIds = runs.get(run.getExternalizableId());
             if (nodeIds != null) {
                 for (String nodeId : nodeIds) {
-                    List<String> categories = categoriesByNode.get(nodeId);
-                    if (categories == null) {
-                        categories = new ArrayList<>();
-                        categoriesByNode.put(nodeId, categories);
-                    }
+                    List<String> categories = categoriesByNode.computeIfAbsent(nodeId, k -> new ArrayList<>());
                     categories.add(cat.getCategoryName());
                 }
             }
