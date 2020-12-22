@@ -96,8 +96,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.maxConcurrentPerNode = maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal;
         this.categories = categories == null ?
-                new CopyOnWriteArrayList<String>() :
-                new CopyOnWriteArrayList<String>(categories);
+                new CopyOnWriteArrayList<>() :
+                new CopyOnWriteArrayList<>(categories);
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
@@ -116,7 +116,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             configVersion = 0L;
         }
         if (categories == null) {
-            categories = new CopyOnWriteArrayList<String>();
+            categories = new CopyOnWriteArrayList<>();
         }
         if (category != null) {
             categories.add(category);
@@ -151,7 +151,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 for (String c : categories) {
                     Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(c);
                     if (properties == null) {
-                        properties = new WeakHashMap<ThrottleJobProperty,Void>();
+                        properties = new WeakHashMap<>();
                         descriptor.propertiesByCategory.put(c, properties);
                     }
                     properties.put(this, null);
@@ -290,12 +290,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      */
     static List<Queue.Task> getCategoryTasks(@Nonnull String category) {
         assert !StringUtils.isEmpty(category);
-        List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
+        List<Queue.Task> categoryTasks = new ArrayList<>();
         Collection<ThrottleJobProperty> properties;
         DescriptorImpl descriptor = fetchDescriptor();
         synchronized (descriptor.propertiesByCategoryLock) {
             Map<ThrottleJobProperty, Void> _properties = descriptor.propertiesByCategory.get(category);
-            properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.emptySet();
+            properties = _properties != null ? new ArrayList<>(_properties.keySet()) : Collections.emptySet();
         }
         for (ThrottleJobProperty t : properties) {
             if (t.getThrottleEnabled()) {
@@ -391,7 +391,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         
         /** Map from category names, to properties including that category. */
         private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory 
-                 = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+                 = new HashMap<>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
 
@@ -401,7 +401,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 load();
                 // Explictly handle the persisted data from the version 1.8.1
                 if (propertiesByCategory == null) {
-                    propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+                    propertiesByCategory = new HashMap<>();
                 }
                 if (!propertiesByCategory.isEmpty()) {
                     propertiesByCategory.clear();
@@ -478,12 +478,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         }
 
         public void setCategories(List<ThrottleCategory> categories) {
-            this.categories = new CopyOnWriteArrayList<ThrottleCategory>(categories);
+            this.categories = new CopyOnWriteArrayList<>(categories);
         }
         
         public List<ThrottleCategory> getCategories() {
             if (categories == null) {
-                categories = new CopyOnWriteArrayList<ThrottleCategory>();
+                categories = new CopyOnWriteArrayList<>();
             }
 
             return categories;
@@ -686,7 +686,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             this.maxConcurrentTotal = maxConcurrentTotal;
             this.categoryName = categoryName;
             this.nodeLabeledPairs =
-                 nodeLabeledPairs == null ? new ArrayList<NodeLabeledPair>() : nodeLabeledPairs;
+                 nodeLabeledPairs == null ? new ArrayList<>() : nodeLabeledPairs;
         }
         
         public Integer getMaxConcurrentPerNode() {
@@ -709,7 +709,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
         public List<NodeLabeledPair> getNodeLabeledPairs() {
             if (nodeLabeledPairs == null)
-                nodeLabeledPairs = new ArrayList<NodeLabeledPair>();
+                nodeLabeledPairs = new ArrayList<>();
 
             return nodeLabeledPairs;
         }
