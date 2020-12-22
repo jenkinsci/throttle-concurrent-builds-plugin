@@ -295,7 +295,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         DescriptorImpl descriptor = fetchDescriptor();
         synchronized (descriptor.propertiesByCategoryLock) {
             Map<ThrottleJobProperty, Void> _properties = descriptor.propertiesByCategory.get(category);
-            properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.<ThrottleJobProperty>emptySet();
+            properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.emptySet();
         }
         for (ThrottleJobProperty t : properties) {
             if (t.getThrottleEnabled()) {
