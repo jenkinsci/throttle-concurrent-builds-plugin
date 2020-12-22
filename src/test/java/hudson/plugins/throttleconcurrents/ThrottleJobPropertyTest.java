@@ -27,7 +27,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -148,7 +147,7 @@ public class ThrottleJobPropertyTest {
         assertEquals(expectedThrottleOption, property.getThrottleOption());
     }
 
-    @Ignore("JENKINS-46858")
+    @Issue("JENKINS-46858")
     @Test
     @WithoutJenkins
     public void testThrottleJobConstructorShouldParseParamsToUseForLimit() {
