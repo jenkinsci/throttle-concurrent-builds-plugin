@@ -297,9 +297,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                         /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
                         categoryTasks.add((Queue.Task) p);
                         if (p instanceof MatrixProject && t.isThrottleMatrixConfigurations()) {
-                            for (MatrixConfiguration mc : ((MatrixProject) p).getActiveConfigurations()) {
-                                categoryTasks.add(mc);
-                            }
+                            categoryTasks.addAll(((MatrixProject) p).getActiveConfigurations());
                         }
                     }
                 }
