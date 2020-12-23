@@ -375,7 +375,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return OriginalParams;
         }
 
-        List<ParameterValue> newParams = new ArrayList<ParameterValue>();
+        List<ParameterValue> newParams = new ArrayList<>();
 
         for (ParameterValue p : OriginalParams) {
             if (params.contains(p.getName())) {
@@ -386,7 +386,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public List<ParameterValue> getParametersFromWorkUnit(WorkUnit unit) {
-        List<ParameterValue> paramsList = new ArrayList<ParameterValue>();
+        List<ParameterValue> paramsList = new ArrayList<>();
 
         if (unit != null && unit.context != null && unit.context.actions != null) {
             List<Action> actions = unit.context.actions;
@@ -408,7 +408,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         else
         {
-            paramsList  = new ArrayList<ParameterValue>();
+            paramsList  = new ArrayList<>();
         }
         return paramsList;
     }
@@ -447,8 +447,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             if (task instanceof MatrixConfiguration) {
                 p = ((MatrixConfiguration)task).getParent();
             }
-            ThrottleJobProperty tjp = p.getProperty(ThrottleJobProperty.class);
-            return tjp;
+            return p.getProperty(ThrottleJobProperty.class);
         }
         return null;
     }
