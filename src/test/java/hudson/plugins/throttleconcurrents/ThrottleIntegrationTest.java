@@ -50,7 +50,7 @@ public class ThrottleIntegrationTest {
     private final long SLEEP_TIME = 100;
     private int executorNum = 2;
     private ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark;
-    private DumbSlave slave = null;
+    private DumbSlave agent = null;
     
     @Rule
     public JenkinsRule r = new JenkinsRule();
@@ -61,7 +61,7 @@ public class ThrottleIntegrationTest {
      */
     private DumbSlave createSlave(String nodeName, String labels, EnvVars env) throws Exception {
         synchronized (r.jenkins) {
-            DumbSlave slave = new DumbSlave(
+            DumbSlave agent = new DumbSlave(
                     nodeName,
                     "dummy",
                     r.createTmpDir().getPath(),
@@ -72,26 +72,26 @@ public class ThrottleIntegrationTest {
                     RetentionStrategy.NOOP,
                     Collections.emptyList()
             );
-            r.jenkins.addNode(slave);
-            return slave;
+            r.jenkins.addNode(agent);
+            return agent;
         }
     }
     
     /**
-     * sets up slave and waterMark.
+     * sets up agent and waterMark.
      */
     @Before
-    public void setupSlave() throws Exception {
+    public void setupAgent() throws Exception {
         int sz = r.jenkins.getNodes().size();
-        slave = createSlave("slave" + sz, null, null);
-        r.waitOnline(slave);
-        waterMark = new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(slave.getRetentionStrategy());
-        slave.setRetentionStrategy(waterMark);
+        agent = createSlave("agent" + sz, null, null);
+        r.waitOnline(agent);
+        waterMark = new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(agent.getRetentionStrategy());
+        agent.setRetentionStrategy(waterMark);
     }
     
     /**
      * setup security so that no one except SYSTEM has any permissions.
-     * should be called after {@link #setupSlave()}
+     * should be called after {@link #setupAgent()}
      */
     @Before
     public void setupSecurity() {
@@ -103,11 +103,11 @@ public class ThrottleIntegrationTest {
     @Test
     public void testNoThrottling() throws Exception {
         FreeStyleProject p1 = r.createFreeStyleProject();
-        p1.setAssignedNode(slave);
+        p1.setAssignedNode(agent);
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
         
         FreeStyleProject p2 = r.createFreeStyleProject();
-        p2.setAssignedNode(slave);
+        p2.setAssignedNode(agent);
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
         
         p1.scheduleBuild2(0);
@@ -135,7 +135,7 @@ public class ThrottleIntegrationTest {
         ));
         
         FreeStyleProject p1 = r.createFreeStyleProject();
-        p1.setAssignedNode(slave);
+        p1.setAssignedNode(agent);
         p1.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
@@ -149,7 +149,7 @@ public class ThrottleIntegrationTest {
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
         
         FreeStyleProject p2 = r.createFreeStyleProject();
-        p2.setAssignedNode(slave);
+        p2.setAssignedNode(agent);
         p2.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
@@ -187,7 +187,7 @@ public class ThrottleIntegrationTest {
                                 Collections.emptyList())));
 
         FreeStyleProject p1 = r.createFreeStyleProject();
-        p1.setAssignedNode(slave);
+        p1.setAssignedNode(agent);
         p1.addProperty(
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
@@ -201,7 +201,7 @@ public class ThrottleIntegrationTest {
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
 
         FreeStyleProject p2 = r.createFreeStyleProject();
-        p2.setAssignedNode(slave);
+        p2.setAssignedNode(agent);
         p2.addProperty(
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
@@ -241,7 +241,7 @@ public class ThrottleIntegrationTest {
         
         Folder f1 = r.createProject(Folder.class, "folder1");
         FreeStyleProject p1 = f1.createProject(FreeStyleProject.class, "p");
-        p1.setAssignedNode(slave);
+        p1.setAssignedNode(agent);
         p1.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
@@ -256,7 +256,7 @@ public class ThrottleIntegrationTest {
         
         Folder f2 = r.createProject(Folder.class, "folder2");
         FreeStyleProject p2 = f2.createProject(FreeStyleProject.class, "p");
-        p2.setAssignedNode(slave);
+        p2.setAssignedNode(agent);
         p2.addProperty(new ThrottleJobProperty(
                 null, // maxConcurrentPerNode
                 null, // maxConcurrentTotal
