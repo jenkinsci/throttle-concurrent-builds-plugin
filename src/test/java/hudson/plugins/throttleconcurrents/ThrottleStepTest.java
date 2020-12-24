@@ -54,7 +54,8 @@ public class ThrottleStepTest {
 
     @Test
     public void onePerNode() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(getJobFlow("first", TestUtil.ONE_PER_NODE, "first-agent"));
 
@@ -84,7 +85,8 @@ public class ThrottleStepTest {
 
     @Test
     public void duplicateCategories() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
 
         WorkflowJob job = j.createProject(WorkflowJob.class, "first-job");
         job.setDefinition(
@@ -125,7 +127,9 @@ public class ThrottleStepTest {
 
     @Test
     public void multipleCategories() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
+
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(getJobFlow("first", TestUtil.ONE_PER_NODE, "first-agent"));
 
@@ -175,7 +179,9 @@ public class ThrottleStepTest {
 
     @Test
     public void onePerNodeParallel() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
+
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(
                 new CpsFlowDefinition(
@@ -253,7 +259,9 @@ public class ThrottleStepTest {
 
     @Test
     public void twoTotal() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
+
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(getJobFlow("first", TestUtil.TWO_TOTAL, "first-agent"));
 
@@ -300,7 +308,9 @@ public class ThrottleStepTest {
     public void interopWithFreestyle() throws Exception {
         final Semaphore semaphore = new Semaphore(1);
 
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
+
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(getJobFlow("first", TestUtil.ONE_PER_NODE, "first-agent"));
 
@@ -415,7 +425,9 @@ public class ThrottleStepTest {
 
     @Test
     public void snippetizer() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
+
         SnippetizerTester st = new SnippetizerTester(j);
         st.assertRoundTrip(
                 new ThrottleStep(Collections.singletonList(TestUtil.ONE_PER_NODE)),
@@ -430,7 +442,9 @@ public class ThrottleStepTest {
     @Issue("JENKINS-49006")
     @Test
     public void throttledPipelinesByCategoryCopyOnWrite() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
+
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(getJobFlow("first", TestUtil.ONE_PER_NODE, "first-agent"));
 

@@ -36,7 +36,9 @@ public class ThrottleJobPropertyPipelineTest {
 
     @Test
     public void twoTotal() throws Exception {
-        TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+        TestUtil.setupCategories();
+
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(getJobFlow("first", "first-agent"));
         firstJob.addProperty(

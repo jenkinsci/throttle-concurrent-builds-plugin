@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import hudson.EnvVars;
 import hudson.model.Executor;
 import hudson.model.Node;
 import hudson.slaves.DumbSlave;
@@ -25,36 +26,41 @@ public class TestUtil {
     static final String OTHER_ONE_PER_NODE = "other_one_per_node";
     static final String TWO_TOTAL = "two_total";
 
-    static void setupAgentsAndCategories(
+    static DumbSlave createAgent(
+            JenkinsRule j,
+            String name,
+            TemporaryFolder temporaryFolder,
+            EnvVars env,
+            int numExecutors,
+            String label)
+            throws Exception {
+        DumbSlave agent =
+                new DumbSlave(
+                        name, temporaryFolder.getRoot().getPath(), j.createComputerLauncher(env));
+        agent.setNumExecutors(numExecutors);
+        agent.setMode(Node.Mode.NORMAL);
+        agent.setLabelString(label == null ? "" : label);
+        agent.setRetentionStrategy(RetentionStrategy.NOOP);
+        agent.setNodeProperties(Collections.emptyList());
+
+        j.jenkins.addNode(agent);
+        j.waitOnline(agent);
+        return agent;
+    }
+
+    static DumbSlave setupOneAgent(JenkinsRule j, TemporaryFolder firstAgentTmp) throws Exception {
+        int sz = j.jenkins.getNodes().size();
+        return createAgent(j, "agent" + sz, firstAgentTmp, null, 2, null);
+    }
+
+    static void setupTwoAgents(
             JenkinsRule j, TemporaryFolder firstAgentTmp, TemporaryFolder secondAgentTmp)
             throws Exception {
-        DumbSlave firstAgent =
-                new DumbSlave(
-                        "first-agent",
-                        "dummy agent",
-                        firstAgentTmp.getRoot().getAbsolutePath(),
-                        "4",
-                        Node.Mode.NORMAL,
-                        "on-agent",
-                        j.createComputerLauncher(null),
-                        RetentionStrategy.NOOP,
-                        Collections.emptyList());
+        createAgent(j, "first-agent", firstAgentTmp, null, 4, "on-agent");
+        createAgent(j, "second-agent", secondAgentTmp, null, 4, "on-agent");
+    }
 
-        DumbSlave secondAgent =
-                new DumbSlave(
-                        "second-agent",
-                        "dummy agent",
-                        secondAgentTmp.getRoot().getAbsolutePath(),
-                        "4",
-                        Node.Mode.NORMAL,
-                        "on-agent",
-                        j.createComputerLauncher(null),
-                        RetentionStrategy.NOOP,
-                        Collections.emptyList());
-
-        j.jenkins.addNode(firstAgent);
-        j.jenkins.addNode(secondAgent);
-
+    static void setupCategories() {
         ThrottleJobProperty.ThrottleCategory firstCat =
                 new ThrottleJobProperty.ThrottleCategory(ONE_PER_NODE, 1, 0, null);
         ThrottleJobProperty.ThrottleCategory secondCat =

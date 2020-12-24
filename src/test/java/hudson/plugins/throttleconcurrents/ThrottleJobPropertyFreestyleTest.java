@@ -29,18 +29,18 @@ import static org.junit.Assert.assertNotNull;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
 
-import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
-import hudson.model.Node.Mode;
 import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
-import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
 
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SleepBuilder;
@@ -49,41 +49,21 @@ import java.util.Collections;
 
 /** Tests that {@link ThrottleJobProperty} actually works for builds. */
 public class ThrottleJobPropertyFreestyleTest {
-    private final long SLEEP_TIME = 100;
-    private int executorNum = 2;
+    private static final long SLEEP_TIME = 100;
+
     private ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark;
     private DumbSlave agent = null;
 
     @Rule public JenkinsRule j = new JenkinsRule();
 
-    /**
-     * Copypasta of {@link JenkinsRule#createSlave(String, String, EnvVars)} to enable modifying the
-     * number of executors.
-     */
-    private DumbSlave createSlave(String nodeName, String labels, EnvVars env) throws Exception {
-        synchronized (j.jenkins) {
-            DumbSlave agent =
-                    new DumbSlave(
-                            nodeName,
-                            "dummy",
-                            j.createTmpDir().getPath(),
-                            Integer.toString(executorNum), // Overridden!
-                            Mode.NORMAL,
-                            labels == null ? "" : labels,
-                            j.createComputerLauncher(env),
-                            RetentionStrategy.NOOP,
-                            Collections.emptyList());
-            j.jenkins.addNode(agent);
-            return agent;
-        }
-    }
+    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+
+    @Rule public TemporaryFolder firstAgentTmp = new TemporaryFolder();
 
     /** sets up agent and waterMark. */
     @Before
     public void setupAgent() throws Exception {
-        int sz = j.jenkins.getNodes().size();
-        agent = createSlave("agent" + sz, null, null);
-        j.waitOnline(agent);
+        agent = TestUtil.setupOneAgent(j, firstAgentTmp);
         waterMark =
                 new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(agent.getRetentionStrategy());
         agent.setRetentionStrategy(waterMark);

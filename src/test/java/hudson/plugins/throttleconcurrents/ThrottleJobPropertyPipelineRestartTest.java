@@ -37,7 +37,8 @@ public class ThrottleJobPropertyPipelineRestartTest {
     public void twoTotalWithRestart() throws Throwable {
         sessions.then(
                 j -> {
-                    TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+                    TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+                    TestUtil.setupCategories();
 
                     // The following is required so that the categories remain after Jenkins
                     // restarts.
