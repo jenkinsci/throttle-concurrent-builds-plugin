@@ -25,6 +25,7 @@
 package hudson.plugins.throttleconcurrents;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
 
@@ -122,8 +123,8 @@ public class ThrottleJobPropertyFreestyleTest {
     public void testThrottlingWithCategoryPerNode() throws Exception {
         final String category = "category";
 
-        ThrottleJobProperty.DescriptorImpl descriptor =
-                r.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
         descriptor.setCategories(
                 Collections.singletonList(
                         new ThrottleJobProperty.ThrottleCategory(
@@ -173,8 +174,8 @@ public class ThrottleJobPropertyFreestyleTest {
     public void testThrottlingWithCategoryTotal() throws Exception {
         final String category = "category";
 
-        ThrottleJobProperty.DescriptorImpl descriptor =
-                r.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
         descriptor.setCategories(
                 Collections.singletonList(
                         new ThrottleJobProperty.ThrottleCategory(
@@ -225,8 +226,8 @@ public class ThrottleJobPropertyFreestyleTest {
     public void testThrottlingWithCategoryInFolder() throws Exception {
         final String category = "category";
 
-        ThrottleJobProperty.DescriptorImpl descriptor =
-                r.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
         descriptor.setCategories(
                 Collections.singletonList(
                         new ThrottleJobProperty.ThrottleCategory(

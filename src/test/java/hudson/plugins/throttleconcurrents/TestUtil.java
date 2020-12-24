@@ -62,8 +62,7 @@ public class TestUtil {
         ThrottleJobProperty.ThrottleCategory thirdCat =
                 new ThrottleJobProperty.ThrottleCategory(OTHER_ONE_PER_NODE, 1, 0, null);
 
-        ThrottleJobProperty.DescriptorImpl descriptor =
-                j.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
         descriptor.setCategories(Arrays.asList(firstCat, secondCat, thirdCat));
 

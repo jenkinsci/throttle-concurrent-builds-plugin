@@ -449,6 +449,7 @@ public class ThrottleStepTest {
         TestUtil.hasPlaceholderTaskForRun(n, firstJobFirstRun);
 
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
         Map<String, List<String>> throttledPipelinesByCategory =
                 descriptor.getThrottledPipelinesForCategory(TestUtil.ONE_PER_NODE);
         assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);

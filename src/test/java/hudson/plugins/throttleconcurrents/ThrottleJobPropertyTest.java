@@ -387,8 +387,7 @@ public class ThrottleJobPropertyTest {
 
     @Test
     public void testDescriptorImplShouldAConcurrencySafeListForCategories() {
-        ThrottleJobProperty.DescriptorImpl descriptor =
-                j.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
 
         assertTrue(descriptor.getCategories() instanceof CopyOnWriteArrayList);
@@ -421,6 +420,7 @@ public class ThrottleJobPropertyTest {
     @Test
     public void throttledPipelinesByCategoryMigratesOldData() {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
 
         Map<String, List<String>> throttledPipelinesByCategory =
                 descriptor.getThrottledPipelinesForCategory(TestUtil.TWO_TOTAL);
@@ -439,8 +439,7 @@ public class ThrottleJobPropertyTest {
     @Issue("JENKINS-54578")
     @Test
     public void clearConfiguredCategories() throws Exception {
-        ThrottleJobProperty.DescriptorImpl descriptor =
-                j.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
 
         // Ensure there are no categories.

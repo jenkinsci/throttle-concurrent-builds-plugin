@@ -3,6 +3,7 @@ package hudson.plugins.throttleconcurrents;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -153,7 +154,8 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             }
 
             private void createCategory() {
-                ThrottleJobProperty.DescriptorImpl descriptor = (ThrottleJobProperty.DescriptorImpl) j.getInstance().getDescriptor(ThrottleJobProperty.class);
+                ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+                assertNotNull(descriptor);
                 descriptor.setCategories(ImmutableList.of(new ThrottleJobProperty.ThrottleCategory(name, maxConcurrentPerNode, maxConcurrentTotal, null)));
             }
         }
