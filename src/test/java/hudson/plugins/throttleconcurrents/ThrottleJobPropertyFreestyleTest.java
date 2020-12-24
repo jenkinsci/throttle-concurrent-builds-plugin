@@ -24,13 +24,23 @@
 
 package hudson.plugins.throttleconcurrents;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
+import com.google.common.collect.Iterables;
 
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
+import hudson.model.Queue;
+import hudson.model.queue.QueueTaskFuture;
 import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.slaves.SlaveComputer;
@@ -44,11 +54,15 @@ import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.SequenceLock;
 import org.jvnet.hudson.test.SleepBuilder;
+import org.jvnet.hudson.test.TestBuilder;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /** Tests that {@link ThrottleJobProperty} actually works for builds. */
 public class ThrottleJobPropertyFreestyleTest {
@@ -102,14 +116,13 @@ public class ThrottleJobPropertyFreestyleTest {
     }
 
     @Test
-    public void testThrottlingWithCategoryPerNode() throws Exception {
-        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
-        ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
+    public void onePerNode() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 2, null);
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
-        FreeStyleProject p1 = j.createFreeStyleProject();
-        p1.setAssignedNode(agent);
-        p1.addProperty(
+        FreeStyleProject firstJob = j.createFreeStyleProject();
+        firstJob.setAssignedNode(agent);
+        firstJob.addProperty(
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
@@ -119,11 +132,27 @@ public class ThrottleJobPropertyFreestyleTest {
                         false,
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
-        p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+        SequenceLock firstJobSeq = new SequenceLock();
+        firstJob.getBuildersList()
+                .add(
+                        new TestBuilder() {
+                            @Override
+                            public boolean perform(
+                                    AbstractBuild<?, ?> build,
+                                    Launcher launcher,
+                                    BuildListener listener)
+                                    throws InterruptedException {
+                                firstJobSeq.phase(0);
+                                firstJobSeq.phase(2);
+                                return true;
+                            }
+                        });
+        FreeStyleBuild firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        firstJobSeq.phase(1);
 
-        FreeStyleProject p2 = j.createFreeStyleProject();
-        p2.setAssignedNode(agent);
-        p2.addProperty(
+        FreeStyleProject secondJob = j.createFreeStyleProject();
+        secondJob.setAssignedNode(agent);
+        secondJob.addProperty(
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
@@ -133,15 +162,42 @@ public class ThrottleJobPropertyFreestyleTest {
                         false,
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
-        p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+        SequenceLock secondJobSeq = new SequenceLock();
+        secondJob
+                .getBuildersList()
+                .add(
+                        new TestBuilder() {
+                            @Override
+                            public boolean perform(
+                                    AbstractBuild<?, ?> build,
+                                    Launcher launcher,
+                                    BuildListener listener)
+                                    throws InterruptedException {
+                                secondJobSeq.phase(0);
+                                secondJobSeq.phase(2);
+                                return true;
+                            }
+                        });
 
-        p1.scheduleBuild2(0);
-        p2.scheduleBuild2(0);
+        QueueTaskFuture<FreeStyleBuild> secondJobFirstRunFuture = secondJob.scheduleBuild2(0);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        Queue.Item queuedItem =
+                Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+        assertEquals(1, agent.toComputer().countBusy());
 
-        j.waitUntilNoActivity();
-
-        // throttled, and only one build runs at the same time.
-        assertEquals(1, waterMark.getExecutorWaterMark());
+        firstJobSeq.done();
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+        secondJobSeq.phase(1);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, agent.toComputer().countBusy());
+        secondJobSeq.done();
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRunFuture.get()));
     }
 
     @Test

@@ -8,10 +8,13 @@ import hudson.EnvVars;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Node;
+import hudson.model.queue.CauseOfBlockage;
 import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
+
+import jenkins.model.queue.CompositeCauseOfBlockage;
 
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
@@ -21,6 +24,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class TestUtil {
 
@@ -103,6 +107,15 @@ public class TestUtil {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
         descriptor.setCategories(Arrays.asList(categories));
+    }
+
+    static Set<String> getBlockageReasons(CauseOfBlockage cob) {
+        if (cob instanceof CompositeCauseOfBlockage) {
+            CompositeCauseOfBlockage ccob = (CompositeCauseOfBlockage) cob;
+            return ccob.uniqueReasons.keySet();
+        } else {
+            return Collections.singleton(cob.getShortDescription());
+        }
     }
 
     static void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {

@@ -1,5 +1,7 @@
 package hudson.plugins.throttleconcurrents;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -16,6 +18,7 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.After;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -26,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class ThrottleJobPropertyPipelineTest {
 
@@ -43,6 +47,65 @@ public class ThrottleJobPropertyPipelineTest {
     public void tearDown() throws Exception {
         TestUtil.tearDown(j, agents);
         agents = new ArrayList<>();
+    }
+
+    @Ignore("TODO Doesn't work at present")
+    @Test
+    public void onePerNode() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 2, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
+
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(getJobFlow("first", agent.getNodeName()));
+        firstJob.addProperty(
+                new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                        true, // throttleEnabled
+                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+
+        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(getJobFlow("second", agent.getNodeName()));
+        secondJob.addProperty(
+                new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                        true, // throttleEnabled
+                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+
+        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        Queue.Item queuedItem =
+                Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, firstJobFirstRun);
+
+        SemaphoreStep.success("wait-first-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, secondJobFirstRun);
+        SemaphoreStep.success("wait-second-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 
     @Test
