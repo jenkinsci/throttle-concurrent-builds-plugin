@@ -38,6 +38,14 @@ public class ThrottleJobPropertyPipelineRestartTest {
         sessions.then(
                 j -> {
                     TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
+
+                    // The following is required so that the categories remain after Jenkins
+                    // restarts.
+                    ThrottleJobProperty.DescriptorImpl descriptor =
+                            ThrottleJobProperty.fetchDescriptor();
+                    assertNotNull(descriptor);
+                    descriptor.save();
+
                     WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
                     firstJob.setDefinition(
                             ThrottleJobPropertyPipelineTest.getJobFlow("first", "first-agent"));

@@ -65,9 +65,6 @@ public class TestUtil {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
         descriptor.setCategories(Arrays.asList(firstCat, secondCat, thirdCat));
-
-        // The following is required for tests that restart Jenkins.
-        descriptor.save();
     }
 
     static void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
