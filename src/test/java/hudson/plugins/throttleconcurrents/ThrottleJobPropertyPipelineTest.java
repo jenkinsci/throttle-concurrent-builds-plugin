@@ -165,9 +165,10 @@ public class ThrottleJobPropertyPipelineTest {
         assertFalse(j.jenkins.getQueue().isEmpty());
         Queue.Item queuedItem =
                 Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
-        assertEquals(
-                Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
-                queuedItem.getCauseOfBlockage().getShortDescription());
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString()));
         assertEquals(1, firstAgent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
