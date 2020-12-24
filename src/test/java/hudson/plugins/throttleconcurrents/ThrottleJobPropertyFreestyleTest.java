@@ -59,6 +59,7 @@ import org.jvnet.hudson.test.SequenceLock;
 import org.jvnet.hudson.test.SleepBuilder;
 import org.jvnet.hudson.test.TestBuilder;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -135,20 +136,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock firstJobSeq = new SequenceLock();
-        firstJob.getBuildersList()
-                .add(
-                        new TestBuilder() {
-                            @Override
-                            public boolean perform(
-                                    AbstractBuild<?, ?> build,
-                                    Launcher launcher,
-                                    BuildListener listener)
-                                    throws InterruptedException {
-                                firstJobSeq.phase(0);
-                                firstJobSeq.phase(2);
-                                return true;
-                            }
-                        });
+        firstJob.getBuildersList().add(new SequenceLockBuilder(firstJobSeq));
 
         FreeStyleBuild firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         firstJobSeq.phase(1);
@@ -166,21 +154,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock secondJobSeq = new SequenceLock();
-        secondJob
-                .getBuildersList()
-                .add(
-                        new TestBuilder() {
-                            @Override
-                            public boolean perform(
-                                    AbstractBuild<?, ?> build,
-                                    Launcher launcher,
-                                    BuildListener listener)
-                                    throws InterruptedException {
-                                secondJobSeq.phase(0);
-                                secondJobSeq.phase(2);
-                                return true;
-                            }
-                        });
+        secondJob.getBuildersList().add(new SequenceLockBuilder(secondJobSeq));
 
         QueueTaskFuture<FreeStyleBuild> secondJobFirstRunFuture = secondJob.scheduleBuild2(0);
         j.jenkins.getQueue().maintain();
@@ -225,20 +199,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock firstJobSeq = new SequenceLock();
-        firstJob.getBuildersList()
-                .add(
-                        new TestBuilder() {
-                            @Override
-                            public boolean perform(
-                                    AbstractBuild<?, ?> build,
-                                    Launcher launcher,
-                                    BuildListener listener)
-                                    throws InterruptedException {
-                                firstJobSeq.phase(0);
-                                firstJobSeq.phase(2);
-                                return true;
-                            }
-                        });
+        firstJob.getBuildersList().add(new SequenceLockBuilder(firstJobSeq));
 
         FreeStyleBuild firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         firstJobSeq.phase(1);
@@ -256,21 +217,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock secondJobSeq = new SequenceLock();
-        secondJob
-                .getBuildersList()
-                .add(
-                        new TestBuilder() {
-                            @Override
-                            public boolean perform(
-                                    AbstractBuild<?, ?> build,
-                                    Launcher launcher,
-                                    BuildListener listener)
-                                    throws InterruptedException {
-                                secondJobSeq.phase(0);
-                                secondJobSeq.phase(2);
-                                return true;
-                            }
-                        });
+        secondJob.getBuildersList().add(new SequenceLockBuilder(secondJobSeq));
 
         FreeStyleBuild secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         secondJobSeq.phase(1);
@@ -288,20 +235,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock thirdJobSeq = new SequenceLock();
-        thirdJob.getBuildersList()
-                .add(
-                        new TestBuilder() {
-                            @Override
-                            public boolean perform(
-                                    AbstractBuild<?, ?> build,
-                                    Launcher launcher,
-                                    BuildListener listener)
-                                    throws InterruptedException {
-                                thirdJobSeq.phase(0);
-                                thirdJobSeq.phase(2);
-                                return true;
-                            }
-                        });
+        thirdJob.getBuildersList().add(new SequenceLockBuilder(thirdJobSeq));
 
         QueueTaskFuture<FreeStyleBuild> thirdJobFirstRunFuture = thirdJob.scheduleBuild2(0);
         j.jenkins.getQueue().maintain();
@@ -376,5 +310,22 @@ public class ThrottleJobPropertyFreestyleTest {
 
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
+    }
+
+    private static class SequenceLockBuilder extends TestBuilder {
+
+        private final SequenceLock sequenceLock;
+
+        private SequenceLockBuilder(SequenceLock sequenceLock) {
+            this.sequenceLock = sequenceLock;
+        }
+
+        @Override
+        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
+                throws InterruptedException, IOException {
+            sequenceLock.phase(0);
+            sequenceLock.phase(2);
+            return true;
+        }
     }
 }
