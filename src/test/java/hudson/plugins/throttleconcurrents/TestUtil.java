@@ -5,10 +5,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import hudson.EnvVars;
+import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Node;
+import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
+import hudson.slaves.SlaveComputer;
 
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
@@ -17,6 +20,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public class TestUtil {
 
@@ -26,38 +30,67 @@ public class TestUtil {
     static final String OTHER_ONE_PER_NODE = "other_one_per_node";
     static final String TWO_TOTAL = "two_total";
 
-    static DumbSlave createAgent(
+    private static DumbSlave createAgent(
             JenkinsRule j,
-            String name,
             TemporaryFolder temporaryFolder,
             EnvVars env,
             int numExecutors,
             String label)
             throws Exception {
-        DumbSlave agent =
-                new DumbSlave(
-                        name, temporaryFolder.getRoot().getPath(), j.createComputerLauncher(env));
-        agent.setNumExecutors(numExecutors);
-        agent.setMode(Node.Mode.NORMAL);
-        agent.setLabelString(label == null ? "" : label);
-        agent.setRetentionStrategy(RetentionStrategy.NOOP);
-        agent.setNodeProperties(Collections.emptyList());
+        synchronized (j.jenkins) {
+            int sz = j.jenkins.getNodes().size();
+            DumbSlave agent =
+                    new DumbSlave(
+                            "agent" + sz,
+                            temporaryFolder.getRoot().getPath(),
+                            j.createComputerLauncher(env));
+            agent.setNumExecutors(numExecutors);
+            agent.setMode(Node.Mode.NORMAL);
+            agent.setLabelString(label == null ? "" : label);
+            agent.setRetentionStrategy(RetentionStrategy.NOOP);
+            agent.setNodeProperties(Collections.emptyList());
 
-        j.jenkins.addNode(agent);
-        j.waitOnline(agent);
+            j.jenkins.addNode(agent);
+            j.waitOnline(agent);
+            return agent;
+        }
+    }
+
+    static Node setupAgent(
+            JenkinsRule j,
+            TemporaryFolder temporaryFolder,
+            List<Node> agents,
+            List<ExecutorWaterMarkRetentionStrategy<SlaveComputer>> waterMarks,
+            EnvVars env,
+            int numExecutors,
+            String label)
+            throws Exception {
+        DumbSlave agent = TestUtil.createAgent(j, temporaryFolder, env, numExecutors, label);
+
+        if (agents != null) {
+            agents.add(agent);
+        }
+
+        if (waterMarks != null) {
+            ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark =
+                    new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(
+                            agent.getRetentionStrategy());
+            agent.setRetentionStrategy(waterMark);
+            waterMarks.add(waterMark);
+        }
+
         return agent;
     }
 
-    static DumbSlave setupOneAgent(JenkinsRule j, TemporaryFolder firstAgentTmp) throws Exception {
-        int sz = j.jenkins.getNodes().size();
-        return createAgent(j, "agent" + sz, firstAgentTmp, null, 2, null);
-    }
-
-    static void setupTwoAgents(
-            JenkinsRule j, TemporaryFolder firstAgentTmp, TemporaryFolder secondAgentTmp)
-            throws Exception {
-        createAgent(j, "first-agent", firstAgentTmp, null, 4, "on-agent");
-        createAgent(j, "second-agent", secondAgentTmp, null, 4, "on-agent");
+    static void tearDown(JenkinsRule j, List<Node> agents) throws Exception {
+        for (Node agent : agents) {
+            Computer computer = agent.toComputer();
+            computer.disconnect(null);
+            while (computer.isOnline()) {
+                Thread.sleep(500L);
+            }
+            j.jenkins.removeNode(agent);
+        }
     }
 
     static void setupCategories() {

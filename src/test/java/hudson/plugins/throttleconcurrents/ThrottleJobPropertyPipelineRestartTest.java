@@ -21,8 +21,10 @@ import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsSessionRule;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public class ThrottleJobPropertyPipelineRestartTest {
 
@@ -35,9 +37,18 @@ public class ThrottleJobPropertyPipelineRestartTest {
 
     @Test
     public void twoTotalWithRestart() throws Throwable {
+        String[] agentNames = new String[2];
         sessions.then(
                 j -> {
-                    TestUtil.setupTwoAgents(j, firstAgentTmp, secondAgentTmp);
+                    List<Node> agents = new ArrayList<>();
+                    Node firstAgent =
+                            TestUtil.setupAgent(
+                                    j, firstAgentTmp, agents, null, null, 4, "on-agent");
+                    Node secondAgent =
+                            TestUtil.setupAgent(
+                                    j, secondAgentTmp, agents, null, null, 4, "on-agent");
+                    agentNames[0] = firstAgent.getNodeName();
+                    agentNames[1] = secondAgent.getNodeName();
                     TestUtil.setupCategories();
 
                     // The following is required so that the categories remain after Jenkins
@@ -49,7 +60,8 @@ public class ThrottleJobPropertyPipelineRestartTest {
 
                     WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
                     firstJob.setDefinition(
-                            ThrottleJobPropertyPipelineTest.getJobFlow("first", "first-agent"));
+                            ThrottleJobPropertyPipelineTest.getJobFlow(
+                                    "first", firstAgent.getNodeName()));
                     firstJob.addProperty(
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
@@ -66,7 +78,8 @@ public class ThrottleJobPropertyPipelineRestartTest {
 
                     WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
                     secondJob.setDefinition(
-                            ThrottleJobPropertyPipelineTest.getJobFlow("second", "second-agent"));
+                            ThrottleJobPropertyPipelineTest.getJobFlow(
+                                    "second", secondAgent.getNodeName()));
                     secondJob.addProperty(
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
@@ -104,15 +117,11 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     assertEquals(
                             Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
                             queuedItem.getCauseOfBlockage().getShortDescription());
-                    Node n = j.jenkins.getNode("first-agent");
-                    assertNotNull(n);
-                    assertEquals(1, n.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(n, firstJobFirstRun);
+                    assertEquals(1, firstAgent.toComputer().countBusy());
+                    TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
-                    Node n2 = j.jenkins.getNode("second-agent");
-                    assertNotNull(n2);
-                    assertEquals(1, n2.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+                    assertEquals(1, secondAgent.toComputer().countBusy());
+                    TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
                 });
         sessions.then(
                 j -> {
@@ -144,15 +153,15 @@ public class ThrottleJobPropertyPipelineRestartTest {
                             Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
                             queuedItem.getCauseOfBlockage().getShortDescription());
 
-                    Node n = j.jenkins.getNode("first-agent");
-                    assertNotNull(n);
-                    assertEquals(1, n.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(n, firstJobFirstRun);
+                    Node firstAgent = j.jenkins.getNode(agentNames[0]);
+                    assertNotNull(firstAgent);
+                    assertEquals(1, firstAgent.toComputer().countBusy());
+                    TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
-                    Node n2 = j.jenkins.getNode("second-agent");
-                    assertNotNull(n2);
-                    assertEquals(1, n2.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+                    Node secondAgent = j.jenkins.getNode(agentNames[1]);
+                    assertNotNull(secondAgent);
+                    assertEquals(1, secondAgent.toComputer().countBusy());
+                    TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
 
                     SemaphoreStep.success("wait-first-job/1", null);
                     j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
@@ -161,8 +170,11 @@ public class ThrottleJobPropertyPipelineRestartTest {
                             (WorkflowRun) queuedItem.getFuture().waitForStart();
                     SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
                     assertTrue(j.jenkins.getQueue().isEmpty());
-                    assertEquals(2, n.toComputer().countBusy() + n2.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(n, thirdJobFirstRun);
+                    assertEquals(
+                            2,
+                            firstAgent.toComputer().countBusy()
+                                    + secondAgent.toComputer().countBusy());
+                    TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);
 
                     SemaphoreStep.success("wait-second-job/1", null);
                     j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));

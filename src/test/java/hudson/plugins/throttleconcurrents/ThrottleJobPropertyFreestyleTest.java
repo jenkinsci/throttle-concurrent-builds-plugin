@@ -30,11 +30,12 @@ import static org.junit.Assert.assertNotNull;
 import com.cloudbees.hudson.plugins.folder.Folder;
 
 import hudson.model.FreeStyleProject;
+import hudson.model.Node;
 import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
-import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -45,14 +46,13 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SleepBuilder;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 /** Tests that {@link ThrottleJobProperty} actually works for builds. */
 public class ThrottleJobPropertyFreestyleTest {
     private static final long SLEEP_TIME = 100;
-
-    private ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark;
-    private DumbSlave agent = null;
 
     @Rule public JenkinsRule j = new JenkinsRule();
 
@@ -60,19 +60,10 @@ public class ThrottleJobPropertyFreestyleTest {
 
     @Rule public TemporaryFolder firstAgentTmp = new TemporaryFolder();
 
-    /** sets up agent and waterMark. */
-    @Before
-    public void setupAgent() throws Exception {
-        agent = TestUtil.setupOneAgent(j, firstAgentTmp);
-        waterMark =
-                new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(agent.getRetentionStrategy());
-        agent.setRetentionStrategy(waterMark);
-    }
+    private List<Node> agents = new ArrayList<>();
+    private List<ExecutorWaterMarkRetentionStrategy<SlaveComputer>> waterMarks = new ArrayList<>();
 
-    /**
-     * setup security so that no one except SYSTEM has any permissions. should be called after
-     * {@link #setupAgent()}
-     */
+    /** setup security so that no one except SYSTEM has any permissions. */
     @Before
     public void setupSecurity() {
         j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
@@ -80,8 +71,19 @@ public class ThrottleJobPropertyFreestyleTest {
         j.jenkins.setAuthorizationStrategy(auth);
     }
 
+    /** Clean up agents. */
+    @After
+    public void tearDown() throws Exception {
+        TestUtil.tearDown(j, agents);
+        agents = new ArrayList<>();
+        waterMarks = new ArrayList<>();
+    }
+
     @Test
     public void testNoThrottling() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
+        ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
+
         FreeStyleProject p1 = j.createFreeStyleProject();
         p1.setAssignedNode(agent);
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
@@ -101,6 +103,9 @@ public class ThrottleJobPropertyFreestyleTest {
 
     @Test
     public void testThrottlingWithCategoryPerNode() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
+        ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
+
         final String category = "category";
 
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
@@ -152,6 +157,9 @@ public class ThrottleJobPropertyFreestyleTest {
 
     @Test
     public void testThrottlingWithCategoryTotal() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
+        ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
+
         final String category = "category";
 
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
@@ -204,6 +212,9 @@ public class ThrottleJobPropertyFreestyleTest {
     @Issue("JENKINS-25326")
     @Test
     public void testThrottlingWithCategoryInFolder() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
+        ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
+
         final String category = "category";
 
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
