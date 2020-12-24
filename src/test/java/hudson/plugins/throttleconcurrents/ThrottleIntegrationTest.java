@@ -141,7 +141,7 @@ public class ThrottleIntegrationTest {
                 null, // maxConcurrentTotal
                 Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
-                "category",     // throttleOption
+                TestUtil.THROTTLE_OPTION_CATEGORY,     // throttleOption
                 false,
                 null,
                 ThrottleMatrixProjectOptions.DEFAULT
@@ -155,7 +155,7 @@ public class ThrottleIntegrationTest {
                 null, // maxConcurrentTotal
                 Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
-                "category",     // throttleOption
+                TestUtil.THROTTLE_OPTION_CATEGORY,     // throttleOption
                 false,
                 null,
                 ThrottleMatrixProjectOptions.DEFAULT
@@ -194,7 +194,7 @@ public class ThrottleIntegrationTest {
                         null, // maxConcurrentTotal
                         Collections.singletonList(category), // categories
                         true, // throttleEnabled
-                        "category", // throttleOption
+                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
@@ -208,7 +208,7 @@ public class ThrottleIntegrationTest {
                         null, // maxConcurrentTotal
                         Collections.singletonList(category), // categories
                         true, // throttleEnabled
-                        "category", // throttleOption
+                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
@@ -247,7 +247,7 @@ public class ThrottleIntegrationTest {
                 null, // maxConcurrentTotal
                 Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
-                "category",     // throttleOption
+                TestUtil.THROTTLE_OPTION_CATEGORY,     // throttleOption
                 false,  // limitOneJobWithMatchingParams
                 null,   // paramsToUse for the previous flag
                 ThrottleMatrixProjectOptions.DEFAULT
@@ -262,7 +262,7 @@ public class ThrottleIntegrationTest {
                 null, // maxConcurrentTotal
                 Collections.singletonList(category),      // categories
                 true,   // throttleEnabled
-                "category",     // throttleOption
+                TestUtil.THROTTLE_OPTION_CATEGORY,     // throttleOption
                 false,  // limitOneJobWithMatchingParams
                 null,   // paramsToUse for the previous flag
                 ThrottleMatrixProjectOptions.DEFAULT

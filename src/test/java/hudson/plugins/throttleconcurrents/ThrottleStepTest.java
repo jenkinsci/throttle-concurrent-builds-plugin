@@ -316,7 +316,7 @@ public class ThrottleStepTest {
                         null, // maxConcurrentTotal
                         Collections.singletonList(TestUtil.ONE_PER_NODE), // categories
                         true, // throttleEnabled
-                        "category", // throttleOption
+                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));

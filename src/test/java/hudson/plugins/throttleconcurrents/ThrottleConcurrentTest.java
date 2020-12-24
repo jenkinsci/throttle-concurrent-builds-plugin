@@ -304,7 +304,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             FreeStyleProject freeStyleProject = j.createFreeStyleProject();
             freeStyleProject.addProperty(
                     new ThrottleJobProperty(0, 0, ImmutableList.of(categoryName), 
-                            true, "category", false, null, null));
+                            true, TestUtil.THROTTLE_OPTION_CATEGORY, false, null, null));
             return freeStyleProject;
         }
 
