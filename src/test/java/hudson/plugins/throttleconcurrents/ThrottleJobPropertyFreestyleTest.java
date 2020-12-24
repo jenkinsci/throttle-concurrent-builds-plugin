@@ -46,7 +46,7 @@ import org.jvnet.hudson.test.SleepBuilder;
 /**
  * Tests that {@link ThrottleJobProperty} actually works for builds.
  */
-public class ThrottleIntegrationTest {
+public class ThrottleJobPropertyFreestyleTest {
     private final long SLEEP_TIME = 100;
     private int executorNum = 2;
     private ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark;
