@@ -40,7 +40,7 @@ public class ThrottleJobPropertyRestartTest {
                     TestUtil.setupAgentsAndCategories(j, firstAgentTmp, secondAgentTmp);
                     WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
                     firstJob.setDefinition(
-                            ThrottleJobPropertyTest.getJobFlow("first", "first-agent"));
+                            ThrottleJobPropertyPipelineTest.getJobFlow("first", "first-agent"));
                     firstJob.addProperty(
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
@@ -57,7 +57,7 @@ public class ThrottleJobPropertyRestartTest {
 
                     WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
                     secondJob.setDefinition(
-                            ThrottleJobPropertyTest.getJobFlow("second", "second-agent"));
+                            ThrottleJobPropertyPipelineTest.getJobFlow("second", "second-agent"));
                     secondJob.addProperty(
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
@@ -73,7 +73,8 @@ public class ThrottleJobPropertyRestartTest {
                     SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
                     WorkflowJob thirdJob = j.createProject(WorkflowJob.class, "third-job");
-                    thirdJob.setDefinition(ThrottleJobPropertyTest.getJobFlow("third", "on-agent"));
+                    thirdJob.setDefinition(
+                            ThrottleJobPropertyPipelineTest.getJobFlow("third", "on-agent"));
                     thirdJob.addProperty(
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
