@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Iterables;
 
+import hudson.Functions;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -30,6 +31,7 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -212,6 +214,10 @@ public class ThrottleStepTest {
 
     @Test
     public void onePerNodeParallel() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
