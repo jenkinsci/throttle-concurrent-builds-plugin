@@ -37,8 +37,6 @@ public class TestUtil {
             new ThrottleJobProperty.ThrottleCategory("two_total", 0, 2, null);
     static final ThrottleJobProperty.ThrottleCategory OTHER_ONE_PER_NODE =
             new ThrottleJobProperty.ThrottleCategory("other_one_per_node", 1, 0, null);
-    static final ThrottleJobProperty.ThrottleCategory ONE_TOTAL =
-            new ThrottleJobProperty.ThrottleCategory("one_total", 0, 1, null);
 
     private static DumbSlave createAgent(
             JenkinsRule j,

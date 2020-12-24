@@ -38,6 +38,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.model.queue.QueueTaskFuture;
@@ -73,6 +74,7 @@ public class ThrottleJobPropertyFreestyleTest {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
 
     @Rule public TemporaryFolder firstAgentTmp = new TemporaryFolder();
+    @Rule public TemporaryFolder secondAgentTmp = new TemporaryFolder();
 
     private List<Node> agents = new ArrayList<>();
     private List<ExecutorWaterMarkRetentionStrategy<SlaveComputer>> waterMarks = new ArrayList<>();
@@ -147,6 +149,7 @@ public class ThrottleJobPropertyFreestyleTest {
                                 return true;
                             }
                         });
+
         FreeStyleBuild firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         firstJobSeq.phase(1);
 
@@ -203,46 +206,130 @@ public class ThrottleJobPropertyFreestyleTest {
     }
 
     @Test
-    public void testThrottlingWithCategoryTotal() throws Exception {
-        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
-        ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
-        TestUtil.setupCategories(TestUtil.ONE_TOTAL);
+    public void twoTotal() throws Exception {
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
+        Node secondAgent =
+                TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
+        TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
-        FreeStyleProject p1 = j.createFreeStyleProject();
-        p1.setAssignedNode(agent);
-        p1.addProperty(
+        FreeStyleProject firstJob = j.createFreeStyleProject();
+        firstJob.setAssignedNode(firstAgent);
+        firstJob.addProperty(
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_TOTAL.getCategoryName()),
+                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
-        p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+        SequenceLock firstJobSeq = new SequenceLock();
+        firstJob.getBuildersList()
+                .add(
+                        new TestBuilder() {
+                            @Override
+                            public boolean perform(
+                                    AbstractBuild<?, ?> build,
+                                    Launcher launcher,
+                                    BuildListener listener)
+                                    throws InterruptedException {
+                                firstJobSeq.phase(0);
+                                firstJobSeq.phase(2);
+                                return true;
+                            }
+                        });
 
-        FreeStyleProject p2 = j.createFreeStyleProject();
-        p2.setAssignedNode(agent);
-        p2.addProperty(
+        FreeStyleBuild firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        firstJobSeq.phase(1);
+
+        FreeStyleProject secondJob = j.createFreeStyleProject();
+        secondJob.setAssignedNode(secondAgent);
+        secondJob.addProperty(
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_TOTAL.getCategoryName()),
+                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
                         null,
                         ThrottleMatrixProjectOptions.DEFAULT));
-        p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
+        SequenceLock secondJobSeq = new SequenceLock();
+        secondJob
+                .getBuildersList()
+                .add(
+                        new TestBuilder() {
+                            @Override
+                            public boolean perform(
+                                    AbstractBuild<?, ?> build,
+                                    Launcher launcher,
+                                    BuildListener listener)
+                                    throws InterruptedException {
+                                secondJobSeq.phase(0);
+                                secondJobSeq.phase(2);
+                                return true;
+                            }
+                        });
 
-        p1.scheduleBuild2(0);
-        p2.scheduleBuild2(0);
+        FreeStyleBuild secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        secondJobSeq.phase(1);
 
-        j.waitUntilNoActivity();
+        FreeStyleProject thirdJob = j.createFreeStyleProject();
+        thirdJob.setAssignedLabel(Label.get("on-agent"));
+        thirdJob.addProperty(
+                new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                        true, // throttleEnabled
+                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                        false,
+                        null,
+                        ThrottleMatrixProjectOptions.DEFAULT));
+        SequenceLock thirdJobSeq = new SequenceLock();
+        thirdJob.getBuildersList()
+                .add(
+                        new TestBuilder() {
+                            @Override
+                            public boolean perform(
+                                    AbstractBuild<?, ?> build,
+                                    Launcher launcher,
+                                    BuildListener listener)
+                                    throws InterruptedException {
+                                thirdJobSeq.phase(0);
+                                thirdJobSeq.phase(2);
+                                return true;
+                            }
+                        });
 
-        // throttled, and only one build runs at the same time.
-        assertEquals(1, waterMark.getExecutorWaterMark());
+        QueueTaskFuture<FreeStyleBuild> thirdJobFirstRunFuture = thirdJob.scheduleBuild2(0);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        Queue.Item queuedItem =
+                Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString()));
+        assertEquals(1, firstAgent.toComputer().countBusy());
+
+        assertEquals(1, secondAgent.toComputer().countBusy());
+
+        firstJobSeq.done();
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+
+        FreeStyleBuild thirdJobFirstRun = thirdJobFirstRunFuture.waitForStart();
+        thirdJobSeq.phase(1);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(2, firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
+
+        secondJobSeq.done();
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
+
+        thirdJobSeq.done();
+        j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
     }
 
     @Issue("JENKINS-25326")
