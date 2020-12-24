@@ -34,12 +34,10 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
-import org.jvnet.hudson.test.recipes.LocalData;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -468,29 +466,5 @@ public class ThrottleStepTest {
         TestUtil.hasPlaceholderTaskForRun(n, secondJobFirstRun);
         SemaphoreStep.success("wait-second-job/1", null);
         j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
-    }
-
-    /**
-     * Ensures that data serialized prior to the fix for JENKINS-49006 is correctly converted to
-     * copy-on-write data structures upon deserialization.
-     */
-    @Issue("JENKINS-49006")
-    @LocalData
-    @Test
-    public void throttledPipelinesByCategoryMigratesOldData() {
-        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
-
-        Map<String, List<String>> throttledPipelinesByCategory =
-                descriptor.getThrottledPipelinesForCategory(TestUtil.TWO_TOTAL);
-        assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
-        assertEquals(3, throttledPipelinesByCategory.size());
-        assertEquals(
-                new HashSet<>(Arrays.asList("first-job#1", "second-job#1", "third-job#1")),
-                throttledPipelinesByCategory.keySet());
-        for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
-            assertTrue(flowNodes instanceof CopyOnWriteArrayList);
-            assertEquals(1, flowNodes.size());
-            assertEquals("3", flowNodes.get(0));
-        }
     }
 }
