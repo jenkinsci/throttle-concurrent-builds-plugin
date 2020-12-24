@@ -123,8 +123,7 @@ public class ThrottleJobPropertyFreestyleTest {
         final String category = "category";
 
         ThrottleJobProperty.DescriptorImpl descriptor =
-                (ThrottleJobProperty.DescriptorImpl)
-                        r.jenkins.getDescriptor(ThrottleJobProperty.class);
+                r.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
         descriptor.setCategories(
                 Collections.singletonList(
                         new ThrottleJobProperty.ThrottleCategory(
@@ -175,8 +174,7 @@ public class ThrottleJobPropertyFreestyleTest {
         final String category = "category";
 
         ThrottleJobProperty.DescriptorImpl descriptor =
-                (ThrottleJobProperty.DescriptorImpl)
-                        r.jenkins.getDescriptor(ThrottleJobProperty.class);
+                r.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
         descriptor.setCategories(
                 Collections.singletonList(
                         new ThrottleJobProperty.ThrottleCategory(
@@ -228,8 +226,7 @@ public class ThrottleJobPropertyFreestyleTest {
         final String category = "category";
 
         ThrottleJobProperty.DescriptorImpl descriptor =
-                (ThrottleJobProperty.DescriptorImpl)
-                        r.jenkins.getDescriptor(ThrottleJobProperty.class);
+                r.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
         descriptor.setCategories(
                 Collections.singletonList(
                         new ThrottleJobProperty.ThrottleCategory(
