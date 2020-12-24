@@ -35,8 +35,8 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.ArrayUtils;
@@ -254,8 +254,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      * @param run the run
      * @return a map (possibly empty) from {@link FlowNode#getId} to a list of category names (possibly empty)
      */
-    @Nonnull
-    static Map<String, List<String>> getCategoriesForRunByFlowNode(@Nonnull Run<?, ?> run) {
+    @NonNull
+    static Map<String, List<String>> getCategoriesForRunByFlowNode(@NonNull Run<?, ?> run) {
         Map<String, List<String>> categoriesByNode = new HashMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
@@ -280,7 +280,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      * @param category a non-null string, the category name.
      * @return A list of {@link Queue.Task}s with {@link ThrottleJobProperty} attached.
      */
-    static List<Queue.Task> getCategoryTasks(@Nonnull String category) {
+    static List<Queue.Task> getCategoryTasks(@NonNull String category) {
         assert !StringUtils.isEmpty(category);
         List<Queue.Task> categoryTasks = new ArrayList<>();
         Collection<ThrottleJobProperty> properties;
@@ -315,8 +315,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      * @param category The category name to look for.
      * @return a map of IDs for {@link Run}s to lists of {@link FlowNode}s for this category, if any. May be empty.
      */
-    @Nonnull
-    static Map<String,List<FlowNode>> getThrottledPipelineRunsForCategory(@Nonnull String category) {
+    @NonNull
+    static Map<String,List<FlowNode>> getThrottledPipelineRunsForCategory(@NonNull String category) {
         Map<String,List<FlowNode>> throttledPipelines = new TreeMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
@@ -572,13 +572,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             LOGGER.log(Level.FINE, "save: {0}", throttledPipelinesByCategory);
         }
 
-        @Nonnull
-        public synchronized Map<String,List<String>> getThrottledPipelinesForCategory(@Nonnull String category) {
+        @NonNull
+        public synchronized Map<String,List<String>> getThrottledPipelinesForCategory(@NonNull String category) {
             return internalGetThrottledPipelinesForCategory(category);
         }
 
-        @Nonnull
-        private Map<String,List<String>> internalGetThrottledPipelinesForCategory(@Nonnull String category) {
+        @NonNull
+        private Map<String,List<String>> internalGetThrottledPipelinesForCategory(@NonNull String category) {
             if (getCategoryByName(category) != null) {
                 if (throttledPipelinesByCategory.containsKey(category)) {
                     return throttledPipelinesByCategory.get(category);
@@ -587,9 +587,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return new CopyOnWriteMap.Tree<>();
         }
 
-        public synchronized void addThrottledPipelineForCategory(@Nonnull String runId,
-                                                                 @Nonnull String flowNodeId,
-                                                                 @Nonnull String category,
+        public synchronized void addThrottledPipelineForCategory(@NonNull String runId,
+                                                                 @NonNull String flowNodeId,
+                                                                 @NonNull String category,
                                                                  TaskListener listener) {
             if (getCategoryByName(category) == null) {
                 if (listener != null) {
@@ -608,9 +608,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
 
-        public synchronized void removeThrottledPipelineForCategory(@Nonnull String runId,
-                                                                    @Nonnull String flowNodeId,
-                                                                    @Nonnull String category,
+        public synchronized void removeThrottledPipelineForCategory(@NonNull String runId,
+                                                                    @NonNull String flowNodeId,
+                                                                    @NonNull String category,
                                                                     TaskListener listener) {
             if (getCategoryByName(category) == null) {
                 if (listener != null) {
@@ -639,8 +639,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
 
-        public synchronized void removeAllFromPipelineRunForCategory(@Nonnull String runId,
-                                                                     @Nonnull String category,
+        public synchronized void removeAllFromPipelineRunForCategory(@NonNull String runId,
+                                                                     @NonNull String category,
                                                                      TaskListener listener) {
             if (getCategoryByName(category) == null) {
                 if (listener != null) {
