@@ -147,7 +147,7 @@ public class ThrottleJobPropertyPipelineTest {
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
-        WorkflowJob thirdJob = j.createProject(WorkflowJob.class, "third-job");
+        WorkflowJob thirdJob = j.createProject(WorkflowJob.class);
         thirdJob.setDefinition(getJobFlow("third", "on-agent"));
         thirdJob.addProperty(
                 new ThrottleJobProperty(
@@ -180,6 +180,7 @@ public class ThrottleJobPropertyPipelineTest {
 
         WorkflowRun thirdJobFirstRun = thirdJobFirstRunFuture.waitForStart();
         SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+        j.jenkins.getQueue().maintain();
         assertTrue(j.jenkins.getQueue().isEmpty());
         assertEquals(2, firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);

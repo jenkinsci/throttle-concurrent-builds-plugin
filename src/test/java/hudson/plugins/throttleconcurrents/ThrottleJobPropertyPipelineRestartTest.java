@@ -1,5 +1,7 @@
 package hudson.plugins.throttleconcurrents;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class ThrottleJobPropertyPipelineRestartTest {
 
@@ -37,6 +40,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
 
     @Test
     public void twoTotalWithRestart() throws Throwable {
+        String[] jobNames = new String[2];
         String[] agentNames = new String[2];
         sessions.then(
                 j -> {
@@ -58,7 +62,8 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     assertNotNull(descriptor);
                     descriptor.save();
 
-                    WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
+                    WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+                    jobNames[0] = firstJob.getName();
                     firstJob.setDefinition(
                             ThrottleJobPropertyPipelineTest.getJobFlow(
                                     "first", firstAgent.getNodeName()));
@@ -76,7 +81,8 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
                     SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
-                    WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
+                    WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+                    jobNames[1] = secondJob.getName();
                     secondJob.setDefinition(
                             ThrottleJobPropertyPipelineTest.getJobFlow(
                                     "second", secondAgent.getNodeName()));
@@ -94,7 +100,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
                     SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
-                    WorkflowJob thirdJob = j.createProject(WorkflowJob.class, "third-job");
+                    WorkflowJob thirdJob = j.createProject(WorkflowJob.class);
                     thirdJob.setDefinition(
                             ThrottleJobPropertyPipelineTest.getJobFlow("third", "on-agent"));
                     thirdJob.addProperty(
@@ -114,9 +120,13 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     Queue.Item queuedItem =
                             Iterables.getOnlyElement(
                                     Arrays.asList(j.jenkins.getQueue().getItems()));
-                    assertEquals(
-                            Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
-                            queuedItem.getCauseOfBlockage().getShortDescription());
+                    Set<String> blockageReasons =
+                            TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+                    assertThat(
+                            blockageReasons,
+                            hasItem(
+                                    Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
+                                            .toString()));
                     assertEquals(1, firstAgent.toComputer().countBusy());
                     TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
@@ -126,15 +136,13 @@ public class ThrottleJobPropertyPipelineRestartTest {
         sessions.then(
                 j -> {
                     RunList<WorkflowRun> firstJobBuilds =
-                            j.jenkins.getItemByFullName("first-job", WorkflowJob.class).getBuilds();
+                            j.jenkins.getItemByFullName(jobNames[0], WorkflowJob.class).getBuilds();
                     assertEquals(1, firstJobBuilds.size());
                     WorkflowRun firstJobFirstRun = firstJobBuilds.getLastBuild();
                     assertNotNull(firstJobFirstRun);
 
                     RunList<WorkflowRun> secondJobBuilds =
-                            j.jenkins
-                                    .getItemByFullName("second-job", WorkflowJob.class)
-                                    .getBuilds();
+                            j.jenkins.getItemByFullName(jobNames[1], WorkflowJob.class).getBuilds();
                     assertEquals(1, secondJobBuilds.size());
                     WorkflowRun secondJobFirstRun = secondJobBuilds.getLastBuild();
                     assertNotNull(secondJobFirstRun);
@@ -149,9 +157,13 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     Queue.Item queuedItem =
                             Iterables.getOnlyElement(
                                     Arrays.asList(j.jenkins.getQueue().getItems()));
-                    assertEquals(
-                            Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString(),
-                            queuedItem.getCauseOfBlockage().getShortDescription());
+                    Set<String> blockageReasons =
+                            TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+                    assertThat(
+                            blockageReasons,
+                            hasItem(
+                                    Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
+                                            .toString()));
 
                     Node firstAgent = j.jenkins.getNode(agentNames[0]);
                     assertNotNull(firstAgent);
@@ -169,6 +181,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     WorkflowRun thirdJobFirstRun =
                             (WorkflowRun) queuedItem.getFuture().waitForStart();
                     SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+                    j.jenkins.getQueue().maintain();
                     assertTrue(j.jenkins.getQueue().isEmpty());
                     assertEquals(
                             2,
@@ -181,6 +194,8 @@ public class ThrottleJobPropertyPipelineRestartTest {
 
                     SemaphoreStep.success("wait-third-job/1", null);
                     j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
+
+                    TestUtil.tearDown(j, Arrays.asList(firstAgent, secondAgent));
                 });
     }
 }

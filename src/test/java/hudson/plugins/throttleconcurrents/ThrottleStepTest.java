@@ -331,6 +331,7 @@ public class ThrottleStepTest {
 
         WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
         j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
+        j.jenkins.getQueue().maintain();
         assertFalse(j.jenkins.getQueue().isEmpty());
         assertEquals(1, firstAgent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
@@ -340,7 +341,9 @@ public class ThrottleStepTest {
 
         SemaphoreStep.success("wait-first-job/1", null);
         j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+
         SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+        j.jenkins.getQueue().maintain();
         assertTrue(j.jenkins.getQueue().isEmpty());
         assertEquals(2, firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);

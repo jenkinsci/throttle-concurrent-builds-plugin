@@ -192,12 +192,14 @@ public class ThrottleJobPropertyFreestyleTest {
 
         firstJobSeq.done();
         j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+
+        FreeStyleBuild secondJobFirstRun = secondJobFirstRunFuture.waitForStart();
         secondJobSeq.phase(1);
         j.jenkins.getQueue().maintain();
         assertTrue(j.jenkins.getQueue().isEmpty());
         assertEquals(1, agent.toComputer().countBusy());
         secondJobSeq.done();
-        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRunFuture.get()));
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 
     @Test
