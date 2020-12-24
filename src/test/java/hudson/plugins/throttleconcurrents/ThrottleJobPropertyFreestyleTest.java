@@ -54,26 +54,26 @@ public class ThrottleJobPropertyFreestyleTest {
     private ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark;
     private DumbSlave agent = null;
 
-    @Rule public JenkinsRule r = new JenkinsRule();
+    @Rule public JenkinsRule j = new JenkinsRule();
 
     /**
      * Copypasta of {@link JenkinsRule#createSlave(String, String, EnvVars)} to enable modifying the
      * number of executors.
      */
     private DumbSlave createSlave(String nodeName, String labels, EnvVars env) throws Exception {
-        synchronized (r.jenkins) {
+        synchronized (j.jenkins) {
             DumbSlave agent =
                     new DumbSlave(
                             nodeName,
                             "dummy",
-                            r.createTmpDir().getPath(),
+                            j.createTmpDir().getPath(),
                             Integer.toString(executorNum), // Overridden!
                             Mode.NORMAL,
                             labels == null ? "" : labels,
-                            r.createComputerLauncher(env),
+                            j.createComputerLauncher(env),
                             RetentionStrategy.NOOP,
                             Collections.emptyList());
-            r.jenkins.addNode(agent);
+            j.jenkins.addNode(agent);
             return agent;
         }
     }
@@ -81,9 +81,9 @@ public class ThrottleJobPropertyFreestyleTest {
     /** sets up agent and waterMark. */
     @Before
     public void setupAgent() throws Exception {
-        int sz = r.jenkins.getNodes().size();
+        int sz = j.jenkins.getNodes().size();
         agent = createSlave("agent" + sz, null, null);
-        r.waitOnline(agent);
+        j.waitOnline(agent);
         waterMark =
                 new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(agent.getRetentionStrategy());
         agent.setRetentionStrategy(waterMark);
@@ -95,25 +95,25 @@ public class ThrottleJobPropertyFreestyleTest {
      */
     @Before
     public void setupSecurity() {
-        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
         GlobalMatrixAuthorizationStrategy auth = new GlobalMatrixAuthorizationStrategy();
-        r.jenkins.setAuthorizationStrategy(auth);
+        j.jenkins.setAuthorizationStrategy(auth);
     }
 
     @Test
     public void testNoThrottling() throws Exception {
-        FreeStyleProject p1 = r.createFreeStyleProject();
+        FreeStyleProject p1 = j.createFreeStyleProject();
         p1.setAssignedNode(agent);
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
 
-        FreeStyleProject p2 = r.createFreeStyleProject();
+        FreeStyleProject p2 = j.createFreeStyleProject();
         p2.setAssignedNode(agent);
         p2.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
 
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
 
-        r.waitUntilNoActivity();
+        j.waitUntilNoActivity();
 
         // not throttled, and builds run concurrently.
         assertEquals(2, waterMark.getExecutorWaterMark());
@@ -133,7 +133,7 @@ public class ThrottleJobPropertyFreestyleTest {
                                 null, // maxConcurrentTotal
                                 Collections.emptyList())));
 
-        FreeStyleProject p1 = r.createFreeStyleProject();
+        FreeStyleProject p1 = j.createFreeStyleProject();
         p1.setAssignedNode(agent);
         p1.addProperty(
                 new ThrottleJobProperty(
@@ -147,7 +147,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         ThrottleMatrixProjectOptions.DEFAULT));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
 
-        FreeStyleProject p2 = r.createFreeStyleProject();
+        FreeStyleProject p2 = j.createFreeStyleProject();
         p2.setAssignedNode(agent);
         p2.addProperty(
                 new ThrottleJobProperty(
@@ -164,7 +164,7 @@ public class ThrottleJobPropertyFreestyleTest {
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
 
-        r.waitUntilNoActivity();
+        j.waitUntilNoActivity();
 
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
@@ -184,7 +184,7 @@ public class ThrottleJobPropertyFreestyleTest {
                                 1, // maxConcurrentTotal
                                 Collections.emptyList())));
 
-        FreeStyleProject p1 = r.createFreeStyleProject();
+        FreeStyleProject p1 = j.createFreeStyleProject();
         p1.setAssignedNode(agent);
         p1.addProperty(
                 new ThrottleJobProperty(
@@ -198,7 +198,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         ThrottleMatrixProjectOptions.DEFAULT));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
 
-        FreeStyleProject p2 = r.createFreeStyleProject();
+        FreeStyleProject p2 = j.createFreeStyleProject();
         p2.setAssignedNode(agent);
         p2.addProperty(
                 new ThrottleJobProperty(
@@ -215,7 +215,7 @@ public class ThrottleJobPropertyFreestyleTest {
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
 
-        r.waitUntilNoActivity();
+        j.waitUntilNoActivity();
 
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
@@ -236,7 +236,7 @@ public class ThrottleJobPropertyFreestyleTest {
                                 null, // maxConcurrentTotal
                                 Collections.emptyList())));
 
-        Folder f1 = r.createProject(Folder.class, "folder1");
+        Folder f1 = j.createProject(Folder.class, "folder1");
         FreeStyleProject p1 = f1.createProject(FreeStyleProject.class, "p");
         p1.setAssignedNode(agent);
         p1.addProperty(
@@ -251,7 +251,7 @@ public class ThrottleJobPropertyFreestyleTest {
                         ThrottleMatrixProjectOptions.DEFAULT));
         p1.getBuildersList().add(new SleepBuilder(SLEEP_TIME));
 
-        Folder f2 = r.createProject(Folder.class, "folder2");
+        Folder f2 = j.createProject(Folder.class, "folder2");
         FreeStyleProject p2 = f2.createProject(FreeStyleProject.class, "p");
         p2.setAssignedNode(agent);
         p2.addProperty(
@@ -269,7 +269,7 @@ public class ThrottleJobPropertyFreestyleTest {
         p1.scheduleBuild2(0);
         p2.scheduleBuild2(0);
 
-        r.waitUntilNoActivity();
+        j.waitUntilNoActivity();
 
         // throttled, and only one build runs at the same time.
         assertEquals(1, waterMark.getExecutorWaterMark());
