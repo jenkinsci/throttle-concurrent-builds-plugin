@@ -55,8 +55,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     + ".USE_FLOW_EXECUTION_LIST",
                             "true"));
 
+    @Deprecated
     @Override
-    public CauseOfBlockage canTake(Node node, Task task) {
+    public @CheckForNull CauseOfBlockage canTake(Node node, Task task) {
         if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
             return canTakeImpl(node, task);
         }
@@ -163,8 +164,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return false;
     }
 
-    // @Override on jenkins 4.127+ , but still compatible with 1.399
-    public CauseOfBlockage canRun(Queue.Item item) {
+    @Override
+    public @CheckForNull CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         List<String> pipelineCategories = categoriesForPipeline(item.task);
 
@@ -212,7 +213,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return true;
     }
 
-    public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
+    private CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
         if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
             return canRunImpl(task, tjp, pipelineCategories);
         }
