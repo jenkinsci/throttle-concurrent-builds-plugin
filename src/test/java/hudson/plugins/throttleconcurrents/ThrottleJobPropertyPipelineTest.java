@@ -52,7 +52,7 @@ public class ThrottleJobPropertyPipelineTest {
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
-        WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
         firstJob.setDefinition(getJobFlow("first", firstAgent.getNodeName()));
         firstJob.addProperty(
                 new ThrottleJobProperty(
@@ -68,7 +68,7 @@ public class ThrottleJobPropertyPipelineTest {
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
-        WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
         secondJob.setDefinition(getJobFlow("second", secondAgent.getNodeName()));
         secondJob.addProperty(
                 new ThrottleJobProperty(
