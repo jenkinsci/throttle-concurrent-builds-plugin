@@ -24,7 +24,7 @@ import org.jvnet.hudson.test.JenkinsSessionRule;
 import java.util.Arrays;
 import java.util.Collections;
 
-public class ThrottleJobPropertyRestartTest {
+public class ThrottleJobPropertyPipelineRestartTest {
 
     @Rule public JenkinsSessionRule sessions = new JenkinsSessionRule();
 
