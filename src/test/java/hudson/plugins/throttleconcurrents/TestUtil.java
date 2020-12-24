@@ -26,9 +26,15 @@ public class TestUtil {
 
     // TODO move this into ThrottleJobProperty and use consistently; same for "project".
     static final String THROTTLE_OPTION_CATEGORY = "category";
-    static final String ONE_PER_NODE = "one_per_node";
-    static final String OTHER_ONE_PER_NODE = "other_one_per_node";
-    static final String TWO_TOTAL = "two_total";
+
+    static final ThrottleJobProperty.ThrottleCategory ONE_PER_NODE =
+            new ThrottleJobProperty.ThrottleCategory("one_per_node", 1, 0, null);
+    static final ThrottleJobProperty.ThrottleCategory TWO_TOTAL =
+            new ThrottleJobProperty.ThrottleCategory("two_total", 0, 2, null);
+    static final ThrottleJobProperty.ThrottleCategory OTHER_ONE_PER_NODE =
+            new ThrottleJobProperty.ThrottleCategory("other_one_per_node", 1, 0, null);
+    static final ThrottleJobProperty.ThrottleCategory ONE_TOTAL =
+            new ThrottleJobProperty.ThrottleCategory("one_total", 0, 1, null);
 
     private static DumbSlave createAgent(
             JenkinsRule j,
@@ -93,17 +99,10 @@ public class TestUtil {
         }
     }
 
-    static void setupCategories() {
-        ThrottleJobProperty.ThrottleCategory firstCat =
-                new ThrottleJobProperty.ThrottleCategory(ONE_PER_NODE, 1, 0, null);
-        ThrottleJobProperty.ThrottleCategory secondCat =
-                new ThrottleJobProperty.ThrottleCategory(TWO_TOTAL, 0, 2, null);
-        ThrottleJobProperty.ThrottleCategory thirdCat =
-                new ThrottleJobProperty.ThrottleCategory(OTHER_ONE_PER_NODE, 1, 0, null);
-
+    static void setupCategories(ThrottleJobProperty.ThrottleCategory... categories) {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
-        descriptor.setCategories(Arrays.asList(firstCat, secondCat, thirdCat));
+        descriptor.setCategories(Arrays.asList(categories));
     }
 
     static void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {

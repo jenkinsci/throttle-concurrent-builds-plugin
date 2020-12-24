@@ -49,7 +49,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
                                     j, secondAgentTmp, agents, null, null, 4, "on-agent");
                     agentNames[0] = firstAgent.getNodeName();
                     agentNames[1] = secondAgent.getNodeName();
-                    TestUtil.setupCategories();
+                    TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
                     // The following is required so that the categories remain after Jenkins
                     // restarts.
@@ -66,7 +66,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
                                     null, // maxConcurrentTotal
-                                    Collections.singletonList(TestUtil.TWO_TOTAL), // categories
+                                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                                     true, // throttleEnabled
                                     TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                                     false,
@@ -84,7 +84,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
                                     null, // maxConcurrentTotal
-                                    Collections.singletonList(TestUtil.TWO_TOTAL), // categories
+                                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                                     true, // throttleEnabled
                                     TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                                     false,
@@ -101,7 +101,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
                             new ThrottleJobProperty(
                                     null, // maxConcurrentPerNode
                                     null, // maxConcurrentTotal
-                                    Collections.singletonList(TestUtil.TWO_TOTAL), // categories
+                                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                                     true, // throttleEnabled
                                     TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                                     false,

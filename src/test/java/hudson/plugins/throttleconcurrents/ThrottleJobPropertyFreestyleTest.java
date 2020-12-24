@@ -105,18 +105,7 @@ public class ThrottleJobPropertyFreestyleTest {
     public void testThrottlingWithCategoryPerNode() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
         ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
-
-        final String category = "category";
-
-        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
-        assertNotNull(descriptor);
-        descriptor.setCategories(
-                Collections.singletonList(
-                        new ThrottleJobProperty.ThrottleCategory(
-                                category,
-                                1, // maxConcurrentPerNode
-                                null, // maxConcurrentTotal
-                                Collections.emptyList())));
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         FreeStyleProject p1 = j.createFreeStyleProject();
         p1.setAssignedNode(agent);
@@ -124,7 +113,7 @@ public class ThrottleJobPropertyFreestyleTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(category), // categories
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
@@ -138,7 +127,7 @@ public class ThrottleJobPropertyFreestyleTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(category), // categories
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
@@ -159,18 +148,7 @@ public class ThrottleJobPropertyFreestyleTest {
     public void testThrottlingWithCategoryTotal() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
         ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
-
-        final String category = "category";
-
-        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
-        assertNotNull(descriptor);
-        descriptor.setCategories(
-                Collections.singletonList(
-                        new ThrottleJobProperty.ThrottleCategory(
-                                category,
-                                null, // maxConcurrentPerNode
-                                1, // maxConcurrentTotal
-                                Collections.emptyList())));
+        TestUtil.setupCategories(TestUtil.ONE_TOTAL);
 
         FreeStyleProject p1 = j.createFreeStyleProject();
         p1.setAssignedNode(agent);
@@ -178,7 +156,7 @@ public class ThrottleJobPropertyFreestyleTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(category), // categories
+                        Collections.singletonList(TestUtil.ONE_TOTAL.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
@@ -192,7 +170,7 @@ public class ThrottleJobPropertyFreestyleTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(category), // categories
+                        Collections.singletonList(TestUtil.ONE_TOTAL.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
@@ -214,18 +192,7 @@ public class ThrottleJobPropertyFreestyleTest {
     public void testThrottlingWithCategoryInFolder() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, waterMarks, null, 2, null);
         ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark = waterMarks.get(0);
-
-        final String category = "category";
-
-        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
-        assertNotNull(descriptor);
-        descriptor.setCategories(
-                Collections.singletonList(
-                        new ThrottleJobProperty.ThrottleCategory(
-                                category,
-                                1, // maxConcurrentPerNode
-                                null, // maxConcurrentTotal
-                                Collections.emptyList())));
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         Folder f1 = j.createProject(Folder.class, "folder1");
         FreeStyleProject p1 = f1.createProject(FreeStyleProject.class, "p");
@@ -234,7 +201,7 @@ public class ThrottleJobPropertyFreestyleTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(category), // categories
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false, // limitOneJobWithMatchingParams
@@ -249,7 +216,7 @@ public class ThrottleJobPropertyFreestyleTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(category), // categories
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false, // limitOneJobWithMatchingParams

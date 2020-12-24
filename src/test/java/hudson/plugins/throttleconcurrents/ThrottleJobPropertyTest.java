@@ -423,7 +423,7 @@ public class ThrottleJobPropertyTest {
         assertNotNull(descriptor);
 
         Map<String, List<String>> throttledPipelinesByCategory =
-                descriptor.getThrottledPipelinesForCategory(TestUtil.TWO_TOTAL);
+                descriptor.getThrottledPipelinesForCategory(TestUtil.TWO_TOTAL.getCategoryName());
         assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
         assertEquals(3, throttledPipelinesByCategory.size());
         assertEquals(

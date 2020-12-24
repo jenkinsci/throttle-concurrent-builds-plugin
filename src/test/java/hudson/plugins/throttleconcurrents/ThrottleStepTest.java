@@ -64,16 +64,18 @@ public class ThrottleStepTest {
     @Test
     public void onePerNode() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
-        firstJob.setDefinition(getJobFlow("first", TestUtil.ONE_PER_NODE, agent.getNodeName()));
+        firstJob.setDefinition(
+                getJobFlow("first", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
 
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
         WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
-        secondJob.setDefinition(getJobFlow("second", TestUtil.ONE_PER_NODE, agent.getNodeName()));
+        secondJob.setDefinition(
+                getJobFlow("second", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
 
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
@@ -96,15 +98,15 @@ public class ThrottleStepTest {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob job = j.createProject(WorkflowJob.class, "first-job");
         job.setDefinition(
                 new CpsFlowDefinition(
                         "throttle(['"
-                                + TestUtil.ONE_PER_NODE
+                                + TestUtil.ONE_PER_NODE.getCategoryName()
                                 + "', '"
-                                + TestUtil.ONE_PER_NODE
+                                + TestUtil.ONE_PER_NODE.getCategoryName()
                                 + "']) { echo 'Hello' }",
                         true));
 
@@ -114,7 +116,7 @@ public class ThrottleStepTest {
 
         j.assertLogContains(
                 "One or more duplicate categories ("
-                        + TestUtil.ONE_PER_NODE
+                        + TestUtil.ONE_PER_NODE.getCategoryName()
                         + ") specified. Duplicates will be ignored.",
                 b);
         j.assertLogContains("Hello", b);
@@ -140,18 +142,24 @@ public class ThrottleStepTest {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE, TestUtil.OTHER_ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(
-                getJobFlow("first", TestUtil.ONE_PER_NODE, firstAgent.getNodeName()));
+                getJobFlow(
+                        "first",
+                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                        firstAgent.getNodeName()));
 
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
         WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
         secondJob.setDefinition(
-                getJobFlow("second", TestUtil.OTHER_ONE_PER_NODE, secondAgent.getNodeName()));
+                getJobFlow(
+                        "second",
+                        TestUtil.OTHER_ONE_PER_NODE.getCategoryName(),
+                        secondAgent.getNodeName()));
 
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
@@ -160,7 +168,9 @@ public class ThrottleStepTest {
         thirdJob.setDefinition(
                 getJobFlow(
                         "third",
-                        Arrays.asList(TestUtil.ONE_PER_NODE, TestUtil.OTHER_ONE_PER_NODE),
+                        Arrays.asList(
+                                TestUtil.ONE_PER_NODE.getCategoryName(),
+                                TestUtil.OTHER_ONE_PER_NODE.getCategoryName()),
                         "on-agent"));
 
         WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
@@ -192,7 +202,7 @@ public class ThrottleStepTest {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(
@@ -200,15 +210,21 @@ public class ThrottleStepTest {
                         "parallel(\n"
                                 + "  a: { "
                                 + getThrottleScript(
-                                        "first-branch-a", TestUtil.ONE_PER_NODE, "on-agent")
+                                        "first-branch-a",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
                                 + " },\n"
                                 + "  b: { "
                                 + getThrottleScript(
-                                        "first-branch-b", TestUtil.ONE_PER_NODE, "on-agent")
+                                        "first-branch-b",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
                                 + " },\n"
                                 + "  c: { "
                                 + getThrottleScript(
-                                        "first-branch-c", TestUtil.ONE_PER_NODE, "on-agent")
+                                        "first-branch-c",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
                                 + " }\n"
                                 + ")\n",
                         true));
@@ -223,15 +239,21 @@ public class ThrottleStepTest {
                         "parallel(\n"
                                 + "  a: { "
                                 + getThrottleScript(
-                                        "second-branch-a", TestUtil.ONE_PER_NODE, "on-agent")
+                                        "second-branch-a",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
                                 + " },\n"
                                 + "  b: { "
                                 + getThrottleScript(
-                                        "second-branch-b", TestUtil.ONE_PER_NODE, "on-agent")
+                                        "second-branch-b",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
                                 + " },\n"
                                 + "  c: { "
                                 + getThrottleScript(
-                                        "second-branch-c", TestUtil.ONE_PER_NODE, "on-agent")
+                                        "second-branch-c",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
                                 + " }\n"
                                 + ")\n",
                         true));
@@ -272,23 +294,27 @@ public class ThrottleStepTest {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
-        firstJob.setDefinition(getJobFlow("first", TestUtil.TWO_TOTAL, firstAgent.getNodeName()));
+        firstJob.setDefinition(
+                getJobFlow(
+                        "first", TestUtil.TWO_TOTAL.getCategoryName(), firstAgent.getNodeName()));
 
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
         WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
         secondJob.setDefinition(
-                getJobFlow("second", TestUtil.TWO_TOTAL, secondAgent.getNodeName()));
+                getJobFlow(
+                        "second", TestUtil.TWO_TOTAL.getCategoryName(), secondAgent.getNodeName()));
 
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
         WorkflowJob thirdJob = j.createProject(WorkflowJob.class, "third-job");
-        thirdJob.setDefinition(getJobFlow("third", TestUtil.TWO_TOTAL, "on-agent"));
+        thirdJob.setDefinition(
+                getJobFlow("third", TestUtil.TWO_TOTAL.getCategoryName(), "on-agent"));
 
         WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
         j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
@@ -318,10 +344,11 @@ public class ThrottleStepTest {
         final Semaphore semaphore = new Semaphore(1);
 
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
-        firstJob.setDefinition(getJobFlow("first", TestUtil.ONE_PER_NODE, agent.getNodeName()));
+        firstJob.setDefinition(
+                getJobFlow("first", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
 
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
@@ -331,7 +358,7 @@ public class ThrottleStepTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_PER_NODE), // categories
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
@@ -375,7 +402,8 @@ public class ThrottleStepTest {
         }
 
         WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
-        secondJob.setDefinition(getJobFlow("second", TestUtil.ONE_PER_NODE, agent.getNodeName()));
+        secondJob.setDefinition(
+                getJobFlow("second", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
 
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
@@ -432,12 +460,15 @@ public class ThrottleStepTest {
 
     @Test
     public void snippetizer() throws Exception {
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         SnippetizerTester st = new SnippetizerTester(j);
         st.assertRoundTrip(
-                new ThrottleStep(Collections.singletonList(TestUtil.ONE_PER_NODE)),
-                "throttle(['" + TestUtil.ONE_PER_NODE + "']) {\n    // some block\n}");
+                new ThrottleStep(
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName())),
+                "throttle(['"
+                        + TestUtil.ONE_PER_NODE.getCategoryName()
+                        + "']) {\n    // some block\n}");
     }
 
     /**
@@ -449,18 +480,24 @@ public class ThrottleStepTest {
     @Test
     public void throttledPipelinesByCategoryCopyOnWrite() throws Exception {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(
-                getJobFlow("first", TestUtil.ONE_PER_NODE, firstAgent.getNodeName()));
+                getJobFlow(
+                        "first",
+                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                        firstAgent.getNodeName()));
 
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
         WorkflowJob secondJob = j.createProject(WorkflowJob.class, "second-job");
         secondJob.setDefinition(
-                getJobFlow("second", TestUtil.ONE_PER_NODE, firstAgent.getNodeName()));
+                getJobFlow(
+                        "second",
+                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                        firstAgent.getNodeName()));
 
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
@@ -471,7 +508,8 @@ public class ThrottleStepTest {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
         Map<String, List<String>> throttledPipelinesByCategory =
-                descriptor.getThrottledPipelinesForCategory(TestUtil.ONE_PER_NODE);
+                descriptor.getThrottledPipelinesForCategory(
+                        TestUtil.ONE_PER_NODE.getCategoryName());
         assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
         assertEquals(2, throttledPipelinesByCategory.size());
         for (List<String> flowNodes : throttledPipelinesByCategory.values()) {

@@ -50,7 +50,7 @@ public class ThrottleJobPropertyPipelineTest {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
-        TestUtil.setupCategories();
+        TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class, "first-job");
         firstJob.setDefinition(getJobFlow("first", firstAgent.getNodeName()));
@@ -58,7 +58,7 @@ public class ThrottleJobPropertyPipelineTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL), // categories
+                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
@@ -74,7 +74,7 @@ public class ThrottleJobPropertyPipelineTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL), // categories
+                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
@@ -90,7 +90,7 @@ public class ThrottleJobPropertyPipelineTest {
                 new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL), // categories
+                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
                         true, // throttleEnabled
                         TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
