@@ -8,8 +8,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
@@ -19,12 +19,12 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 public class ThrottleStepExecution extends StepExecution {
     private final ThrottleStep step;
 
-    public ThrottleStepExecution(@Nonnull ThrottleStep step, StepContext context) {
+    public ThrottleStepExecution(@NonNull ThrottleStep step, StepContext context) {
         super(context);
         this.step = step;
     }
 
-    @Nonnull
+    @NonNull
     public List<String> getCategories() {
         return Collections.unmodifiableList(step.getCategories());
     }
@@ -101,7 +101,7 @@ public class ThrottleStepExecution extends StepExecution {
 
         private static final long serialVersionUID = 1;
 
-        Callback(@CheckForNull String runId, @CheckForNull String flowNodeId, @Nonnull List<String> categories) {
+        Callback(@CheckForNull String runId, @CheckForNull String flowNodeId, @NonNull List<String> categories) {
             this.runId = runId;
             this.flowNodeId = flowNodeId;
             this.categories.addAll(categories);

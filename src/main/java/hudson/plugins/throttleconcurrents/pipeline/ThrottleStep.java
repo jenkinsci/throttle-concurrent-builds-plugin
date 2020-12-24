@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -21,11 +21,11 @@ public class ThrottleStep extends Step implements Serializable {
     private List<String> categories;
 
     @DataBoundConstructor
-    public ThrottleStep(@Nonnull List<String> categories) {
+    public ThrottleStep(@NonNull List<String> categories) {
         this.categories = categories;
     }
 
-    @Nonnull
+    @NonNull
     public List<String> getCategories() {
         return categories;
     }
