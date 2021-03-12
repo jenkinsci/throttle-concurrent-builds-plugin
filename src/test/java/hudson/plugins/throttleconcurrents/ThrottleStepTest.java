@@ -521,6 +521,10 @@ public class ThrottleStepTest {
     @Issue("JENKINS-49006")
     @Test
     public void throttledPipelinesByCategoryCopyOnWrite() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
