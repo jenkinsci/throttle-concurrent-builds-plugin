@@ -315,7 +315,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp == null) {
-            // If the property has been ocasionally deleted by this call,
+            // If the property has been occasionally deleted by this call,
             // it does not make sense to limit the throttling by parameter.
             return false;
         }
@@ -389,11 +389,22 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     public List<ParameterValue> getParametersFromWorkUnit(WorkUnit unit) {
         List<ParameterValue> paramsList = new ArrayList<>();
 
-        if (unit != null && unit.context != null && unit.context.actions != null) {
-            List<Action> actions = unit.context.actions;
-            for (Action action : actions) {
-                if (action instanceof ParametersAction) {
-                    paramsList = ((ParametersAction)action).getParameters();
+        if (unit != null && unit.context != null) {
+            if (unit.context.actions != null && !unit.context.actions.isEmpty()) {
+                List<Action> actions = unit.context.actions;
+                for (Action action : actions) {
+                    if (action instanceof ParametersAction) {
+                        paramsList = ((ParametersAction) action).getParameters();
+                    }
+                }
+            } else if (unit.context.task instanceof PlaceholderTask) {
+                PlaceholderTask placeholderTask = (PlaceholderTask) unit.context.task;
+                Run<?, ?> run = placeholderTask.run();
+                if (run != null) {
+                    List<ParametersAction> actions = run.getActions(ParametersAction.class);
+                    for (ParametersAction action : actions) {
+                        paramsList = action.getParameters();
+                    }
                 }
             }
         }
