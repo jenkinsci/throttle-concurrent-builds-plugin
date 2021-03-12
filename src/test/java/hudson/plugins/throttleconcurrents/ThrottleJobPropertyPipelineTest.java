@@ -9,7 +9,9 @@ import static org.junit.Assert.assertTrue;
 import com.google.common.collect.Iterables;
 
 import hudson.model.Node;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
+import hudson.model.StringParameterDefinition;
 import hudson.model.queue.QueueTaskFuture;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -23,6 +25,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.util.ArrayList;
@@ -190,6 +193,60 @@ public class ThrottleJobPropertyPipelineTest {
 
         SemaphoreStep.success("wait-third-job/1", null);
         j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
+    }
+
+    @Issue("JENKINS-37809")
+    @Test
+    public void limitOneJobWithMatchingParams() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 2, null);
+
+        WorkflowJob project = j.createProject(WorkflowJob.class);
+        ParametersDefinitionProperty pdp =
+                new ParametersDefinitionProperty(
+                        new StringParameterDefinition("FOO", "foo", ""),
+                        new StringParameterDefinition("BAR", "bar", ""));
+        project.addProperty(pdp);
+        project.setConcurrentBuild(true);
+        project.setDefinition(getJobFlow(project.getName(), agent.getNodeName()));
+        project.addProperty(
+                new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Collections.emptyList(),
+                        true, // throttleEnabled
+                        TestUtil.THROTTLE_OPTION_PROJECT, // throttleOption
+                        true,
+                        "FOO,BAR",
+                        ThrottleMatrixProjectOptions.DEFAULT));
+
+        WorkflowRun firstRun = project.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-" + project.getName() + "-job/1", firstRun);
+
+        QueueTaskFuture<WorkflowRun> secondRunFuture = project.scheduleBuild2(0);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        Queue.Item queuedItem =
+                Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(
+                        Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters()
+                                .toString()));
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, firstRun);
+
+        SemaphoreStep.success("wait-" + project.getName() + "-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstRun));
+
+        WorkflowRun secondRun = secondRunFuture.waitForStart();
+        SemaphoreStep.waitForStart("wait-" + project.getName() + "-job/2", secondRun);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, secondRun);
+        SemaphoreStep.success("wait-" + project.getName() + "-job/2", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondRun));
     }
 
     static CpsFlowDefinition getJobFlow(String jobName, String label) {

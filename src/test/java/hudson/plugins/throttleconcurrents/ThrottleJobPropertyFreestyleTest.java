@@ -40,7 +40,9 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
+import hudson.model.StringParameterDefinition;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
@@ -59,7 +61,6 @@ import org.jvnet.hudson.test.SequenceLock;
 import org.jvnet.hudson.test.SleepBuilder;
 import org.jvnet.hudson.test.TestBuilder;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -266,6 +267,60 @@ public class ThrottleJobPropertyFreestyleTest {
         j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
     }
 
+    @Test
+    public void limitOneJobWithMatchingParams() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 2, null);
+
+        FreeStyleProject project = j.createFreeStyleProject();
+        project.setAssignedNode(agent);
+        ParametersDefinitionProperty pdp =
+                new ParametersDefinitionProperty(
+                        new StringParameterDefinition("FOO", "foo", ""),
+                        new StringParameterDefinition("BAR", "bar", ""));
+        project.addProperty(pdp);
+        project.setConcurrentBuild(true);
+        project.addProperty(
+                new ThrottleJobProperty(
+                        null, // maxConcurrentPerNode
+                        null, // maxConcurrentTotal
+                        Collections.emptyList(),
+                        true, // throttleEnabled
+                        TestUtil.THROTTLE_OPTION_PROJECT, // throttleOption
+                        true,
+                        "FOO,BAR",
+                        ThrottleMatrixProjectOptions.DEFAULT));
+        SequenceLock firstRunSeq = new SequenceLock();
+        SequenceLock secondRunSeq = new SequenceLock();
+        project.getBuildersList().add(new SequenceLockBuilder(firstRunSeq, secondRunSeq));
+
+        FreeStyleBuild firstRun = project.scheduleBuild2(0).waitForStart();
+        firstRunSeq.phase(1);
+
+        QueueTaskFuture<FreeStyleBuild> secondRunFuture = project.scheduleBuild2(0);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        Queue.Item queuedItem =
+                Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(
+                        Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters()
+                                .toString()));
+        assertEquals(1, agent.toComputer().countBusy());
+
+        firstRunSeq.done();
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstRun));
+
+        FreeStyleBuild secondRun = secondRunFuture.waitForStart();
+        secondRunSeq.phase(1);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, agent.toComputer().countBusy());
+        secondRunSeq.done();
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondRun));
+    }
+
     @Issue("JENKINS-25326")
     @Test
     public void testThrottlingWithCategoryInFolder() throws Exception {
@@ -314,17 +369,21 @@ public class ThrottleJobPropertyFreestyleTest {
 
     private static class SequenceLockBuilder extends TestBuilder {
 
-        private final SequenceLock sequenceLock;
+        private final List<SequenceLock> sequenceLocks;
 
-        private SequenceLockBuilder(SequenceLock sequenceLock) {
-            this.sequenceLock = sequenceLock;
+        private SequenceLockBuilder(SequenceLock... sequenceLock) {
+            this.sequenceLocks = Arrays.asList(sequenceLock);
         }
 
         @Override
         public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
-                throws InterruptedException, IOException {
-            sequenceLock.phase(0);
-            sequenceLock.phase(2);
+                throws InterruptedException {
+            for (int i = 0; i < sequenceLocks.size(); i++) {
+                if ((build.number - 1) == i) {
+                    sequenceLocks.get(i).phase(0);
+                    sequenceLocks.get(i).phase(2);
+                }
+            }
             return true;
         }
     }

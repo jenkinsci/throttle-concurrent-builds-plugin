@@ -30,6 +30,7 @@ public class TestUtil {
 
     // TODO move this into ThrottleJobProperty and use consistently; same for "project".
     static final String THROTTLE_OPTION_CATEGORY = "category";
+    static final String THROTTLE_OPTION_PROJECT = "project";
 
     static final ThrottleJobProperty.ThrottleCategory ONE_PER_NODE =
             new ThrottleJobProperty.ThrottleCategory("one_per_node", 1, 0, null);
