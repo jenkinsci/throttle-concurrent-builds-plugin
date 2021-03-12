@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Iterables;
 
+import hudson.Functions;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.util.RunList;
@@ -16,6 +17,7 @@ import hudson.util.RunList;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
+import org.junit.Assume;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,6 +42,10 @@ public class ThrottleJobPropertyPipelineRestartTest {
 
     @Test
     public void twoTotalWithRestart() throws Throwable {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         String[] jobNames = new String[2];
         String[] agentNames = new String[2];
         sessions.then(

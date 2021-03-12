@@ -70,6 +70,10 @@ public class ThrottleStepTest {
 
     @Test
     public void onePerNode() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 2, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
@@ -110,6 +114,10 @@ public class ThrottleStepTest {
 
     @Test
     public void duplicateCategories() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
@@ -154,6 +162,10 @@ public class ThrottleStepTest {
 
     @Test
     public void multipleCategories() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
@@ -310,6 +322,10 @@ public class ThrottleStepTest {
 
     @Test
     public void twoTotal() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         Node secondAgent =
                 TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
@@ -363,6 +379,10 @@ public class ThrottleStepTest {
 
     @Test
     public void interopWithFreestyle() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         final Semaphore semaphore = new Semaphore(1);
 
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
@@ -501,6 +521,10 @@ public class ThrottleStepTest {
     @Issue("JENKINS-49006")
     @Test
     public void throttledPipelinesByCategoryCopyOnWrite() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
