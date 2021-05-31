@@ -35,8 +35,8 @@
     <j:if test="${!empty(descriptor.categories)}">
       <f:entry title="${%Multi-Project Throttle Category}">
         <j:forEach var="cat" items="${descriptor.categories}">
-          <f:checkbox name="categories" json="${cat.categoryName}" checked="${instance.categories.contains(cat.categoryName)}" />
-          <label class="attach-previous">${cat.categoryName}</label>
+          <f:checkbox name="categories" json="${cat.categoryName}" title="${cat.categoryName}"
+                      checked="${instance.categories.contains(cat.categoryName)}" />
           <st:nbsp/>
         </j:forEach>
       </f:entry>
