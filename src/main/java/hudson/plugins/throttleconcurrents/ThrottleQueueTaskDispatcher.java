@@ -454,6 +454,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @CheckForNull
     private ThrottleJobProperty getThrottleJobProperty(Task task) {
+        if (task instanceof PlaceholderTask) {
+            Job<?,?> p = (Job<?,?>) task.getOwnerTask();
+            return p.getProperty(ThrottleJobProperty.class);
+        }
         if (task instanceof Job) {
             Job<?,?> p = (Job<?,?>) task;
             if (task instanceof MatrixConfiguration) {
@@ -505,10 +509,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         // Note that we can't use WorkflowJob.class because it is not on this plugin's classpath.
-        if (USE_FLOW_EXECUTION_LIST
-                && task.getClass()
-                        .getName()
-                        .equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+        if (USE_FLOW_EXECUTION_LIST && isWorkflowJob(task)) {
             return buildsOfPipelineJob(task);
         } else {
             return buildsOfProjectOnAllNodesImpl(task);
@@ -535,6 +536,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
+    private boolean isWorkflowJob(Task task) {
+        return task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob");
+    }
+
     private int buildsOfProjectOnNodeImpl(Node node, Task task) {
         int runCount = 0;
         LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
@@ -544,8 +549,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         Computer computer = node.toComputer();
         if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
             // Count flyweight tasks that might not consume an actual executor.
-            for (Executor e : computer.getOneOffExecutors()) {
-                runCount += buildsOnExecutor(task, e);
+            // Pipelines will either be a PlaceholderTask or, if limiting by category, a WorkflowJob
+            // These take a slot on both one-off executors and normal executors, so to avoid
+            // double counting we skip one-off executors on these two job types.
+            if (!(task instanceof PlaceholderTask) && !isWorkflowJob(task)) {
+                for (Executor e : computer.getOneOffExecutors()) {
+                    runCount += buildsOnExecutor(task, e);
+                }
             }
 
             for (Executor e : computer.getExecutors()) {
@@ -567,13 +577,29 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int buildsOnExecutor(Task task, Executor exec) {
-        int runCount = 0;
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
-        if (currentExecutable != null && task.equals(currentExecutable.getParent())) {
-            runCount++;
+
+        if (currentExecutable == null) {
+            return 0;
         }
 
-        return runCount;
+        if (task.equals(currentExecutable.getParent())) {
+            return 1;
+        }
+
+        if (task instanceof PlaceholderTask) {
+            if (task.getOwnerTask().equals(currentExecutable.getParent().getOwnerTask())) {
+                return 1;
+            }
+        }
+
+        if (isWorkflowJob(task)) {
+            if (task.equals(currentExecutable.getParent().getOwnerTask())) {
+                return 1;
+            }
+        }
+
+        return 0;
     }
 
     /**
