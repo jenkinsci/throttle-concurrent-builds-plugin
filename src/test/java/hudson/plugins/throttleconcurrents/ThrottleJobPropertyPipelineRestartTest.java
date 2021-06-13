@@ -52,11 +52,9 @@ public class ThrottleJobPropertyPipelineRestartTest {
                 j -> {
                     List<Node> agents = new ArrayList<>();
                     Node firstAgent =
-                            TestUtil.setupAgent(
-                                    j, firstAgentTmp, agents, null, null, 4, "on-agent");
+                            TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
                     Node secondAgent =
-                            TestUtil.setupAgent(
-                                    j, secondAgentTmp, agents, null, null, 4, "on-agent");
+                            TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
                     agentNames[0] = firstAgent.getNodeName();
                     agentNames[1] = secondAgent.getNodeName();
                     TestUtil.setupCategories(TestUtil.TWO_TOTAL);
