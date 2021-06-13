@@ -74,7 +74,7 @@ public class ThrottleStepTest {
                 "TODO Windows ACI agents do not have enough memory to run this test",
                 Functions.isWindows());
 
-        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 2, "on-agent");
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);
@@ -118,9 +118,8 @@ public class ThrottleStepTest {
                 "TODO Windows ACI agents do not have enough memory to run this test",
                 Functions.isWindows());
 
-        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
-        Node secondAgent =
-                TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob job = j.createProject(WorkflowJob.class);
@@ -166,9 +165,8 @@ public class ThrottleStepTest {
                 "TODO Windows ACI agents do not have enough memory to run this test",
                 Functions.isWindows());
 
-        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
-        Node secondAgent =
-                TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE, TestUtil.OTHER_ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);
@@ -230,9 +228,8 @@ public class ThrottleStepTest {
                 "TODO Windows ACI agents do not have enough memory to run this test",
                 Functions.isWindows());
 
-        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
-        Node secondAgent =
-                TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);
@@ -326,9 +323,8 @@ public class ThrottleStepTest {
                 "TODO Windows ACI agents do not have enough memory to run this test",
                 Functions.isWindows());
 
-        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
-        Node secondAgent =
-                TestUtil.setupAgent(j, secondAgentTmp, agents, null, null, 4, "on-agent");
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);
@@ -385,7 +381,7 @@ public class ThrottleStepTest {
 
         final Semaphore semaphore = new Semaphore(1);
 
-        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);
@@ -525,7 +521,7 @@ public class ThrottleStepTest {
                 "TODO Windows ACI agents do not have enough memory to run this test",
                 Functions.isWindows());
 
-        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, null, 4, "on-agent");
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);

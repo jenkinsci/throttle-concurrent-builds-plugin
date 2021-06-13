@@ -9,10 +9,8 @@ import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Node;
 import hudson.model.queue.CauseOfBlockage;
-import hudson.plugins.throttleconcurrents.testutils.ExecutorWaterMarkRetentionStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
-import hudson.slaves.SlaveComputer;
 
 import jenkins.model.queue.CompositeCauseOfBlockage;
 
@@ -69,7 +67,6 @@ public class TestUtil {
             JenkinsRule j,
             TemporaryFolder temporaryFolder,
             List<Node> agents,
-            List<ExecutorWaterMarkRetentionStrategy<SlaveComputer>> waterMarks,
             EnvVars env,
             int numExecutors,
             String label)
@@ -78,14 +75,6 @@ public class TestUtil {
 
         if (agents != null) {
             agents.add(agent);
-        }
-
-        if (waterMarks != null) {
-            ExecutorWaterMarkRetentionStrategy<SlaveComputer> waterMark =
-                    new ExecutorWaterMarkRetentionStrategy<SlaveComputer>(
-                            agent.getRetentionStrategy());
-            agent.setRetentionStrategy(waterMark);
-            waterMarks.add(waterMark);
         }
 
         return agent;
