@@ -51,6 +51,20 @@ image:doc/images/global_categoryConfig.png[Global Category Configuration]
 
 To set an unlimited value of concurrent builds for a restriction, use 0.
 
+Also global configuration could be configured via https://plugins.jenkins.io/configuration-as-code/[Jenkins Configuration as Code] (JCasC) as following:
+[source,yaml]
+----
+unclassified:
+  throttleJobProperty:
+    categories:
+    - categoryName: "myThrottleCategory"
+      maxConcurrentTotal: 5
+      maxConcurrentPerNode: 2
+      nodeLabeledPairs:
+      - throttledNodeLabel: "docker"
+        maxConcurrentPerNodeLabeled: 1
+----
+
 === Throttling of classic job types
 
 Classic job types (e.g., Freestyle, Matrix, and Job DSL) can be configured via job properties in the job configuration screen.
