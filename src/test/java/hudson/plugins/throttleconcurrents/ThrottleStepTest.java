@@ -98,6 +98,7 @@ public class ThrottleStepTest {
         assertThat(
                 blockageReasons,
                 hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+        TestUtil.hasPauseActionForItem(queuedItem);
         assertEquals(1, agent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(agent, firstJobFirstRun);
 
