@@ -21,7 +21,7 @@ import hudson.model.queue.SubTask;
 import hudson.model.queue.WorkUnit;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.security.ACL;
-import hudson.security.NotSerilizableSecurityContext;
+import hudson.security.ACLContext;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,11 +30,9 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
 import org.jenkinsci.plugins.workflow.actions.BodyInvocationAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionList;
@@ -57,27 +55,21 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                                     + ".USE_FLOW_EXECUTION_LIST",
                             "true"));
 
+    @Deprecated
     @Override
-    public CauseOfBlockage canTake(Node node, Task task) {
-        if (Jenkins.getAuthentication() == ACL.SYSTEM) {
+    public @CheckForNull CauseOfBlockage canTake(Node node, Task task) {
+        if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
             return canTakeImpl(node, task);
         }
 
         // Throttle-concurrent-builds requires READ permissions for all projects.
-        SecurityContext orig = SecurityContextHolder.getContext();
-        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
-        auth.setAuthentication(ACL.SYSTEM);
-        SecurityContextHolder.setContext(auth);
-
-        try {
+        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
             return canTakeImpl(node, task);
-        } finally {
-            SecurityContextHolder.setContext(orig);
         }
     }
 
     private CauseOfBlockage canTakeImpl(Node node, Task task) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
         List<String> pipelineCategories = categoriesForPipeline(task);
 
@@ -163,7 +155,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean hasPendingPipelineForCategory(List<FlowNode> flowNodes) {
-        for (Queue.BuildableItem pending : Jenkins.getActiveInstance().getQueue().getPendingItems()) {
+        for (Queue.BuildableItem pending : Jenkins.get().getQueue().getPendingItems()) {
             if (isTaskThrottledPipeline(pending.task, flowNodes)) {
                 return true;
             }
@@ -172,8 +164,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return false;
     }
 
-    // @Override on jenkins 4.127+ , but still compatible with 1.399
-    public CauseOfBlockage canRun(Queue.Item item) {
+    @Override
+    public @CheckForNull CauseOfBlockage canRun(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         List<String> pipelineCategories = categoriesForPipeline(item.task);
 
@@ -186,7 +178,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
-    @Nonnull
+    @NonNull
     private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
 
@@ -197,7 +189,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
     }
 
-    private boolean shouldBeThrottled(@Nonnull Task task, @CheckForNull ThrottleJobProperty tjp) {
+    private boolean shouldBeThrottled(@NonNull Task task, @CheckForNull ThrottleJobProperty tjp) {
         if (tjp == null) {
             return false;
         }
@@ -221,26 +213,19 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return true;
     }
 
-    public CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
-        if (Jenkins.getAuthentication() == ACL.SYSTEM) {
+    private CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
+        if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
             return canRunImpl(task, tjp, pipelineCategories);
         }
 
         // Throttle-concurrent-builds requires READ permissions for all projects.
-        SecurityContext orig = SecurityContextHolder.getContext();
-        NotSerilizableSecurityContext auth = new NotSerilizableSecurityContext();
-        auth.setAuthentication(ACL.SYSTEM);
-        SecurityContextHolder.setContext(auth);
-
-        try {
+        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
             return canRunImpl(task, tjp, pipelineCategories);
-        } finally {
-            SecurityContextHolder.setContext(orig);
         }
     }
 
     private CauseOfBlockage canRunImpl(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
             return null;
         }
@@ -267,7 +252,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return null;
     }
 
-    private CauseOfBlockage throttleCheckForCategoriesAllNodes(Jenkins jenkins, @Nonnull List<String> categories) {
+    private CauseOfBlockage throttleCheckForCategoriesAllNodes(Jenkins jenkins, @NonNull List<String> categories) {
         for (String catNm : categories) {
             // Quick check that catNm itself is a real string.
             if (catNm != null && !catNm.equals("")) {
@@ -314,7 +299,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         if (isAnotherBuildWithSameParametersRunningOnNode(jenkins, item)) {
             return true;
         }
@@ -330,7 +315,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private boolean isAnotherBuildWithSameParametersRunningOnNode(Node node, Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp == null) {
-            // If the property has been ocasionally deleted by this call,
+            // If the property has been occasionally deleted by this call,
             // it does not make sense to limit the throttling by parameter.
             return false;
         }
@@ -410,7 +395,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return OriginalParams;
         }
 
-        List<ParameterValue> newParams = new ArrayList<ParameterValue>();
+        List<ParameterValue> newParams = new ArrayList<>();
         LOGGER.log(Level.FINEST, "filtering by paramsToCompare = " + paramsToCompare);
 
         for (ParameterValue p : OriginalParams) {
@@ -435,13 +420,24 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     public List<ParameterValue> getParametersFromWorkUnit(WorkUnit unit) {
-        List<ParameterValue> paramsList = new ArrayList<ParameterValue>();
+        List<ParameterValue> paramsList = new ArrayList<>();
 
-        if (unit != null && unit.context != null && unit.context.actions != null) {
-            List<Action> actions = unit.context.actions;
-            for (Action action : actions) {
-                if (action instanceof ParametersAction) {
-                    paramsList = ((ParametersAction)action).getParameters();
+        if (unit != null && unit.context != null) {
+            if (unit.context.actions != null && !unit.context.actions.isEmpty()) {
+                List<Action> actions = unit.context.actions;
+                for (Action action : actions) {
+                    if (action instanceof ParametersAction) {
+                        paramsList = ((ParametersAction) action).getParameters();
+                    }
+                }
+            } else if (unit.context.task instanceof PlaceholderTask) {
+                PlaceholderTask placeholderTask = (PlaceholderTask) unit.context.task;
+                Run<?, ?> run = placeholderTask.run();
+                if (run != null) {
+                    List<ParametersAction> actions = run.getActions(ParametersAction.class);
+                    for (ParametersAction action : actions) {
+                        paramsList = action.getParameters();
+                    }
                 }
             }
         }
@@ -457,12 +453,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         else
         {
-            paramsList  = new ArrayList<ParameterValue>();
+            paramsList  = new ArrayList<>();
         }
         return paramsList;
     }
 
-    @Nonnull
+    @NonNull
     private List<String> categoriesForPipeline(Task task) {
         if (task instanceof PlaceholderTask) {
             PlaceholderTask placeholderTask = (PlaceholderTask)task;
@@ -496,13 +492,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             if (task instanceof MatrixConfiguration) {
                 p = ((MatrixConfiguration)task).getParent();
             }
-            ThrottleJobProperty tjp = p.getProperty(ThrottleJobProperty.class);
-            return tjp;
+            return p.getProperty(ThrottleJobProperty.class);
         }
         return null;
     }
 
-    private int pipelinesOnNode(@Nonnull Node node, @Nonnull Run<?,?> run, @Nonnull List<FlowNode> flowNodes) {
+    private int pipelinesOnNode(@NonNull Node node, @NonNull Run<?,?> run, @NonNull List<FlowNode> flowNodes) {
         int runCount = 0;
         LOGGER.log(Level.FINE, "Checking for pipelines of {0} on node {1}", new Object[] {run.getDisplayName(), node.getDisplayName()});
 
@@ -517,8 +512,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
-    private int pipelinesOnAllNodes(@Nonnull Run<?,?> run, @Nonnull List<FlowNode> flowNodes) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+    private int pipelinesOnAllNodes(@NonNull Run<?,?> run, @NonNull List<FlowNode> flowNodes) {
+        final Jenkins jenkins = Jenkins.get();
         int totalRunCount = pipelinesOnNode(jenkins, run, flowNodes);
 
         for (Node node : jenkins.getNodes()) {
@@ -595,7 +590,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private int buildsOfProjectOnAllNodesImpl(Task task) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         int totalRunCount = buildsOfProjectOnNode(jenkins, task);
 
         for (Node node : jenkins.getNodes()) {
@@ -625,7 +620,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
      * @return 1 if there's something currently executing on that executor and it's of that run and one of the provided
      * flow nodes, 0 otherwise.
      */
-    private int pipelinesOnExecutor(@Nonnull Run<?,?> run, @Nonnull Executor exec, @Nonnull List<FlowNode> flowNodes) {
+    private int pipelinesOnExecutor(@NonNull Run<?,?> run, @NonNull Executor exec, @NonNull List<FlowNode> flowNodes) {
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
         if (currentExecutable != null) {
             SubTask parent = currentExecutable.getParent();

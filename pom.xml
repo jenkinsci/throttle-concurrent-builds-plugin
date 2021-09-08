@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 The MIT License
 
@@ -26,7 +27,7 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>3.56</version>
+    <version>4.24</version>
     <relativePath />
   </parent>
 
@@ -39,18 +40,18 @@ THE SOFTWARE.
   
   <licenses>
     <license>
-      <name>MIT license</name>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
       <comments>All source code is under the MIT license.</comments>
     </license>
   </licenses>
     
   <properties>
-    <revision>2.0.2</revision>
+    <revision>2.5</revision>
     <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.60.3</jenkins.version>
+    <jenkins.version>2.222.4</jenkins.version>
     <java.level>8</java.level>
-    <workflow-cps-plugin.version>2.42</workflow-cps-plugin.version>
-    <workflow-support-plugin.version>2.16</workflow-support-plugin.version>
+    <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
   </properties>
 
   <developers>
@@ -89,9 +90,9 @@ THE SOFTWARE.
   </repositories>
 
   <scm>
-    <connection>scm:git:git://github.com/jenkinsci/throttle-concurrent-builds-plugin.git</connection>
-    <developerConnection>scm:git:git@github.com:jenkinsci/throttle-concurrent-builds-plugin.git</developerConnection>
-    <url>https://github.com/jenkinsci/throttle-concurrent-builds-plugin</url>
+    <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
+    <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+    <url>https://github.com/${gitHubRepo}</url>
     <tag>${scmTag}</tag>
   </scm>
 
@@ -106,9 +107,22 @@ THE SOFTWARE.
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.jenkins-ci.plugins</groupId>
-                <artifactId>script-security</artifactId>
-                <version>1.36</version>
+                <groupId>io.jenkins.tools.bom</groupId>
+                <artifactId>bom-2.222.x</artifactId>
+                <version>887.vae9c8ac09ff7</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.fusesource.jansi</groupId>
+                <artifactId>jansi</artifactId>
+                <version>1.15</version>
+            </dependency>
+            <!-- RequireUpperBoundDeps via jgiven-junit -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>1.7.32</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -117,96 +131,66 @@ THE SOFTWARE.
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>matrix-project</artifactId>
-            <version>1.11</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-api</artifactId>
-            <version>2.24</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
-            <version>2.13</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-durable-task-step</artifactId>
-            <version>2.13</version>
         </dependency>
 
         <!-- Dependencies for test -->
         <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>cloudbees-folder</artifactId>
-          <version>6.2.0</version>
           <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>matrix-auth</artifactId>
-          <version>2.1</version>
-          <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.jenkins-ci.plugins</groupId>
-          <artifactId>credentials</artifactId>
-          <version>2.1.13</version>
           <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
-            <version>${workflow-cps-plugin.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
-            <version>${workflow-cps-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-job</artifactId>
-            <version>2.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-basic-steps</artifactId>
-            <version>2.6</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>junit</artifactId>
-            <version>1.20</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
-            <version>${workflow-support-plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
-            <version>${workflow-support-plugin.version}</version>
             <classifier>tests</classifier>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <version>1.5.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.tngtech.jgiven</groupId>
             <artifactId>jgiven-junit</artifactId>
-            <version>0.7.2</version>
+            <version>1.1.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

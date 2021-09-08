@@ -1,6 +1,9 @@
 package hudson.plugins.throttleconcurrents;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -151,7 +154,8 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             }
 
             private void createCategory() {
-                ThrottleJobProperty.DescriptorImpl descriptor = (ThrottleJobProperty.DescriptorImpl) j.getInstance().getDescriptor(ThrottleJobProperty.class);
+                ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+                assertNotNull(descriptor);
                 descriptor.setCategories(ImmutableList.of(new ThrottleJobProperty.ThrottleCategory(name, maxConcurrentPerNode, maxConcurrentTotal, null)));
             }
         }
@@ -264,7 +268,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                     maxConcurrentBuilds = numberOfConcurrentBuilds;
                 }
             }
-            assertThat(maxConcurrentBuilds).isEqualTo(i);
+            assertEquals(i, maxConcurrentBuilds);
             return self();
         }
 
@@ -282,7 +286,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                     }
                 }
             }
-            assertThat(ImmutableSet.copyOf(maxConcurrentBuilds.values())).containsExactly(maxConcurrentPerNode);
+            assertThat(ImmutableSet.copyOf(maxConcurrentBuilds.values()), contains(maxConcurrentPerNode));
             return self();
         }
     }
@@ -302,7 +306,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             FreeStyleProject freeStyleProject = j.createFreeStyleProject();
             freeStyleProject.addProperty(
                     new ThrottleJobProperty(0, 0, ImmutableList.of(categoryName), 
-                            true, "category", false, null, null));
+                            true, TestUtil.THROTTLE_OPTION_CATEGORY, false, null, null));
             return freeStyleProject;
         }
 

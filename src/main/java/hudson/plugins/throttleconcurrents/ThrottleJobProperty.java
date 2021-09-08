@@ -35,8 +35,8 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.ArrayUtils;
@@ -65,11 +65,17 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     // The paramsToUseForLimit is assigned by end-user configuration and
     // is generally a string with names of build arguments to consider,
     // and is empty, or has one arg name, or a token-separated list of
-    // such names.
+    // such names (see PARAMS_LIMIT_SEPARATOR below).
     // The paramsToCompare is an array of arg name strings, one per
     // list entry, processed from paramsToUseForLimit.
     private String paramsToUseForLimit;
     private transient List<String> paramsToCompare;
+
+    /*
+     * Documentation only stated "," but its use was broken for so long that probably people used
+     * the de-facto working whitespace instead.
+     */
+    private static final String PARAMS_LIMIT_SEPARATOR = "[\\s,]+";
 
     /**
      * Store a config version so we're able to migrate config on various
@@ -90,26 +96,15 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         this.maxConcurrentPerNode = maxConcurrentPerNode;
         this.maxConcurrentTotal = maxConcurrentTotal;
         this.categories = categories == null ?
-                new CopyOnWriteArrayList<String>() :
-                new CopyOnWriteArrayList<String>(categories);
+                new CopyOnWriteArrayList<>() :
+                new CopyOnWriteArrayList<>(categories);
         this.throttleEnabled = throttleEnabled;
         this.throttleOption = throttleOption;
         this.limitOneJobWithMatchingParams = limitOneJobWithMatchingParams;
         this.matrixOptions = matrixOptions;
         this.paramsToUseForLimit = paramsToUseForLimit;
-        if ((this.paramsToUseForLimit != null)) {
-            if ((this.paramsToUseForLimit.length() > 0)) {
-                this.paramsToCompare = Arrays.asList(ArrayUtils.nullToEmpty(StringUtils.split(this.paramsToUseForLimit)));
-            }
-            else {
-                this.paramsToCompare = new ArrayList<String>();
-            }
-        }
-        else {
-            this.paramsToCompare = new ArrayList<String>();
-        }
+        this.paramsToCompare = parseParamsToUseForLimit(this.paramsToUseForLimit);
     }
-
 
     /**
      * Migrates deprecated/obsolete data.
@@ -121,7 +116,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             configVersion = 0L;
         }
         if (categories == null) {
-            categories = new CopyOnWriteArrayList<String>();
+            categories = new CopyOnWriteArrayList<>();
         }
         if (category != null) {
             categories.add(category);
@@ -154,11 +149,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             DescriptorImpl descriptor = (DescriptorImpl) getDescriptor();    
             synchronized (descriptor.propertiesByCategoryLock) {
                 for (String c : categories) {
-                    Map<ThrottleJobProperty,Void> properties = descriptor.propertiesByCategory.get(c);
-                    if (properties == null) {
-                        properties = new WeakHashMap<ThrottleJobProperty,Void>();
-                        descriptor.propertiesByCategory.put(c, properties);
-                    }
+                    Map<ThrottleJobProperty, Void> properties = descriptor.propertiesByCategory.computeIfAbsent(c, k -> new WeakHashMap<>());
                     properties.put(this, null);
                 }
             }
@@ -228,19 +219,33 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
     public List<String> getParamsToCompare() {
         if (paramsToCompare == null) {
-            if ((paramsToUseForLimit != null)) {
-                if ((paramsToUseForLimit.length() > 0)) {
-                    paramsToCompare = Arrays.asList(paramsToUseForLimit.split(","));
-                }
-                else {
-                    paramsToCompare = new ArrayList<String>();
-                }
-            }
-            else {
-                paramsToCompare = new ArrayList<String>();
-            }
+            paramsToCompare = parseParamsToUseForLimit(paramsToUseForLimit);
         }
         return paramsToCompare;
+    }
+
+    /**
+     * Compute the parameters to use for the comparison when checking when another build with the
+     * same parameters is running on a node.
+     *
+     * @param paramsToUseForLimit A user-provided list of parameters, separated either by commas or
+     *     whitespace.
+     * @return A parsed representation of the user-provided list of parameters.
+     */
+    private static List<String> parseParamsToUseForLimit(String paramsToUseForLimit) {
+        if (paramsToUseForLimit != null) {
+            if (!paramsToUseForLimit.isEmpty()) {
+                String[] split =
+                        ArrayUtils.nullToEmpty(paramsToUseForLimit.split(PARAMS_LIMIT_SEPARATOR));
+                List<String> result = new ArrayList<>(Arrays.asList(split));
+                result.removeAll(Collections.singletonList(""));
+                return result;
+            } else {
+                return new ArrayList<>();
+            }
+        } else {
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -249,8 +254,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      * @param run the run
      * @return a map (possibly empty) from {@link FlowNode#getId} to a list of category names (possibly empty)
      */
-    @Nonnull
-    static Map<String, List<String>> getCategoriesForRunByFlowNode(@Nonnull Run<?, ?> run) {
+    @NonNull
+    static Map<String, List<String>> getCategoriesForRunByFlowNode(@NonNull Run<?, ?> run) {
         Map<String, List<String>> categoriesByNode = new HashMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
@@ -260,11 +265,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             List<String> nodeIds = runs.get(run.getExternalizableId());
             if (nodeIds != null) {
                 for (String nodeId : nodeIds) {
-                    List<String> categories = categoriesByNode.get(nodeId);
-                    if (categories == null) {
-                        categories = new ArrayList<>();
-                        categoriesByNode.put(nodeId, categories);
-                    }
+                    List<String> categories = categoriesByNode.computeIfAbsent(nodeId, k -> new ArrayList<>());
                     categories.add(cat.getCategoryName());
                 }
             }
@@ -279,14 +280,14 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      * @param category a non-null string, the category name.
      * @return A list of {@link Queue.Task}s with {@link ThrottleJobProperty} attached.
      */
-    static List<Queue.Task> getCategoryTasks(@Nonnull String category) {
+    static List<Queue.Task> getCategoryTasks(@NonNull String category) {
         assert !StringUtils.isEmpty(category);
-        List<Queue.Task> categoryTasks = new ArrayList<Queue.Task>();
+        List<Queue.Task> categoryTasks = new ArrayList<>();
         Collection<ThrottleJobProperty> properties;
         DescriptorImpl descriptor = fetchDescriptor();
         synchronized (descriptor.propertiesByCategoryLock) {
             Map<ThrottleJobProperty, Void> _properties = descriptor.propertiesByCategory.get(category);
-            properties = _properties != null ? new ArrayList<ThrottleJobProperty>(_properties.keySet()) : Collections.<ThrottleJobProperty>emptySet();
+            properties = _properties != null ? new ArrayList<>(_properties.keySet()) : Collections.emptySet();
         }
         for (ThrottleJobProperty t : properties) {
             if (t.getThrottleEnabled()) {
@@ -296,9 +297,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                         /* has not since been reconfigured */ p.getProperty(ThrottleJobProperty.class) == t) {
                         categoryTasks.add((Queue.Task) p);
                         if (p instanceof MatrixProject && t.isThrottleMatrixConfigurations()) {
-                            for (MatrixConfiguration mc : ((MatrixProject) p).getActiveConfigurations()) {
-                                categoryTasks.add(mc);
-                            }
+                            categoryTasks.addAll(((MatrixProject) p).getActiveConfigurations());
                         }
                     }
                 }
@@ -316,8 +315,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
      * @param category The category name to look for.
      * @return a map of IDs for {@link Run}s to lists of {@link FlowNode}s for this category, if any. May be empty.
      */
-    @Nonnull
-    static Map<String,List<FlowNode>> getThrottledPipelineRunsForCategory(@Nonnull String category) {
+    @NonNull
+    static Map<String,List<FlowNode>> getThrottledPipelineRunsForCategory(@NonNull String category) {
         Map<String,List<FlowNode>> throttledPipelines = new TreeMap<>();
 
         final DescriptorImpl descriptor = fetchDescriptor();
@@ -368,7 +367,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
     }
 
     public static DescriptorImpl fetchDescriptor() {
-        return Jenkins.getActiveInstance().getDescriptorByType(DescriptorImpl.class);
+        return Jenkins.get().getDescriptorByType(DescriptorImpl.class);
     }
     
     @Extension
@@ -382,7 +381,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         
         /** Map from category names, to properties including that category. */
         private transient Map<String,Map<ThrottleJobProperty,Void>> propertiesByCategory 
-                 = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+                 = new HashMap<>();
         /** A sync object for {@link #propertiesByCategory} */
         private final transient Object propertiesByCategoryLock = new Object();
 
@@ -392,7 +391,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 load();
                 // Explictly handle the persisted data from the version 1.8.1
                 if (propertiesByCategory == null) {
-                    propertiesByCategory = new HashMap<String,Map<ThrottleJobProperty,Void>>();
+                    propertiesByCategory = new HashMap<>();
                 }
                 if (!propertiesByCategory.isEmpty()) {
                     propertiesByCategory.clear();
@@ -469,12 +468,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         }
 
         public void setCategories(List<ThrottleCategory> categories) {
-            this.categories = new CopyOnWriteArrayList<ThrottleCategory>(categories);
+            this.categories = new CopyOnWriteArrayList<>(categories);
         }
         
         public List<ThrottleCategory> getCategories() {
             if (categories == null) {
-                categories = new CopyOnWriteArrayList<ThrottleCategory>();
+                categories = new CopyOnWriteArrayList<>();
             }
 
             return categories;
@@ -573,13 +572,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             LOGGER.log(Level.FINE, "save: {0}", throttledPipelinesByCategory);
         }
 
-        @Nonnull
-        public synchronized Map<String,List<String>> getThrottledPipelinesForCategory(@Nonnull String category) {
+        @NonNull
+        public synchronized Map<String,List<String>> getThrottledPipelinesForCategory(@NonNull String category) {
             return internalGetThrottledPipelinesForCategory(category);
         }
 
-        @Nonnull
-        private Map<String,List<String>> internalGetThrottledPipelinesForCategory(@Nonnull String category) {
+        @NonNull
+        private Map<String,List<String>> internalGetThrottledPipelinesForCategory(@NonNull String category) {
             if (getCategoryByName(category) != null) {
                 if (throttledPipelinesByCategory.containsKey(category)) {
                     return throttledPipelinesByCategory.get(category);
@@ -588,9 +587,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return new CopyOnWriteMap.Tree<>();
         }
 
-        public synchronized void addThrottledPipelineForCategory(@Nonnull String runId,
-                                                                 @Nonnull String flowNodeId,
-                                                                 @Nonnull String category,
+        public synchronized void addThrottledPipelineForCategory(@NonNull String runId,
+                                                                 @NonNull String flowNodeId,
+                                                                 @NonNull String category,
                                                                  TaskListener listener) {
             if (getCategoryByName(category) == null) {
                 if (listener != null) {
@@ -609,9 +608,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
 
-        public synchronized void removeThrottledPipelineForCategory(@Nonnull String runId,
-                                                                    @Nonnull String flowNodeId,
-                                                                    @Nonnull String category,
+        public synchronized void removeThrottledPipelineForCategory(@NonNull String runId,
+                                                                    @NonNull String flowNodeId,
+                                                                    @NonNull String category,
                                                                     TaskListener listener) {
             if (getCategoryByName(category) == null) {
                 if (listener != null) {
@@ -622,7 +621,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
                 if (!currentPipelines.isEmpty()) {
                     List<String> flowNodes = currentPipelines.get(runId);
-                    if (flowNodes != null && flowNodes.contains(flowNodeId)) {
+                    if (flowNodes != null) {
                         flowNodes.remove(flowNodeId);
                     }
                     if (flowNodes != null && !flowNodes.isEmpty()) {
@@ -640,8 +639,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
 
-        public synchronized void removeAllFromPipelineRunForCategory(@Nonnull String runId,
-                                                                     @Nonnull String category,
+        public synchronized void removeAllFromPipelineRunForCategory(@NonNull String runId,
+                                                                     @NonNull String category,
                                                                      TaskListener listener) {
             if (getCategoryByName(category) == null) {
                 if (listener != null) {
@@ -651,9 +650,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
                 Map<String,List<String>> currentPipelines = internalGetThrottledPipelinesForCategory(category);
 
                 if (!currentPipelines.isEmpty()) {
-                    if (currentPipelines.containsKey(runId)) {
-                        currentPipelines.remove(runId);
-                    }
+                    currentPipelines.remove(runId);
                 }
                 if (currentPipelines.isEmpty()) {
                     throttledPipelinesByCategory.remove(category);
@@ -679,7 +676,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             this.maxConcurrentTotal = maxConcurrentTotal;
             this.categoryName = categoryName;
             this.nodeLabeledPairs =
-                 nodeLabeledPairs == null ? new ArrayList<NodeLabeledPair>() : nodeLabeledPairs;
+                 nodeLabeledPairs == null ? new ArrayList<>() : nodeLabeledPairs;
         }
         
         public Integer getMaxConcurrentPerNode() {
@@ -702,7 +699,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
 
         public List<NodeLabeledPair> getNodeLabeledPairs() {
             if (nodeLabeledPairs == null)
-                nodeLabeledPairs = new ArrayList<NodeLabeledPair>();
+                nodeLabeledPairs = new ArrayList<>();
 
             return nodeLabeledPairs;
         }

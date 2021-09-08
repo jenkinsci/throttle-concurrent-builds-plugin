@@ -27,7 +27,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import java.util.ArrayList;
 import java.util.List;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
@@ -50,8 +50,8 @@ public class HtmlUnitHelper {
      * @param xpath Xpath for buttons search
      * @return List of discovered buttons
      */
-    @Nonnull
-    public static List<HtmlButton> getButtonsByXPath(@Nonnull HtmlForm form, @Nonnull String xpath) {
+    @NonNull
+    public static List<HtmlButton> getButtonsByXPath(@NonNull HtmlForm form, @NonNull String xpath) {
         List<?> buttons = form.getByXPath(xpath);
         List<HtmlButton> res = new ArrayList<>(buttons.size());
         for(Object buttonCandidate: buttons) {

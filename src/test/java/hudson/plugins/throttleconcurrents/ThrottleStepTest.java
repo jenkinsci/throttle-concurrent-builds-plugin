@@ -1,14 +1,18 @@
 package hudson.plugins.throttleconcurrents;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.collect.Iterables;
+
+import hudson.Functions;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
-import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -18,388 +22,446 @@ import hudson.model.Queue;
 import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
-import hudson.slaves.DumbSlave;
-import hudson.slaves.RetentionStrategy;
 import hudson.util.CopyOnWriteMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Semaphore;
+
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
+import org.junit.After;
+import org.junit.Assume;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.RestartableJenkinsRule;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
-import org.jvnet.hudson.test.recipes.LocalData;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Semaphore;
 
 public class ThrottleStepTest {
-    private static final String ONE_PER_NODE = "one_per_node";
-    private static final String OTHER_ONE_PER_NODE = "other_one_per_node";
-    private static final String TWO_TOTAL = "two_total";
 
-    @Rule
-    public RestartableJenkinsRule story = new RestartableJenkinsRule();
+    @Rule public JenkinsRule j = new JenkinsRule();
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
 
-    @Rule
-    public TemporaryFolder firstAgentTmp = new TemporaryFolder();
-    @Rule
-    public TemporaryFolder secondAgentTmp = new TemporaryFolder();
+    @Rule public TemporaryFolder firstAgentTmp = new TemporaryFolder();
+    @Rule public TemporaryFolder secondAgentTmp = new TemporaryFolder();
 
-    public void setupAgentsAndCategories() throws Exception {
-        DumbSlave firstAgent = new DumbSlave("first-agent", "dummy agent", firstAgentTmp.getRoot().getAbsolutePath(),
-                "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.emptyList());
+    private List<Node> agents = new ArrayList<>();
 
-        DumbSlave secondAgent = new DumbSlave("second-agent", "dummy agent", secondAgentTmp.getRoot().getAbsolutePath(),
-                "4", Node.Mode.NORMAL, "on-agent", story.j.createComputerLauncher(null),
-                RetentionStrategy.NOOP, Collections.emptyList());
-
-        story.j.jenkins.addNode(firstAgent);
-        story.j.jenkins.addNode(secondAgent);
-
-        ThrottleJobProperty.ThrottleCategory firstCat = new ThrottleJobProperty.ThrottleCategory(ONE_PER_NODE, 1, 0, null);
-        ThrottleJobProperty.ThrottleCategory secondCat = new ThrottleJobProperty.ThrottleCategory(TWO_TOTAL, 0, 2, null);
-        ThrottleJobProperty.ThrottleCategory thirdCat = new ThrottleJobProperty.ThrottleCategory(OTHER_ONE_PER_NODE, 1, 0, null);
-
-        ThrottleJobProperty.DescriptorImpl descriptor = story.j.jenkins.getDescriptorByType(ThrottleJobProperty.DescriptorImpl.class);
-        assertNotNull(descriptor);
-        descriptor.setCategories(Arrays.asList(firstCat, secondCat, thirdCat));
+    /** Clean up agents. */
+    @After
+    public void tearDown() throws Exception {
+        TestUtil.tearDown(j, agents);
+        agents = new ArrayList<>();
     }
 
     @Test
-    public void onePerNode() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
+    public void onePerNode() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
 
-                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
-                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(getJobFlow("second", ONE_PER_NODE, "first-agent"));
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(
+                getJobFlow("first", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
 
-                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                story.j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-                Node n = story.j.jenkins.getNode("first-agent");
-                assertNotNull(n);
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
-                SemaphoreStep.success("wait-first-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
-                SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
-                assertTrue(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, secondJobFirstRun);
-                SemaphoreStep.success("wait-second-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(
+                getJobFlow("second", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
 
-            }
-        });
+        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        Queue.Item queuedItem =
+                Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, firstJobFirstRun);
+
+        SemaphoreStep.success("wait-first-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, secondJobFirstRun);
+        SemaphoreStep.success("wait-second-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 
     @Test
-    public void duplicateCategories() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
+    public void duplicateCategories() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
 
-                WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['" + ONE_PER_NODE + "', '" + ONE_PER_NODE +"']) { echo 'Hello' }", true));
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
-                WorkflowRun b = j.scheduleBuild2(0).waitForStart();
+        WorkflowJob job = j.createProject(WorkflowJob.class);
+        job.setDefinition(
+                new CpsFlowDefinition(
+                        "throttle(['"
+                                + TestUtil.ONE_PER_NODE.getCategoryName()
+                                + "', '"
+                                + TestUtil.ONE_PER_NODE.getCategoryName()
+                                + "']) { echo 'Hello' }",
+                        true));
 
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
+        WorkflowRun b = job.scheduleBuild2(0).waitForStart();
 
-                story.j.assertLogContains("One or more duplicate categories (" + ONE_PER_NODE + ") specified. Duplicates will be ignored.", b);
-                story.j.assertLogContains("Hello", b);
-            }
-        });
+        j.assertBuildStatusSuccess(j.waitForCompletion(b));
+
+        j.assertLogContains(
+                "One or more duplicate categories ("
+                        + TestUtil.ONE_PER_NODE.getCategoryName()
+                        + ") specified. Duplicates will be ignored.",
+                b);
+        j.assertLogContains("Hello", b);
     }
 
     @Test
-    public void undefinedCategories() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                WorkflowJob j = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                j.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", true));
+    public void undefinedCategories() throws Exception {
+        WorkflowJob job = j.createProject(WorkflowJob.class);
+        job.setDefinition(
+                new CpsFlowDefinition(
+                        "throttle(['undefined', 'also-undefined']) { echo 'Hello' }", true));
 
-                WorkflowRun b = j.scheduleBuild2(0).waitForStart();
+        WorkflowRun b = job.scheduleBuild2(0).waitForStart();
 
-                story.j.assertBuildStatus(Result.FAILURE, story.j.waitForCompletion(b));
-                story.j.assertLogContains("One or more specified categories do not exist: undefined, also-undefined", b);
-                story.j.assertLogNotContains("Hello", b);
-            }
-        });
+        j.assertBuildStatus(Result.FAILURE, j.waitForCompletion(b));
+        j.assertLogContains(
+                "One or more specified categories do not exist: undefined, also-undefined", b);
+        j.assertLogNotContains("Hello", b);
     }
 
     @Test
-    public void multipleCategories() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
+    public void multipleCategories() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
 
-                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE, TestUtil.OTHER_ONE_PER_NODE);
 
-                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(getJobFlow("second", OTHER_ONE_PER_NODE, "second-agent"));
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(
+                getJobFlow(
+                        "first",
+                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                        firstAgent.getNodeName()));
 
-                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
-                WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
-                thirdJob.setDefinition(getJobFlow("third",
-                        Arrays.asList(ONE_PER_NODE, OTHER_ONE_PER_NODE),
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(
+                getJobFlow(
+                        "second",
+                        TestUtil.OTHER_ONE_PER_NODE.getCategoryName(),
+                        secondAgent.getNodeName()));
+
+        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+
+        WorkflowJob thirdJob = j.createProject(WorkflowJob.class);
+        thirdJob.setDefinition(
+                getJobFlow(
+                        "third",
+                        Arrays.asList(
+                                TestUtil.ONE_PER_NODE.getCategoryName(),
+                                TestUtil.OTHER_ONE_PER_NODE.getCategoryName()),
                         "on-agent"));
 
-                WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
-                story.j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-                Node n = story.j.jenkins.getNode("first-agent");
-                assertNotNull(n);
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+        WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
+        j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
-                Node n2 = story.j.jenkins.getNode("second-agent");
-                assertNotNull(n2);
-                assertEquals(1, n2.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+        assertEquals(1, secondAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
 
-                SemaphoreStep.success("wait-first-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
+        SemaphoreStep.success("wait-first-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
 
-                SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
-                assertTrue(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, thirdJobFirstRun);
+        SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);
 
-                SemaphoreStep.success("wait-second-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+        SemaphoreStep.success("wait-second-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
 
-                SemaphoreStep.success("wait-third-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
-            }
-        });
+        SemaphoreStep.success("wait-third-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
     }
 
     @Test
-    public void onePerNodeParallel() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                firstJob.setDefinition(new CpsFlowDefinition("parallel(\n" +
-                        "  a: { " + getThrottleScript("first-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
-                        "  b: { " + getThrottleScript("first-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
-                        "  c: { " + getThrottleScript("first-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", true));
+    public void onePerNodeParallel() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
 
-                WorkflowRun run1 = firstJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-first-branch-a-job/1", run1);
-                SemaphoreStep.waitForStart("wait-first-branch-b-job/1", run1);
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
-                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(new CpsFlowDefinition("parallel(\n" +
-                        "  a: { " + getThrottleScript("second-branch-a", ONE_PER_NODE, "on-agent") + " },\n" +
-                        "  b: { " + getThrottleScript("second-branch-b", ONE_PER_NODE, "on-agent") + " },\n" +
-                        "  c: { " + getThrottleScript("second-branch-c", ONE_PER_NODE, "on-agent") + " }\n" +
-                        ")\n", true));
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(
+                new CpsFlowDefinition(
+                        "parallel(\n"
+                                + "  a: { "
+                                + getThrottleScript(
+                                        "first-branch-a",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
+                                + " },\n"
+                                + "  b: { "
+                                + getThrottleScript(
+                                        "first-branch-b",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
+                                + " },\n"
+                                + "  c: { "
+                                + getThrottleScript(
+                                        "first-branch-c",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
+                                + " }\n"
+                                + ")\n",
+                        true));
 
-                WorkflowRun run2 = secondJob.scheduleBuild2(0).waitForStart();
+        WorkflowRun run1 = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-branch-a-job/1", run1);
+        SemaphoreStep.waitForStart("wait-first-branch-b-job/1", run1);
 
-                Computer first = story.j.jenkins.getNode("first-agent").toComputer();
-                Computer second = story.j.jenkins.getNode("second-agent").toComputer();
-                assertEquals(1, first.countBusy());
-                assertEquals(1, second.countBusy());
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(
+                new CpsFlowDefinition(
+                        "parallel(\n"
+                                + "  a: { "
+                                + getThrottleScript(
+                                        "second-branch-a",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
+                                + " },\n"
+                                + "  b: { "
+                                + getThrottleScript(
+                                        "second-branch-b",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
+                                + " },\n"
+                                + "  c: { "
+                                + getThrottleScript(
+                                        "second-branch-c",
+                                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                                        "on-agent")
+                                + " }\n"
+                                + ")\n",
+                        true));
 
-                story.j.waitForMessage("Still waiting to schedule task", run1);
-                story.j.waitForMessage("Still waiting to schedule task", run2);
+        WorkflowRun run2 = secondJob.scheduleBuild2(0).waitForStart();
 
-                SemaphoreStep.success("wait-first-branch-a-job/1", null);
-                SemaphoreStep.waitForStart("wait-first-branch-c-job/1", run1);
-                assertEquals(1, first.countBusy());
-                assertEquals(1, second.countBusy());
-                SemaphoreStep.success("wait-first-branch-b-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run2);
-                assertEquals(1, first.countBusy());
-                assertEquals(1, second.countBusy());
-                SemaphoreStep.success("wait-first-branch-c-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run2);
-                assertEquals(1, first.countBusy());
-                assertEquals(1, second.countBusy());
-                SemaphoreStep.success("wait-second-branch-a-job/1", null);
-                SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run2);
-                assertEquals(1, first.countBusy());
-                assertEquals(1, second.countBusy());
-                SemaphoreStep.success("wait-second-branch-b-job/1", null);
-                SemaphoreStep.success("wait-second-branch-c-job/1", null);
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        assertEquals(1, secondAgent.toComputer().countBusy());
 
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(run1));
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(run2));
-            }
-        });
+        j.waitForMessage("Still waiting to schedule task", run1);
+        j.waitForMessage("Still waiting to schedule task", run2);
+
+        SemaphoreStep.success("wait-first-branch-a-job/1", null);
+        SemaphoreStep.waitForStart("wait-first-branch-c-job/1", run1);
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        assertEquals(1, secondAgent.toComputer().countBusy());
+        SemaphoreStep.success("wait-first-branch-b-job/1", null);
+        SemaphoreStep.waitForStart("wait-second-branch-a-job/1", run2);
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        assertEquals(1, secondAgent.toComputer().countBusy());
+        SemaphoreStep.success("wait-first-branch-c-job/1", null);
+        SemaphoreStep.waitForStart("wait-second-branch-b-job/1", run2);
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        assertEquals(1, secondAgent.toComputer().countBusy());
+        SemaphoreStep.success("wait-second-branch-a-job/1", null);
+        SemaphoreStep.waitForStart("wait-second-branch-c-job/1", run2);
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        assertEquals(1, secondAgent.toComputer().countBusy());
+        SemaphoreStep.success("wait-second-branch-b-job/1", null);
+        SemaphoreStep.success("wait-second-branch-c-job/1", null);
+
+        j.assertBuildStatusSuccess(j.waitForCompletion(run1));
+        j.assertBuildStatusSuccess(j.waitForCompletion(run2));
     }
 
     @Test
-    public void twoTotal() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                firstJob.setDefinition(getJobFlow("first", TWO_TOTAL, "first-agent"));
+    public void twoTotal() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
 
-                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
+        TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
-                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(getJobFlow("second", TWO_TOTAL, "second-agent"));
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(
+                getJobFlow(
+                        "first", TestUtil.TWO_TOTAL.getCategoryName(), firstAgent.getNodeName()));
 
-                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
-                WorkflowJob thirdJob = story.j.jenkins.createProject(WorkflowJob.class, "third-job");
-                thirdJob.setDefinition(getJobFlow("third", TWO_TOTAL, "on-agent"));
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(
+                getJobFlow(
+                        "second", TestUtil.TWO_TOTAL.getCategoryName(), secondAgent.getNodeName()));
 
-                WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
-                story.j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-                Node n = story.j.jenkins.getNode("first-agent");
-                assertNotNull(n);
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, firstJobFirstRun);
+        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
-                Node n2 = story.j.jenkins.getNode("second-agent");
-                assertNotNull(n2);
-                assertEquals(1, n2.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n2, secondJobFirstRun);
+        WorkflowJob thirdJob = j.createProject(WorkflowJob.class);
+        thirdJob.setDefinition(
+                getJobFlow("third", TestUtil.TWO_TOTAL.getCategoryName(), "on-agent"));
 
-                SemaphoreStep.success("wait-first-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
-                SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
-                assertTrue(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, thirdJobFirstRun);
+        WorkflowRun thirdJobFirstRun = thirdJob.scheduleBuild2(0).waitForStart();
+        j.waitForMessage("Still waiting to schedule task", thirdJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
-                SemaphoreStep.success("wait-second-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+        assertEquals(1, secondAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
 
-                SemaphoreStep.success("wait-third-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(thirdJobFirstRun));
-            }
-        });
+        SemaphoreStep.success("wait-first-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+
+        SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(2, firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);
+
+        SemaphoreStep.success("wait-second-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
+
+        SemaphoreStep.success("wait-third-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
     }
 
     @Test
-    public void interopWithFreestyle() {
+    public void interopWithFreestyle() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
+
         final Semaphore semaphore = new Semaphore(1);
 
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                WorkflowJob firstJob = story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
-                WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(
+                getJobFlow("first", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
 
-                FreeStyleProject freeStyleProject = story.j.createFreeStyleProject("f");
-                freeStyleProject.addProperty(new ThrottleJobProperty(
+        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+
+        FreeStyleProject freeStyleProject = j.createFreeStyleProject("f");
+        freeStyleProject.addProperty(
+                new ThrottleJobProperty(
                         null, // maxConcurrentPerNode
                         null, // maxConcurrentTotal
-                        Collections.singletonList(ONE_PER_NODE),      // categories
-                        true,   // throttleEnabled
-                        "category",     // throttleOption
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                        true, // throttleEnabled
+                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
                         false,
                         null,
-                        ThrottleMatrixProjectOptions.DEFAULT
-                ));
-                freeStyleProject.setAssignedLabel(Label.get("first-agent"));
-                freeStyleProject.getBuildersList().add(new TestBuilder() {
-                    @Override
-                    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
-                        semaphore.acquire();
-                        return true;
-                    }
-                });
+                        ThrottleMatrixProjectOptions.DEFAULT));
+        freeStyleProject.setAssignedLabel(Label.get(agent.getNodeName()));
+        freeStyleProject
+                .getBuildersList()
+                .add(
+                        new TestBuilder() {
+                            @Override
+                            public boolean perform(
+                                    AbstractBuild<?, ?> build,
+                                    Launcher launcher,
+                                    BuildListener listener)
+                                    throws InterruptedException {
+                                semaphore.acquire();
+                                return true;
+                            }
+                        });
 
-                semaphore.acquire();
+        semaphore.acquire();
 
-                QueueTaskFuture<FreeStyleBuild> futureBuild = freeStyleProject.scheduleBuild2(0);
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, story.j.jenkins.getQueue().getItems().length);
-                Queue.Item i = story.j.jenkins.getQueue().getItems()[0];
-                assertTrue(i.task instanceof FreeStyleProject);
+        QueueTaskFuture<FreeStyleBuild> futureBuild = freeStyleProject.scheduleBuild2(0);
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, j.jenkins.getQueue().getItems().length);
+        Queue.Item i = j.jenkins.getQueue().getItems()[0];
+        assertTrue(i.task instanceof FreeStyleProject);
 
-                Node n = story.j.jenkins.getNode("first-agent");
-                assertNotNull(n);
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, firstJobFirstRun);
-                SemaphoreStep.success("wait-first-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(firstJobFirstRun));
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, firstJobFirstRun);
+        SemaphoreStep.success("wait-first-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
 
-                FreeStyleBuild freeStyleBuild = futureBuild.waitForStart();
-                assertEquals(1, n.toComputer().countBusy());
-                for (Executor e : n.toComputer().getExecutors()) {
-                    if (e.isBusy()) {
-                        assertEquals(freeStyleBuild, e.getCurrentExecutable());
-                    }
-                }
-
-                WorkflowJob secondJob = story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                secondJob.setDefinition(getJobFlow("second", ONE_PER_NODE, "first-agent"));
-
-                WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                story.j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
-                assertFalse(story.j.jenkins.getQueue().isEmpty());
-
-                assertEquals(1, n.toComputer().countBusy());
-                for (Executor e : n.toComputer().getExecutors()) {
-                    if (e.isBusy()) {
-                        assertEquals(freeStyleBuild, e.getCurrentExecutable());
-                    }
-                }
-                semaphore.release();
-
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(freeStyleBuild));
-                SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
-                assertTrue(story.j.jenkins.getQueue().isEmpty());
-                assertEquals(1, n.toComputer().countBusy());
-                hasPlaceholderTaskForRun(n, secondJobFirstRun);
-                SemaphoreStep.success("wait-second-job/1", null);
-                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(secondJobFirstRun));
+        FreeStyleBuild freeStyleBuild = futureBuild.waitForStart();
+        assertEquals(1, agent.toComputer().countBusy());
+        for (Executor e : agent.toComputer().getExecutors()) {
+            if (e.isBusy()) {
+                assertEquals(freeStyleBuild, e.getCurrentExecutable());
             }
-        });
+        }
+
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(
+                getJobFlow("second", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
+
+        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
+        assertFalse(j.jenkins.getQueue().isEmpty());
+
+        assertEquals(1, agent.toComputer().countBusy());
+        for (Executor e : agent.toComputer().getExecutors()) {
+            if (e.isBusy()) {
+                assertEquals(freeStyleBuild, e.getCurrentExecutable());
+            }
+        }
+        semaphore.release();
+
+        j.assertBuildStatusSuccess(j.waitForCompletion(freeStyleBuild));
+        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, secondJobFirstRun);
+        SemaphoreStep.success("wait-second-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 
     private CpsFlowDefinition getJobFlow(String jobName, String category, String label) {
@@ -420,25 +482,31 @@ public class ThrottleStepTest {
             quoted.add("'" + c + "'");
         }
 
-        return "throttle([" + StringUtils.join(quoted, ", ") + "]) {\n" +
-                "  echo 'hi there'\n" +
-                "  node('" + label + "') {\n" +
-                "    semaphore 'wait-" + jobName + "-job'\n" +
-                "  }\n" +
-                "}\n";
+        return "throttle(["
+                + StringUtils.join(quoted, ", ")
+                + "]) {\n"
+                + "  echo 'hi there'\n"
+                + "  node('"
+                + label
+                + "') {\n"
+                + "    semaphore 'wait-"
+                + jobName
+                + "-job'\n"
+                + "  }\n"
+                + "}\n";
     }
 
     @Test
-    public void snippetizer() {
-        story.addStep(new Statement() {
-            @Override
-            public void evaluate() throws Throwable {
-                setupAgentsAndCategories();
-                SnippetizerTester st = new SnippetizerTester(story.j);
-                st.assertRoundTrip(new ThrottleStep(Collections.singletonList(ONE_PER_NODE)),
-                        "throttle(['" + ONE_PER_NODE + "']) {\n    // some block\n}");
-            }
-        });
+    public void snippetizer() throws Exception {
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
+
+        SnippetizerTester st = new SnippetizerTester(j);
+        st.assertRoundTrip(
+                new ThrottleStep(
+                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName())),
+                "throttle(['"
+                        + TestUtil.ONE_PER_NODE.getCategoryName()
+                        + "']) {\n    // some block\n}");
     }
 
     /**
@@ -448,92 +516,56 @@ public class ThrottleStepTest {
      */
     @Issue("JENKINS-49006")
     @Test
-    public void throttledPipelinesByCategoryCopyOnWrite() {
-        story.addStep(
-                new Statement() {
-                    @Override
-                    public void evaluate() throws Throwable {
-                        setupAgentsAndCategories();
-                        WorkflowJob firstJob =
-                                story.j.jenkins.createProject(WorkflowJob.class, "first-job");
-                        firstJob.setDefinition(getJobFlow("first", ONE_PER_NODE, "first-agent"));
+    public void throttledPipelinesByCategoryCopyOnWrite() throws Exception {
+        Assume.assumeFalse(
+                "TODO Windows ACI agents do not have enough memory to run this test",
+                Functions.isWindows());
 
-                        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+        Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
-                        WorkflowJob secondJob =
-                                story.j.jenkins.createProject(WorkflowJob.class, "second-job");
-                        secondJob.setDefinition(getJobFlow("second", ONE_PER_NODE, "first-agent"));
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(
+                getJobFlow(
+                        "first",
+                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                        firstAgent.getNodeName()));
 
-                        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                        story.j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
-                        assertFalse(story.j.jenkins.getQueue().isEmpty());
-                        Node n = story.j.jenkins.getNode("first-agent");
-                        assertNotNull(n);
-                        assertEquals(1, n.toComputer().countBusy());
-                        hasPlaceholderTaskForRun(n, firstJobFirstRun);
+        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
-                        ThrottleJobProperty.DescriptorImpl descriptor =
-                                ThrottleJobProperty.fetchDescriptor();
-                        Map<String, List<String>> throttledPipelinesByCategory =
-                                descriptor.getThrottledPipelinesForCategory(ONE_PER_NODE);
-                        assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
-                        assertEquals(2, throttledPipelinesByCategory.size());
-                        for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
-                            assertTrue(flowNodes instanceof CopyOnWriteArrayList);
-                            assertEquals(1, flowNodes.size());
-                        }
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(
+                getJobFlow(
+                        "second",
+                        TestUtil.ONE_PER_NODE.getCategoryName(),
+                        firstAgent.getNodeName()));
 
-                        SemaphoreStep.success("wait-first-job/1", null);
-                        story.j.assertBuildStatusSuccess(
-                                story.j.waitForCompletion(firstJobFirstRun));
-                        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
-                        assertTrue(story.j.jenkins.getQueue().isEmpty());
-                        assertEquals(1, n.toComputer().countBusy());
-                        hasPlaceholderTaskForRun(n, secondJobFirstRun);
-                        SemaphoreStep.success("wait-second-job/1", null);
-                        story.j.assertBuildStatusSuccess(
-                                story.j.waitForCompletion(secondJobFirstRun));
-                    }
-                });
-    }
+        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
+        assertFalse(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
-    /**
-     * Ensures that data serialized prior to the fix for JENKINS-49006 is correctly converted to
-     * copy-on-write data structures upon deserialization.
-     */
-    @Issue("JENKINS-49006")
-    @LocalData
-    @Test
-    public void throttledPipelinesByCategoryMigratesOldData() throws Exception {
-        story.then(
-                s -> {
-                    ThrottleJobProperty.DescriptorImpl descriptor =
-                            ThrottleJobProperty.fetchDescriptor();
-
-                    Map<String, List<String>> throttledPipelinesByCategory =
-                            descriptor.getThrottledPipelinesForCategory(TWO_TOTAL);
-                    assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
-                    assertEquals(3, throttledPipelinesByCategory.size());
-                    assertEquals(
-                            new HashSet<>(
-                                    Arrays.asList("first-job#1", "second-job#1", "third-job#1")),
-                            throttledPipelinesByCategory.keySet());
-                    for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
-                        assertTrue(flowNodes instanceof CopyOnWriteArrayList);
-                        assertEquals(1, flowNodes.size());
-                        assertEquals("3", flowNodes.get(0));
-                    }
-                });
-    }
-
-    private void hasPlaceholderTaskForRun(Node n, WorkflowRun r) {
-        for (Executor exec : n.toComputer().getExecutors()) {
-            if (exec.getCurrentExecutable() != null) {
-                assertTrue(exec.getCurrentExecutable().getParent() instanceof ExecutorStepExecution.PlaceholderTask);
-                ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask)exec.getCurrentExecutable().getParent();
-                assertEquals(r, task.run());
-            }
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
+        Map<String, List<String>> throttledPipelinesByCategory =
+                descriptor.getThrottledPipelinesForCategory(
+                        TestUtil.ONE_PER_NODE.getCategoryName());
+        assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
+        assertEquals(2, throttledPipelinesByCategory.size());
+        for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
+            assertTrue(flowNodes instanceof CopyOnWriteArrayList);
+            assertEquals(1, flowNodes.size());
         }
+
+        SemaphoreStep.success("wait-first-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, firstAgent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(firstAgent, secondJobFirstRun);
+        SemaphoreStep.success("wait-second-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 }
