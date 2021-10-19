@@ -85,8 +85,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             }
             if (tjp != null) {
                 if (tjp.getThrottleOption().equals("project")) {
-                    if (tjp.getMaxConcurrentPerNode().intValue() > 0) {
-                        int maxConcurrentPerNode = tjp.getMaxConcurrentPerNode().intValue();
+                    if (tjp.getMaxConcurrentPerNode() > 0) {
+                        int maxConcurrentPerNode = tjp.getMaxConcurrentPerNode();
                         int runCount = buildsOfProjectOnNode(node, task);
 
                         // This would mean that there are as many or more builds currently running than are allowed.
@@ -121,7 +121,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         int runCount = 0;
                         // Max concurrent per node for category
                         int maxConcurrentPerNode = getMaxConcurrentPerNodeBasedOnMatchingLabels(
-                                node, category, category.getMaxConcurrentPerNode().intValue());
+                                node, category, category.getMaxConcurrentPerNode());
                         if (maxConcurrentPerNode > 0) {
                             for (Task catTask : categoryTasks) {
                                 if (jenkins.getQueue().isPending(catTask)) {
@@ -234,8 +234,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
         if (tjp != null) {
             if (tjp.getThrottleOption().equals("project")) {
-                if (tjp.getMaxConcurrentTotal().intValue() > 0) {
-                    int maxConcurrentTotal = tjp.getMaxConcurrentTotal().intValue();
+                if (tjp.getMaxConcurrentTotal() > 0) {
+                    int maxConcurrentTotal = tjp.getMaxConcurrentTotal();
                     int totalRunCount = buildsOfProjectOnAllNodes(task);
 
                     if (totalRunCount >= maxConcurrentTotal) {
@@ -263,8 +263,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
                 // Double check category itself isn't null
                 if (category != null) {
-                    if (category.getMaxConcurrentTotal().intValue() > 0) {
-                        int maxConcurrentTotal = category.getMaxConcurrentTotal().intValue();
+                    if (category.getMaxConcurrentTotal() > 0) {
+                        int maxConcurrentTotal = category.getMaxConcurrentTotal();
                         int totalRunCount = 0;
 
                         for (Task catTask : categoryTasks) {
@@ -668,7 +668,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 for(LabelAtom aNodeLabel: nodeLabels) {
                     String nodeLabel = aNodeLabel.getDisplayName();
                     if(nodeLabel.equals(throttledNodeLabel)) {
-                        maxConcurrentPerNodeLabeledIfMatch = nodeLabeledPair.getMaxConcurrentPerNodeLabeled().intValue();
+                        maxConcurrentPerNodeLabeledIfMatch = nodeLabeledPair.getMaxConcurrentPerNodeLabeled();
                         LOGGER.log(Level.FINE, "node labels match; => maxConcurrentPerNode'' = {0}", maxConcurrentPerNodeLabeledIfMatch);
                         nodeLabelsMatch = true;
                         break;
