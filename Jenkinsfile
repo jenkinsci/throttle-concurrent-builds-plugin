@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /* `buildPlugin` step provided by: https://github.com/jenkins-infra/pipeline-library */
-buildPlugin(useAci: true, configurations: [
+buildPlugin(useContainerAgent: true, configurations: [
   // Test the long-term support end of the compatibility spectrum (i.e., the minimum required
   // Jenkins version).
   [ platform: 'linux', jdk: '8', jenkins: null ],
