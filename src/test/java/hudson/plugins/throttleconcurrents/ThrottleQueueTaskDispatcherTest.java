@@ -37,6 +37,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import jenkins.model.Jenkins;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -83,7 +84,7 @@ public class ThrottleQueueTaskDispatcherTest {
     @Before
     public void setUp() {
         // TODO Delete the tables code once the baseline is past 2.264.
-        VersionNumber version = r.jenkins.getVersion();
+        VersionNumber version = Jenkins.getVersion();
         if (version.isNewerThanOrEqualTo(new VersionNumber("2.264"))) {
             parentXPath = parentXPathDivs;
         } else {
