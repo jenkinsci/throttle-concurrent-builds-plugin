@@ -33,7 +33,6 @@ import static org.junit.Assert.assertTrue;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.google.common.collect.Iterables;
 
-import hudson.Functions;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -48,7 +47,6 @@ import hudson.model.queue.QueueTaskFuture;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
 
 import org.junit.After;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -95,10 +93,6 @@ public class ThrottleJobPropertyFreestyleTest {
 
     @Test
     public void testNoThrottling() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, null);
 
         FreeStyleProject p1 = j.createFreeStyleProject();
@@ -130,10 +124,6 @@ public class ThrottleJobPropertyFreestyleTest {
 
     @Test
     public void onePerNode() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, null);
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
@@ -195,10 +185,6 @@ public class ThrottleJobPropertyFreestyleTest {
 
     @Test
     public void twoTotal() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.TWO_TOTAL);
@@ -285,10 +271,6 @@ public class ThrottleJobPropertyFreestyleTest {
 
     @Test
     public void limitOneJobWithMatchingParams() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, null);
 
         FreeStyleProject project = j.createFreeStyleProject();
@@ -344,10 +326,6 @@ public class ThrottleJobPropertyFreestyleTest {
     @Issue("JENKINS-25326")
     @Test
     public void testThrottlingWithCategoryInFolder() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, null);
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 

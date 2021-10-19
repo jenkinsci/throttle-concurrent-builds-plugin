@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Iterables;
 
-import hudson.Functions;
 import hudson.model.Node;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
@@ -20,7 +19,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.After;
-import org.junit.Assume;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -57,10 +55,6 @@ public class ThrottleJobPropertyPipelineTest {
     @Ignore("TODO Doesn't work at present")
     @Test
     public void onePerNode() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
@@ -119,10 +113,6 @@ public class ThrottleJobPropertyPipelineTest {
 
     @Test
     public void twoTotal() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.TWO_TOTAL);
@@ -207,10 +197,6 @@ public class ThrottleJobPropertyPipelineTest {
     @Issue("JENKINS-37809")
     @Test
     public void limitOneJobWithMatchingParams() throws Exception {
-        Assume.assumeFalse(
-                "TODO Windows ACI agents do not have enough memory to run this test",
-                Functions.isWindows());
-
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, null);
 
         WorkflowJob project = j.createProject(WorkflowJob.class);
