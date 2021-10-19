@@ -358,7 +358,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
         return throttledPipelines;
     }
 
-    private static Item getItem(ItemGroup group, String name) {
+    private static Item getItem(ItemGroup<?> group, String name) {
         if (group instanceof Jenkins) {
             return ((Jenkins) group).getItemMap().get(name);
         } else {
@@ -411,7 +411,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return Job.class.isAssignableFrom(jobType) && Queue.Task.class.isAssignableFrom(jobType);
         }
              
-        public boolean isMatrixProject(Job job) {
+        public boolean isMatrixProject(Job<?, ?> job) {
             return job instanceof MatrixProject;
         }
 
