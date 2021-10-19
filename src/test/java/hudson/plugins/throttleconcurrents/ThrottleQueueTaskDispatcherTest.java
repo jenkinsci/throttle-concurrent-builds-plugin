@@ -198,12 +198,12 @@ public class ThrottleQueueTaskDispatcherTest {
         HtmlPage page = getLoggerPage(logger);
         if(expectMatch)
         {
-            assertTrue(expectedTracesMessage(match, true), page.asText().contains(matchTrace));
-            assertTrue(expectedTracesMessage(max, true), page.asText().contains(maxTrace+targetedPairNumber));
+            assertTrue(expectedTracesMessage(match, true), page.asNormalizedText().contains(matchTrace));
+            assertTrue(expectedTracesMessage(max, true), page.asNormalizedText().contains(maxTrace+targetedPairNumber));
         }
         else {
-            assertTrue(expectedTracesMessage(mismatch, true), page.asText().contains(mismatchTrace));
-            assertFalse(expectedTracesMessage(max, false), page.asText().contains(maxTrace));
+            assertTrue(expectedTracesMessage(mismatch, true), page.asNormalizedText().contains(mismatchTrace));
+            assertFalse(expectedTracesMessage(max, false), page.asNormalizedText().contains(maxTrace));
         }
     }
 
