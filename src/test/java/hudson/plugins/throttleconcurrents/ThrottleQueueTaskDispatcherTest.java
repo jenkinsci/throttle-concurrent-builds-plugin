@@ -347,7 +347,13 @@ public class ThrottleQueueTaskDispatcherTest {
             if (buttons.isEmpty()) {
                 fail("Failed to find button by xpath: " + buttonsXPath);
             }
-            page = buttons.get(0).click();
+            page = buttons
+                    .stream().filter(button -> button.getTextContent().equals("OK"))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError(String.format(
+                            "Failed to find button by xpath: %s and text 'OK'", buttonsXPath))
+                    )
+                    .click();
 
         } else {
             List<HtmlElement> elementsByAttribute = form.getElementsByAttribute("input", "type", "submit");
