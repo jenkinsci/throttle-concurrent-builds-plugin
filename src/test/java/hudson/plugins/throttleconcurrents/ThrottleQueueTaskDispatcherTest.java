@@ -19,6 +19,7 @@ package hudson.plugins.throttleconcurrents;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import com.gargoylesoftware.htmlunit.ElementNotFoundException;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
@@ -313,41 +314,49 @@ public class ThrottleQueueTaskDispatcherTest {
         for(HtmlRadioButtonInput radio: radios) {
             radio.setChecked(radio.getValueAttribute().equals("hudson.slaves.DumbSlave"));
         }
-        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
-        String buttonText = "OK";
-        boolean buttonFound = false;
+        page = submitForm(form);
+        boolean buttonFound;
 
-        for(HtmlButton button: buttons) {
-            if(button.getTextContent().equals(buttonText))
+        List<HtmlForm> forms = page.getForms();
+
+        for(HtmlForm aForm: forms) {
+            if(aForm.getActionAttribute().equals("doCreateItem"))
             {
-                buttonFound = true;
-                page = button.click();
-                List<HtmlForm> forms = page.getForms();
-
-                for(HtmlForm aForm: forms) {
-                    if(aForm.getActionAttribute().equals("doCreateItem"))
-                    {
-                        form = aForm;
-                        break;
-                    }
-                }
-                input = form.getInputByName("_.numExecutors");
-                input.setValueAttribute("1");
-
-                input = form.getInputByName("_.remoteFS");
-                input.setValueAttribute("/");
-
-                input = form.getInputByName("_.labelString");
-                input.setValueAttribute(label);
+                form = aForm;
                 break;
             }
         }
-        failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
+        input = form.getInputByName("_.numExecutors");
+        input.setValueAttribute("1");
 
-        buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
-        buttonText = saveButtonText;
-        buttonFound = buttonFoundThusFormSubmitted(form, buttons, buttonText);
-        failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
+        input = form.getInputByName("_.remoteFS");
+        input.setValueAttribute("/");
+
+        input = form.getInputByName("_.labelString");
+        input.setValueAttribute(label);
+
+        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
+        buttonFound = buttonFoundThusFormSubmitted(form, buttons, saveButtonText);
+        failWithMessageIfButtonNotFoundOnPage(buttonFound, saveButtonText, url);
+    }
+
+    private HtmlPage submitForm(HtmlForm form) throws IOException {
+        HtmlPage page;
+        if (Jenkins.getVersion().isOlderThan(new VersionNumber("2.320"))) {
+            List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
+            if (buttons.isEmpty()) {
+                fail("Failed to find button by xpath: " + buttonsXPath);
+            }
+            page = buttons.get(0).click();
+
+        } else {
+            List<HtmlElement> elementsByAttribute = form.getElementsByAttribute("input", "type", "submit");
+            if (elementsByAttribute.isEmpty()) {
+                fail("Failed to find an input with type submit on the page");
+            }
+            page = elementsByAttribute.get(0).click();
+        }
+        return page;
     }
 
     private String configureLogger()

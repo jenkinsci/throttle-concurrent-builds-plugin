@@ -464,12 +464,8 @@ public class ThrottleJobPropertyTest {
         // TODO Delete the tables code once the baseline is past 2.264.
         VersionNumber version = Jenkins.getVersion();
         if (version.isNewerThanOrEqualTo(new VersionNumber("2.264"))) {
-            deleteButtons =
-                    config.getByXPath(
-                            "//div[contains(concat(' ',normalize-space(@class),' '),' setting-name"
-                                    + " ') and text()='Multi-Project Throttle"
-                                    + " Categories']/../div[@class='setting-main']"
-                                    + "//button[text()='Delete']");
+            deleteButtons = config.getByXPath(
+                    "//div[text()='Multi-Project Throttle Categories']/../div//button[text()='Delete']");
         } else {
             deleteButtons =
                     config.getByXPath(
