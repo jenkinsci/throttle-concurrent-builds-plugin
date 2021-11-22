@@ -7,8 +7,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Iterables;
-
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -47,6 +45,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
+import java.util.stream.Collectors;
 
 public class ThrottleStepTest {
 
@@ -86,8 +85,10 @@ public class ThrottleStepTest {
         j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
         j.jenkins.getQueue().maintain();
         assertFalse(j.jenkins.getQueue().isEmpty());
-        Queue.Item queuedItem =
-                Iterables.getOnlyElement(Arrays.asList(j.jenkins.getQueue().getItems()));
+        List<Queue.Item> queuedItemList =
+                Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+        assertEquals(1, queuedItemList.size());
+        Queue.Item queuedItem = queuedItemList.get(0);
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
