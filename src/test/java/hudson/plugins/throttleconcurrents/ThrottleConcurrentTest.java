@@ -5,8 +5,6 @@ import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.tngtech.jgiven.Stage;
 import com.tngtech.jgiven.annotation.AfterStage;
 import com.tngtech.jgiven.annotation.BeforeStage;
@@ -156,7 +154,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             private void createCategory() {
                 ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
                 assertNotNull(descriptor);
-                descriptor.setCategories(ImmutableList.of(new ThrottleJobProperty.ThrottleCategory(name, maxConcurrentPerNode, maxConcurrentTotal, null)));
+                descriptor.setCategories(Collections.singletonList(new ThrottleJobProperty.ThrottleCategory(name, maxConcurrentPerNode, maxConcurrentTotal, null)));
             }
         }
 
@@ -286,7 +284,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                     }
                 }
             }
-            assertThat(ImmutableSet.copyOf(maxConcurrentBuilds.values()), contains(maxConcurrentPerNode));
+            assertThat(new ArrayList<>(maxConcurrentBuilds.values()), contains(maxConcurrentPerNode));
             return self();
         }
     }
@@ -305,7 +303,7 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         private FreeStyleProject createProjectInCategory(String categoryName) throws IOException {
             FreeStyleProject freeStyleProject = j.createFreeStyleProject();
             freeStyleProject.addProperty(
-                    new ThrottleJobProperty(0, 0, ImmutableList.of(categoryName), 
+                    new ThrottleJobProperty(0, 0, Collections.singletonList(categoryName),
                             true, TestUtil.THROTTLE_OPTION_CATEGORY, false, null, null));
             return freeStyleProject;
         }

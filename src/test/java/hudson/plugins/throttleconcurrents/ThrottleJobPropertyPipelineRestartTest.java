@@ -7,8 +7,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Iterables;
-
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.util.RunList;
@@ -28,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ThrottleJobPropertyPipelineRestartTest {
 
@@ -115,9 +114,11 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     thirdJob.scheduleBuild2(0);
                     j.jenkins.getQueue().maintain();
                     assertFalse(j.jenkins.getQueue().isEmpty());
-                    Queue.Item queuedItem =
-                            Iterables.getOnlyElement(
-                                    Arrays.asList(j.jenkins.getQueue().getItems()));
+                    List<Queue.Item> queuedItemList =
+                            Arrays.stream(j.jenkins.getQueue().getItems())
+                                    .collect(Collectors.toList());
+                    assertEquals(1, queuedItemList.size());
+                    Queue.Item queuedItem = queuedItemList.get(0);
                     Set<String> blockageReasons =
                             TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
                     assertThat(
@@ -152,9 +153,11 @@ public class ThrottleJobPropertyPipelineRestartTest {
                     }
 
                     assertFalse(j.jenkins.getQueue().isEmpty());
-                    Queue.Item queuedItem =
-                            Iterables.getOnlyElement(
-                                    Arrays.asList(j.jenkins.getQueue().getItems()));
+                    List<Queue.Item> queuedItemList =
+                            Arrays.stream(j.jenkins.getQueue().getItems())
+                                    .collect(Collectors.toList());
+                    assertEquals(1, queuedItemList.size());
+                    Queue.Item queuedItem = queuedItemList.get(0);
                     Set<String> blockageReasons =
                             TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
                     assertThat(
