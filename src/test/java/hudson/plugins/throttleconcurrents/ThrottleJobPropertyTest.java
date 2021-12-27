@@ -465,7 +465,7 @@ public class ThrottleJobPropertyTest {
         VersionNumber version = Jenkins.getVersion();
         if (version.isNewerThanOrEqualTo(new VersionNumber("2.264"))) {
             deleteButtons = config.getByXPath(
-                    "//div[text()='Multi-Project Throttle Categories']/../div//button[text()='Delete']");
+                    "//div[text()='Multi-Project Throttle Categories']/../div//button[@title='Delete']");
         } else {
             deleteButtons =
                     config.getByXPath(
