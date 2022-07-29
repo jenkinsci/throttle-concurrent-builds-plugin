@@ -179,6 +179,29 @@ pipeline {
 }
 ----
 
+=== Example 4: Throttling of declarative stages
+
+It is possible to throttle a stage of a declarative pipeline if the stage assigns an agent. The throttle step should be placed in the options block of the stage.
+
+[source,groovy]
+----
+pipeline {
+    agent none
+
+    stages {
+        stage('sleep') {
+            agent any
+            options {
+                throttle(['test_4'])
+            }
+            steps {
+                sh "sleep 500"
+                echo "Done"
+            }
+        }
+    }
+}
+
 == Unsupported use cases
 
 This section contains links to the use cases which are *not* supported.

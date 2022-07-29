@@ -439,6 +439,49 @@ public class ThrottleStepTest {
         j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 
+    @Test
+    public void inOptionsBlockOfDeclarativePipeline() throws Exception {
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
+        TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
+
+        WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+        firstJob.setDefinition(
+                getDeclarativeJobFlow("first", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
+
+        WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+        SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+
+        WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+        secondJob.setDefinition(
+                getDeclarativeJobFlow("second", TestUtil.ONE_PER_NODE.getCategoryName(), agent.getNodeName()));
+
+        WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+        j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertFalse(j.jenkins.getQueue().isEmpty());
+
+        List<Queue.Item> queuedItemList =
+                Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+        assertEquals(1, queuedItemList.size());
+        Queue.Item queuedItem = queuedItemList.get(0);
+        Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+        assertThat(
+                blockageReasons,
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, firstJobFirstRun);
+
+        SemaphoreStep.success("wait-first-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+        SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+        j.jenkins.getQueue().maintain();
+        assertTrue(j.jenkins.getQueue().isEmpty());
+        assertEquals(1, agent.toComputer().countBusy());
+        TestUtil.hasPlaceholderTaskForRun(agent, secondJobFirstRun);
+        SemaphoreStep.success("wait-second-job/1", null);
+        j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
+    }
+
     private CpsFlowDefinition getJobFlow(String jobName, String category, String label) {
         return getJobFlow(jobName, Collections.singletonList(category), label);
     }
@@ -468,6 +511,36 @@ public class ThrottleStepTest {
                 + jobName
                 + "-job'\n"
                 + "  }\n"
+                + "}\n";
+    }
+
+    static CpsFlowDefinition getDeclarativeJobFlow(String jobName, String categories, String label) {
+        return new CpsFlowDefinition(getDeclarativeThrottleScript(jobName, Collections.singletonList(categories), label), true);
+    }
+
+    private static String getDeclarativeThrottleScript(String jobName, List<String> categories, String label) {
+        List<String> quoted = new ArrayList<>();
+        for (String c : categories) {
+            quoted.add("'" + c + "'");
+        }
+
+        return "pipeline {\n"
+                + "agent none\n"
+                + "stages {"
+                + "stage('throttle') {\n"
+                + "agent { label '"
+                + label
+                + "'}\n"
+                + "options { throttle(["
+                + StringUtils.join(quoted, ", ")
+                + "]) }\n"
+                + "steps {\n"
+                + "  semaphore 'wait-"
+                + jobName
+                + "-job'\n"
+                + "}\n"
+                + "}\n"
+                + "}\n"
                 + "}\n";
     }
 
