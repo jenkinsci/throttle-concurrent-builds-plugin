@@ -193,6 +193,11 @@ THE SOFTWARE.
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.jenkinsci.plugins</groupId>
+            <artifactId>pipeline-model-definition</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>com.tngtech.jgiven</groupId>
             <artifactId>jgiven-junit</artifactId>
             <version>1.2.2</version>
