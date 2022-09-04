@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import jenkins.model.Jenkins;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -61,9 +60,7 @@ public class ThrottleQueueTaskDispatcherTest {
     private static final String maxTrace = "=> maxConcurrentPerNode' = ";
     private static final String mismatch = "mismatch";
     private static final String mismatchTrace = "node labels mismatch";
-    private static String parentXPath;
-    private static final String parentXPathTables = "//td[contains(text(),'Throttl')]/..";
-    private static final String parentXPathDivs = "//div[contains(text(),'Throttl')]/..";
+    private static final String parentXPath = "//div[contains(text(),'Throttl')]/..";
     private static final String saveButtonText = "Save";
     private static final String testCategoryName = "cat1";
     private static final String testCategoryLabel = testCategoryName+"label";
@@ -81,17 +78,6 @@ public class ThrottleQueueTaskDispatcherTest {
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
-
-    @Before
-    public void setUp() {
-        // TODO Delete the tables code once the baseline is past 2.264.
-        VersionNumber version = Jenkins.getVersion();
-        if (version.isNewerThanOrEqualTo(new VersionNumber("2.264"))) {
-            parentXPath = parentXPathDivs;
-        } else {
-            parentXPath = parentXPathTables;
-        }
-    }
 
     /**
      * @throws ExecutionException upon Jenkins project build scheduling issue.
