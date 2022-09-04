@@ -49,7 +49,7 @@ THE SOFTWARE.
   <properties>
     <revision>2.9</revision>
     <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.249.1</jenkins.version>
+    <jenkins.version>2.289.3</jenkins.version>
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
   </properties>
 
@@ -107,15 +107,10 @@ THE SOFTWARE.
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.249.x</artifactId>
-                <version>984.vb5eaac999a7e</version>
+                <artifactId>bom-2.289.x</artifactId>
+                <version>1500.ve4d05cd32975</version>
                 <scope>import</scope>
                 <type>pom</type>
-            </dependency>
-            <dependency>
-                <groupId>org.fusesource.jansi</groupId>
-                <artifactId>jansi</artifactId>
-                <version>1.18</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -124,12 +119,6 @@ THE SOFTWARE.
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>matrix-project</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>javax.annotation</groupId>
-                    <artifactId>javax.annotation-api</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>

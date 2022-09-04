@@ -19,9 +19,6 @@ import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
 import hudson.util.CopyOnWriteMap;
-import hudson.util.VersionNumber;
-
-import jenkins.model.Jenkins;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -460,18 +457,7 @@ public class ThrottleJobPropertyTest {
         HtmlPage page = webClient.goTo("configure");
         WebClientUtil.waitForJSExec(page.getWebClient());
         HtmlForm config = page.getFormByName("config");
-        List<HtmlButton> deleteButtons;
-        // TODO Delete the tables code once the baseline is past 2.264.
-        VersionNumber version = Jenkins.getVersion();
-        if (version.isNewerThanOrEqualTo(new VersionNumber("2.264"))) {
-            deleteButtons = config.getByXPath(
-                    "//div[text()='Multi-Project Throttle Categories']/../div//button[@title='Delete']");
-        } else {
-            deleteButtons =
-                    config.getByXPath(
-                            "//td[@class='setting-name' and text()='Multi-Project Throttle"
-                                + " Categories']/../td[@class='setting-main']//button[text()='Delete']");
-        }
+        List<HtmlButton> deleteButtons = config.getByXPath("//div[text()='Multi-Project Throttle Categories']/../div//button[@title='Delete']");
         assertEquals(1, deleteButtons.size());
         deleteButtons.get(0).click();
         WebClientUtil.waitForJSExec(page.getWebClient());
