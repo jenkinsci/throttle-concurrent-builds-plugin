@@ -183,7 +183,7 @@ THE SOFTWARE.
         <dependency>
             <groupId>com.tngtech.jgiven</groupId>
             <artifactId>jgiven-junit</artifactId>
-            <version>1.2.3</version>
+            <version>1.2.4</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
