@@ -50,7 +50,7 @@ import org.jvnet.hudson.test.JenkinsRule;
  * @author marco.miller@ericsson.com
  */
 public class ThrottleQueueTaskDispatcherTest {
-    private static final String buttonsXPath = "//button[@tabindex='0']";
+    private static final String buttonsXPath = "//button";
     private static final String configFormName = "config";
     private static final String configUrlSuffix = "configure";
     private static final String logUrlPrefix = "log/";
@@ -341,12 +341,15 @@ public class ThrottleQueueTaskDispatcherTest {
                     )
                     .click();
 
-        } else {
+        } else if (Jenkins.getVersion().isOlderThan(new VersionNumber("2.376"))) {
             List<HtmlElement> elementsByAttribute = form.getElementsByAttribute("input", "type", "submit");
             if (elementsByAttribute.isEmpty()) {
                 fail("Failed to find an input with type submit on the page");
             }
             page = elementsByAttribute.get(0).click();
+        } else {
+            HtmlButton button = form.getButtonByName("Submit");
+            page = button.click();
         }
         return page;
     }
