@@ -27,7 +27,7 @@ THE SOFTWARE.
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.51</version>
+    <version>4.52</version>
     <relativePath />
   </parent>
 
@@ -49,7 +49,7 @@ THE SOFTWARE.
   <properties>
     <revision>2.11</revision>
     <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.289.3</jenkins.version>
+    <jenkins.version>2.361.4</jenkins.version>
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
   </properties>
 
@@ -107,8 +107,8 @@ THE SOFTWARE.
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.289.x</artifactId>
-                <version>1500.ve4d05cd32975</version>
+                <artifactId>bom-2.361.x</artifactId>
+                <version>1723.vcb_9fee52c9fc</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
