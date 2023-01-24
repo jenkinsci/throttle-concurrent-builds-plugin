@@ -49,7 +49,7 @@ THE SOFTWARE.
   <properties>
     <revision>2.11</revision>
     <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.361.4</jenkins.version>
+    <jenkins.version>2.388-rc33317.343e0f4b_2297</jenkins.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/7599 -->
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
   </properties>
 
@@ -112,6 +112,11 @@ THE SOFTWARE.
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins.workflow</groupId>
+                <artifactId>workflow-durable-task-step</artifactId>
+                <version>1226.v0ed1a_02b_02c2</version> <!-- TODO https://github.com/jenkinsci/workflow-durable-task-step-plugin/pull/287 -->
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -131,6 +136,7 @@ THE SOFTWARE.
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-durable-task-step</artifactId>
+            <!-- TODO switch to test scope once PlaceholderTask.getNode call can be abstracted -->
         </dependency>
 
         <!-- Dependencies for test -->

@@ -397,11 +397,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         paramsList = ((ParametersAction) action).getParameters();
                     }
                 }
-            } else if (unit.context.task instanceof PlaceholderTask) {
-                PlaceholderTask placeholderTask = (PlaceholderTask) unit.context.task;
-                Run<?, ?> run = placeholderTask.run();
-                if (run != null) {
-                    List<ParametersAction> actions = run.getActions(ParametersAction.class);
+            } else {
+                Queue.Executable run = unit.context.task.getOwnerExecutable();
+                if (run instanceof Run) {
+                    List<ParametersAction> actions = ((Run<?, ?>) run).getActions(ParametersAction.class);
                     for (ParametersAction action : actions) {
                         paramsList = action.getParameters();
                     }
@@ -427,11 +426,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @NonNull
     private List<String> categoriesForPipeline(Task task) {
+        // TODO avoid casting to PlaceholderTask; could task.node.id be replaced with task.affinityKey?
         if (task instanceof PlaceholderTask) {
             PlaceholderTask placeholderTask = (PlaceholderTask)task;
-            Run<?, ?> r = placeholderTask.run();
-            if (r != null) {
-                Map<String, List<String>> categoriesByFlowNode = ThrottleJobProperty.getCategoriesForRunByFlowNode(r);
+            Queue.Executable r = task.getOwnerExecutable();
+            if (r instanceof Run) {
+                Map<String, List<String>> categoriesByFlowNode = ThrottleJobProperty.getCategoriesForRunByFlowNode((Run<?, ?>) r);
                 if (!categoriesByFlowNode.isEmpty()) {
                     try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
                         FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
@@ -591,10 +591,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
         if (currentExecutable != null) {
             SubTask parent = currentExecutable.getParent();
-            if (parent instanceof PlaceholderTask) {
-                PlaceholderTask task = (PlaceholderTask)parent;
-                if (run.equals(task.run())) {
-                    if (isTaskThrottledPipeline(task, flowNodes)) {
+            if (parent instanceof Task) {
+                if (run.equals(parent.getOwnerExecutable())) {
+                    if (isTaskThrottledPipeline((Task) parent, flowNodes)) {
                         return 1;
                     }
                 }
@@ -605,7 +604,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean isTaskThrottledPipeline(Task origTask, List<FlowNode> flowNodes) {
-        if (origTask instanceof PlaceholderTask) {
+        if (origTask instanceof PlaceholderTask) { // TODO as in categoriesForPipeline
             PlaceholderTask task = (PlaceholderTask)origTask;
             try {
                 FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
