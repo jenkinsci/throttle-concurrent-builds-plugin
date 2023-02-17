@@ -185,6 +185,13 @@ THE SOFTWARE.
             <artifactId>jgiven-junit</artifactId>
             <version>1.2.4</version>
             <scope>test</scope>
+            <exclusions>
+                <!-- Provided by Jenkins core -->
+                <exclusion>
+                    <groupId>org.fusesource.jansi</groupId>
+                    <artifactId>jansi</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 </project>  
