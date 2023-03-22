@@ -45,6 +45,7 @@ import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -426,6 +427,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return true;
         }
 
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
         public FormValidation doCheckCategoryName(@QueryParameter String value) {
             if (Util.fixEmptyAndTrim(value) == null) {
                 return FormValidation.error("Empty category names are not allowed.");
@@ -434,6 +436,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
 
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
         public FormValidation doCheckMaxConcurrentPerNode(@QueryParameter String value) {
             return checkNullOrInt(value);
         }
@@ -448,6 +451,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             }
         }
 
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
         public FormValidation doCheckMaxConcurrentTotal(@QueryParameter String value) {
             return checkNullOrInt(value);
         }
@@ -479,7 +483,14 @@ public class ThrottleJobProperty extends JobProperty<Job<?,?>> {
             return categories;
         }
 
-        public ListBoxModel doFillCategoryItems() {
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public ListBoxModel doFillCategoryItems(@AncestorInPath Item item) {
+            if (item != null) {
+                item.checkPermission(Item.CONFIGURE);
+            } else {
+                Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            }
+
             ListBoxModel m = new ListBoxModel();
 
             m.add("(none)", "");
