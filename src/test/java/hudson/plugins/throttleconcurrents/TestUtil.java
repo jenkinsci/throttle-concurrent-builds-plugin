@@ -11,18 +11,15 @@ import hudson.model.Node;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
-
-import jenkins.model.queue.CompositeCauseOfBlockage;
-
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.JenkinsRule;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import jenkins.model.queue.CompositeCauseOfBlockage;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
+import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.JenkinsRule;
 
 public class TestUtil {
 
@@ -38,19 +35,12 @@ public class TestUtil {
             new ThrottleJobProperty.ThrottleCategory("other_one_per_node", 1, 0, null);
 
     private static DumbSlave createAgent(
-            JenkinsRule j,
-            TemporaryFolder temporaryFolder,
-            EnvVars env,
-            int numExecutors,
-            String label)
+            JenkinsRule j, TemporaryFolder temporaryFolder, EnvVars env, int numExecutors, String label)
             throws Exception {
         synchronized (j.jenkins) {
             int sz = j.jenkins.getNodes().size();
             DumbSlave agent =
-                    new DumbSlave(
-                            "agent" + sz,
-                            temporaryFolder.getRoot().getPath(),
-                            j.createComputerLauncher(env));
+                    new DumbSlave("agent" + sz, temporaryFolder.getRoot().getPath(), j.createComputerLauncher(env));
             agent.setNumExecutors(numExecutors);
             agent.setMode(Node.Mode.NORMAL);
             agent.setLabelString(label == null ? "" : label);
@@ -109,12 +99,9 @@ public class TestUtil {
     static void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
         for (Executor exec : n.toComputer().getExecutors()) {
             if (exec.getCurrentExecutable() != null) {
-                assertTrue(
-                        exec.getCurrentExecutable().getParent()
-                                instanceof ExecutorStepExecution.PlaceholderTask);
-                ExecutorStepExecution.PlaceholderTask task =
-                        (ExecutorStepExecution.PlaceholderTask)
-                                exec.getCurrentExecutable().getParent();
+                assertTrue(exec.getCurrentExecutable().getParent() instanceof ExecutorStepExecution.PlaceholderTask);
+                ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask)
+                        exec.getCurrentExecutable().getParent();
                 while (task.run() == null) {
                     // Wait for the step context to be ready.
                     Thread.sleep(500);

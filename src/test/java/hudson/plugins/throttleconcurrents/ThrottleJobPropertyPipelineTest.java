@@ -11,7 +11,12 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
 import hudson.model.StringParameterDefinition;
 import hudson.model.queue.QueueTaskFuture;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -26,21 +31,19 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 public class ThrottleJobPropertyPipelineTest {
 
-    @Rule public JenkinsRule j = new JenkinsRule();
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
 
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+    @ClassRule
+    public static BuildWatcher buildWatcher = new BuildWatcher();
 
-    @Rule public TemporaryFolder firstAgentTmp = new TemporaryFolder();
-    @Rule public TemporaryFolder secondAgentTmp = new TemporaryFolder();
+    @Rule
+    public TemporaryFolder firstAgentTmp = new TemporaryFolder();
+
+    @Rule
+    public TemporaryFolder secondAgentTmp = new TemporaryFolder();
 
     private List<Node> agents = new ArrayList<>();
 
@@ -59,32 +62,30 @@ public class ThrottleJobPropertyPipelineTest {
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);
         firstJob.setDefinition(getJobFlow("first", agent.getNodeName()));
-        firstJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        firstJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
 
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
         WorkflowJob secondJob = j.createProject(WorkflowJob.class);
         secondJob.setDefinition(getJobFlow("second", agent.getNodeName()));
-        secondJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        secondJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
 
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         j.waitForMessage("Still waiting to schedule task", secondJobFirstRun);
@@ -98,7 +99,8 @@ public class ThrottleJobPropertyPipelineTest {
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
-                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1)
+                        .toString()));
         assertEquals(1, agent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(agent, firstJobFirstRun);
 
@@ -121,48 +123,45 @@ public class ThrottleJobPropertyPipelineTest {
 
         WorkflowJob firstJob = j.createProject(WorkflowJob.class);
         firstJob.setDefinition(getJobFlow("first", firstAgent.getNodeName()));
-        firstJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        firstJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
 
         WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
         WorkflowJob secondJob = j.createProject(WorkflowJob.class);
         secondJob.setDefinition(getJobFlow("second", secondAgent.getNodeName()));
-        secondJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        secondJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
 
         WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
         WorkflowJob thirdJob = j.createProject(WorkflowJob.class);
         thirdJob.setDefinition(getJobFlow("third", "on-agent"));
-        thirdJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        thirdJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
 
         QueueTaskFuture<WorkflowRun> thirdJobFirstRunFuture = thirdJob.scheduleBuild2(0);
         j.jenkins.getQueue().maintain();
@@ -174,7 +173,8 @@ public class ThrottleJobPropertyPipelineTest {
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
-                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString()));
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
+                        .toString()));
         assertEquals(1, firstAgent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
@@ -188,7 +188,9 @@ public class ThrottleJobPropertyPipelineTest {
         SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
         j.jenkins.getQueue().maintain();
         assertTrue(j.jenkins.getQueue().isEmpty());
-        assertEquals(2, firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
+        assertEquals(
+                2,
+                firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);
 
         SemaphoreStep.success("wait-second-job/1", null);
@@ -204,23 +206,20 @@ public class ThrottleJobPropertyPipelineTest {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, null);
 
         WorkflowJob project = j.createProject(WorkflowJob.class);
-        ParametersDefinitionProperty pdp =
-                new ParametersDefinitionProperty(
-                        new StringParameterDefinition("FOO", "foo", ""),
-                        new StringParameterDefinition("BAR", "bar", ""));
+        ParametersDefinitionProperty pdp = new ParametersDefinitionProperty(
+                new StringParameterDefinition("FOO", "foo", ""), new StringParameterDefinition("BAR", "bar", ""));
         project.addProperty(pdp);
         project.setConcurrentBuild(true);
         project.setDefinition(getJobFlow(project.getName(), agent.getNodeName()));
-        project.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.emptyList(),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_PROJECT, // throttleOption
-                        true,
-                        "FOO,BAR",
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        project.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.emptyList(),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_PROJECT, // throttleOption
+                true,
+                "FOO,BAR",
+                ThrottleMatrixProjectOptions.DEFAULT));
 
         WorkflowRun firstRun = project.scheduleBuild2(0).waitForStart();
         SemaphoreStep.waitForStart("wait-" + project.getName() + "-job/1", firstRun);
@@ -235,9 +234,8 @@ public class ThrottleJobPropertyPipelineTest {
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
-                hasItem(
-                        Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters()
-                                .toString()));
+                hasItem(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters()
+                        .toString()));
         assertEquals(1, agent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(agent, firstRun);
 
@@ -259,13 +257,6 @@ public class ThrottleJobPropertyPipelineTest {
     }
 
     private static String getThrottleScript(String jobName, String label) {
-        return "echo 'hi there'\n"
-                + "node('"
-                + label
-                + "') {\n"
-                + "  semaphore 'wait-"
-                + jobName
-                + "-job'\n"
-                + "}\n";
+        return "echo 'hi there'\n" + "node('" + label + "') {\n" + "  semaphore 'wait-" + jobName + "-job'\n" + "}\n";
     }
 }

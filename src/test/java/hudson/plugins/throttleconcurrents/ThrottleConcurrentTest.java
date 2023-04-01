@@ -43,7 +43,11 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
 @Ignore("Depends on a newer version of Guava than can be used with Pipeline")
-public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.GivenStage, ThrottleConcurrentTest.WhenAction, ThrottleConcurrentTest.ThenSomeOutcome> {
+public class ThrottleConcurrentTest
+        extends ScenarioTest<
+                ThrottleConcurrentTest.GivenStage,
+                ThrottleConcurrentTest.WhenAction,
+                ThrottleConcurrentTest.ThenSomeOutcome> {
     @Rule
     @ScenarioState
     public JenkinsRule j = new JenkinsRule();
@@ -53,21 +57,21 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         int nodeNumber = 2;
         int maxPerNode = 3;
 
-        given()
-                .$_nodes(nodeNumber).with().$_executors(10)
+        given().$_nodes(nodeNumber)
+                .with()
+                .$_executors(10)
                 .and()
-                .a_category().with().maxConcurrentPerNode(maxPerNode)
+                .a_category()
+                .with()
+                .maxConcurrentPerNode(maxPerNode)
                 .and()
                 .$_projects_having_this_category(maxPerNode * nodeNumber + 5);
 
-        when()
-                .each_project_is_built_$_times(3);
+        when().each_project_is_built_$_times(3);
 
-        then()
-                .there_should_be_at_most_$_concurrent_builds(nodeNumber * maxPerNode)
+        then().there_should_be_at_most_$_concurrent_builds(nodeNumber * maxPerNode)
                 .and()
                 .at_most_$_concurrent_builds_per_node(maxPerNode);
-
     }
 
     @Test
@@ -75,18 +79,19 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         int nodeNumber = 2;
         int maxTotal = 4;
 
-        given()
-                .$_nodes(nodeNumber).with().$_executors(10)
+        given().$_nodes(nodeNumber)
+                .with()
+                .$_executors(10)
                 .and()
-                .a_category().with().maxConcurrentTotal(maxTotal)
+                .a_category()
+                .with()
+                .maxConcurrentTotal(maxTotal)
                 .and()
                 .$_projects_having_this_category(maxTotal + 3);
 
-        when()
-                .each_project_is_built_$_times(3);
+        when().each_project_is_built_$_times(3);
 
-        then()
-                .there_should_be_at_most_$_concurrent_builds(maxTotal);
+        then().there_should_be_at_most_$_concurrent_builds(maxTotal);
     }
 
     public static class GivenStage extends Stage<GivenStage> {
@@ -101,7 +106,6 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
         private int numNodes = 2;
         private int numExecutorsPerNode = 10;
-
 
         public GivenStage a_category() {
             currentCategory = new CategorySpec(j);
@@ -154,7 +158,8 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             private void createCategory() {
                 ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
                 assertNotNull(descriptor);
-                descriptor.setCategories(Collections.singletonList(new ThrottleJobProperty.ThrottleCategory(name, maxConcurrentPerNode, maxConcurrentTotal, null)));
+                descriptor.setCategories(Collections.singletonList(new ThrottleJobProperty.ThrottleCategory(
+                        name, maxConcurrentPerNode, maxConcurrentTotal, null)));
             }
         }
 
@@ -180,8 +185,16 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
                 waiter.register();
                 Jenkins jenkins = j.getInstance();
                 synchronized (jenkins) {
-                    DumbSlave slave = new DumbSlave("slave" + jenkins.getNodes().size(), "dummy",
-                            j.createTmpDir().getPath(), Integer.toString(numExecutorsPerNode), Node.Mode.NORMAL, "", j.createComputerLauncher(null), RetentionStrategy.NOOP, Collections.emptyList());
+                    DumbSlave slave = new DumbSlave(
+                            "slave" + jenkins.getNodes().size(),
+                            "dummy",
+                            j.createTmpDir().getPath(),
+                            Integer.toString(numExecutorsPerNode),
+                            Node.Mode.NORMAL,
+                            "",
+                            j.createComputerLauncher(null),
+                            RetentionStrategy.NOOP,
+                            Collections.emptyList());
                     jenkins.addNode(slave);
                 }
                 latch.await();
@@ -195,8 +208,10 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
         ExecutorService executorService;
         private List<Future<AbstractBuild<?, ?>>> builds;
+
         @ScenarioState
         private TreeMap<Long, Integer> buildingChanges;
+
         @ScenarioState
         private TreeMap<Long, Map<String, Integer>> buildsPerNode;
 
@@ -229,31 +244,41 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             for (Future<AbstractBuild<?, ?>> buildFuture : builds) {
                 AbstractBuild<?, ?> build = buildFuture.get();
                 long startTimeInMillis = build.getStartTimeInMillis();
-                buildingChanges.put(startTimeInMillis, Optional.ofNullable(buildingChanges.get(startTimeInMillis)).orElse(0) + 1);
+                buildingChanges.put(
+                        startTimeInMillis,
+                        Optional.ofNullable(buildingChanges.get(startTimeInMillis))
+                                        .orElse(0)
+                                + 1);
                 long endTimeInMillis = startTimeInMillis + build.getDuration();
-                buildingChanges.put(endTimeInMillis, Optional.ofNullable(buildingChanges.get(endTimeInMillis)).orElse(0) - 1);
+                buildingChanges.put(
+                        endTimeInMillis,
+                        Optional.ofNullable(buildingChanges.get(endTimeInMillis))
+                                        .orElse(0)
+                                - 1);
 
                 String nodeName = build.getBuiltOnStr();
-                Map<String, Integer> nodeChanges = Optional.ofNullable(buildsPerNode.get(startTimeInMillis)).orElse(new HashMap<>());
-                nodeChanges.put(nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) + 1);
-                buildsPerNode.put(startTimeInMillis,
-                        nodeChanges);
+                Map<String, Integer> nodeChanges = Optional.ofNullable(buildsPerNode.get(startTimeInMillis))
+                        .orElse(new HashMap<>());
+                nodeChanges.put(
+                        nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) + 1);
+                buildsPerNode.put(startTimeInMillis, nodeChanges);
 
-                nodeChanges = Optional.ofNullable(buildsPerNode.get(endTimeInMillis)).orElse(new HashMap<>());
-                nodeChanges.put(nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) - 1);
-                buildsPerNode.put(endTimeInMillis,
-                        nodeChanges);
-
+                nodeChanges =
+                        Optional.ofNullable(buildsPerNode.get(endTimeInMillis)).orElse(new HashMap<>());
+                nodeChanges.put(
+                        nodeName, Optional.ofNullable(nodeChanges.get(nodeName)).orElse(0) - 1);
+                buildsPerNode.put(endTimeInMillis, nodeChanges);
             }
-
         }
     }
 
     public static class ThenSomeOutcome extends Stage<ThenSomeOutcome> {
         @ScenarioState
         private TreeMap<Long, Integer> buildingChanges;
+
         @ScenarioState
         private TreeMap<Long, Map<String, Integer>> buildsPerNode;
+
         @ScenarioState
         private JenkinsRule j;
 
@@ -274,12 +299,16 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             Map<String, Integer> numberOfConcurrentBuilds = new HashMap<>();
             Map<String, Integer> maxConcurrentBuilds = new HashMap<>();
             for (Map.Entry<Long, Map<String, Integer>> changePerNodePerTime : buildsPerNode.entrySet()) {
-                for (Map.Entry<String, Integer> changesPerNode : changePerNodePerTime.getValue().entrySet()) {
+                for (Map.Entry<String, Integer> changesPerNode :
+                        changePerNodePerTime.getValue().entrySet()) {
                     String nodeName = changesPerNode.getKey();
-                    int newValue = Optional.ofNullable(numberOfConcurrentBuilds.get(nodeName)).orElse(0) +
-                            changesPerNode.getValue();
+                    int newValue = Optional.ofNullable(numberOfConcurrentBuilds.get(nodeName))
+                                    .orElse(0)
+                            + changesPerNode.getValue();
                     numberOfConcurrentBuilds.put(nodeName, newValue);
-                    if (newValue > Optional.ofNullable(maxConcurrentBuilds.get(nodeName)).orElse(0)) {
+                    if (newValue
+                            > Optional.ofNullable(maxConcurrentBuilds.get(nodeName))
+                                    .orElse(0)) {
                         maxConcurrentBuilds.put(nodeName, newValue);
                     }
                 }
@@ -302,9 +331,15 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
 
         private FreeStyleProject createProjectInCategory(String categoryName) throws IOException {
             FreeStyleProject freeStyleProject = j.createFreeStyleProject();
-            freeStyleProject.addProperty(
-                    new ThrottleJobProperty(0, 0, Collections.singletonList(categoryName),
-                            true, TestUtil.THROTTLE_OPTION_CATEGORY, false, null, null));
+            freeStyleProject.addProperty(new ThrottleJobProperty(
+                    0,
+                    0,
+                    Collections.singletonList(categoryName),
+                    true,
+                    TestUtil.THROTTLE_OPTION_CATEGORY,
+                    false,
+                    null,
+                    null));
             return freeStyleProject;
         }
 
@@ -313,7 +348,6 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
             inQueue.acquire();
             return j.buildAndAssertSuccess(project);
         }
-
     }
 
     private static class SemaphoreBuilder extends Builder {
@@ -324,7 +358,8 @@ public class ThrottleConcurrentTest extends ScenarioTest<ThrottleConcurrentTest.
         }
 
         @Override
-        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException {
+        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
+                throws InterruptedException {
             inBuild.release();
             Thread.sleep(100);
             return true;

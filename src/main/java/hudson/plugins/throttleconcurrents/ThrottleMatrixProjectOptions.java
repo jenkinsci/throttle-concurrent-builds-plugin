@@ -24,12 +24,12 @@
 
 package hudson.plugins.throttleconcurrents;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixConfiguration;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -40,17 +40,16 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * @since 1.8.3
  */
 public class ThrottleMatrixProjectOptions implements Describable<ThrottleMatrixProjectOptions> {
-    
+
     private final boolean throttleMatrixBuilds;
     private final boolean throttleMatrixConfigurations;
-    
+
     /**
      * A default configuration, which retains the behavior from
-     * version 1.8. 
+     * version 1.8.
      */
-    public static final ThrottleMatrixProjectOptions DEFAULT = 
-            new ThrottleMatrixProjectOptions(true, false);
-    
+    public static final ThrottleMatrixProjectOptions DEFAULT = new ThrottleMatrixProjectOptions(true, false);
+
     @DataBoundConstructor
     public ThrottleMatrixProjectOptions(boolean throttleMatrixBuilds, boolean throttleMatrixConfigurations) {
         this.throttleMatrixBuilds = throttleMatrixBuilds;
@@ -67,19 +66,19 @@ public class ThrottleMatrixProjectOptions implements Describable<ThrottleMatrixP
 
     @Extension
     public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
-    
+
     @Override
     public Descriptor<ThrottleMatrixProjectOptions> getDescriptor() {
         return DESCRIPTOR;
     }
-    
+
     public static class DescriptorImpl extends Descriptor<ThrottleMatrixProjectOptions> {
 
         @Override
         public String getDisplayName() {
             return Messages.ThrottleMatrixProjectOptions_DisplayName();
         }
-        
+
         @NonNull
         public ThrottleMatrixProjectOptions getDefaults() {
             return ThrottleMatrixProjectOptions.DEFAULT;
