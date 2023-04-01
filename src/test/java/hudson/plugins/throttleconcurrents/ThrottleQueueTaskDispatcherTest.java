@@ -63,7 +63,7 @@ public class ThrottleQueueTaskDispatcherTest {
     private static final String parentXPath = "//div[contains(text(),'Throttl')]/..";
     private static final String saveButtonText = "Save";
     private static final String testCategoryName = "cat1";
-    private static final String testCategoryLabel = testCategoryName+"label";
+    private static final String testCategoryLabel = testCategoryName + "label";
     //
     private static final boolean configureNodeLabel = true;
     private static final boolean configureNoNodeLabel = false;
@@ -74,7 +74,7 @@ public class ThrottleQueueTaskDispatcherTest {
     private static final int configureTwoMaxLabelPairs = 2;
     private static final int noCategoryWideMaxConcurrentPerNode = 0;
     private static final int someCategoryWideMaxConcurrentPerNode = 1;
-    private static final int greaterCategoryWideMaxConcurrentPerNode = configureOneMaxLabelPair+1;
+    private static final int greaterCategoryWideMaxConcurrentPerNode = configureOneMaxLabelPair + 1;
 
     @Rule
     public JenkinsRule r = new JenkinsRule();
@@ -86,13 +86,9 @@ public class ThrottleQueueTaskDispatcherTest {
      */
     @Test
     public void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPair()
-    throws ExecutionException, InterruptedException, IOException
-    {
+            throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-            configureOneMaxLabelPair,
-            noCategoryWideMaxConcurrentPerNode,
-            expectMatch,
-            configureNodeLabel);
+                configureOneMaxLabelPair, noCategoryWideMaxConcurrentPerNode, expectMatch, configureNodeLabel);
     }
 
     /**
@@ -102,13 +98,9 @@ public class ThrottleQueueTaskDispatcherTest {
      */
     @Test
     public void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPairs()
-    throws ExecutionException, InterruptedException, IOException
-    {
+            throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-            configureTwoMaxLabelPairs,
-            noCategoryWideMaxConcurrentPerNode,
-            expectMatch,
-            configureNodeLabel);
+                configureTwoMaxLabelPairs, noCategoryWideMaxConcurrentPerNode, expectMatch, configureNodeLabel);
     }
 
     /**
@@ -118,13 +110,12 @@ public class ThrottleQueueTaskDispatcherTest {
      */
     @Test
     public void testShouldConsiderTaskAsBlockableStillUponMatchingLabelPairWithLowestMax()
-    throws ExecutionException, InterruptedException, IOException
-    {
+            throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-            configureOneMaxLabelPair, //=> label-pair max of 1, still to match as *the* max;
-            greaterCategoryWideMaxConcurrentPerNode, //greater than label-pair max but still
-            expectMatch,
-            configureNodeLabel);
+                configureOneMaxLabelPair, // => label-pair max of 1, still to match as *the* max;
+                greaterCategoryWideMaxConcurrentPerNode, // greater than label-pair max but still
+                expectMatch,
+                configureNodeLabel);
     }
 
     /**
@@ -134,13 +125,9 @@ public class ThrottleQueueTaskDispatcherTest {
      */
     @Test
     public void testShouldConsiderTaskAsBuildableStillUponMismatchingMaxLabelPairs()
-    throws ExecutionException, InterruptedException, IOException
-    {
+            throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-            configureTwoMaxLabelPairs,
-            someCategoryWideMaxConcurrentPerNode,
-            expectMismatch,
-            configureNodeLabel);
+                configureTwoMaxLabelPairs, someCategoryWideMaxConcurrentPerNode, expectMismatch, configureNodeLabel);
     }
 
     /**
@@ -150,13 +137,9 @@ public class ThrottleQueueTaskDispatcherTest {
      */
     @Test
     public void testShouldConsiderTaskAsBuildableStillUponNoNodeLabel()
-    throws ExecutionException, InterruptedException, IOException
-    {
+            throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-            configureOneMaxLabelPair,
-            someCategoryWideMaxConcurrentPerNode,
-            expectMismatch,
-            configureNoNodeLabel);
+                configureOneMaxLabelPair, someCategoryWideMaxConcurrentPerNode, expectMismatch, configureNoNodeLabel);
     }
 
     /**
@@ -169,13 +152,11 @@ public class ThrottleQueueTaskDispatcherTest {
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
     private void assertBasedOnMaxLabelPairMatchingOrNot(
-        int targetedPairNumber, int maxConcurrentPerNode, boolean expectMatch, boolean configureNodeLabel)
-    throws ExecutionException, InterruptedException, IOException
-    {
-        if(configureNodeLabel)
-        {
+            int targetedPairNumber, int maxConcurrentPerNode, boolean expectMatch, boolean configureNodeLabel)
+            throws ExecutionException, InterruptedException, IOException {
+        if (configureNodeLabel) {
             String nodeLabelSuffix = expectMatch ? "" : "other";
-            configureNewNodeWithLabel(testCategoryLabel +targetedPairNumber +nodeLabelSuffix);
+            configureNewNodeWithLabel(testCategoryLabel + targetedPairNumber + nodeLabelSuffix);
         }
         configureGlobalThrottling(testCategoryLabel, targetedPairNumber, maxConcurrentPerNode);
 
@@ -184,47 +165,47 @@ public class ThrottleQueueTaskDispatcherTest {
         String logger = configureLogger();
         project.scheduleBuild2(0).get();
         HtmlPage page = getLoggerPage(logger);
-        if(expectMatch)
-        {
-            assertTrue(expectedTracesMessage(match, true), page.asNormalizedText().contains(matchTrace));
-            assertTrue(expectedTracesMessage(max, true), page.asNormalizedText().contains(maxTrace+targetedPairNumber));
-        }
-        else {
-            assertTrue(expectedTracesMessage(mismatch, true), page.asNormalizedText().contains(mismatchTrace));
-            assertFalse(expectedTracesMessage(max, false), page.asNormalizedText().contains(maxTrace));
+        if (expectMatch) {
+            assertTrue(
+                    expectedTracesMessage(match, true), page.asNormalizedText().contains(matchTrace));
+            assertTrue(
+                    expectedTracesMessage(max, true), page.asNormalizedText().contains(maxTrace + targetedPairNumber));
+        } else {
+            assertTrue(
+                    expectedTracesMessage(mismatch, true),
+                    page.asNormalizedText().contains(mismatchTrace));
+            assertFalse(
+                    expectedTracesMessage(max, false), page.asNormalizedText().contains(maxTrace));
         }
     }
 
     private void configureGlobalThrottling(String labelRoot, int numberOfPairs, int maxConcurrentPerNode)
-    throws InterruptedException, IOException {
-        URL url = new URL(r.getURL()+configUrlSuffix);
+            throws InterruptedException, IOException {
+        URL url = new URL(r.getURL() + configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
-        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath+buttonsXPath);
+        List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath + buttonsXPath);
         String buttonText = "Add Category";
         boolean buttonFound = false;
 
-        for(HtmlButton button : buttons) {
-            if(button.getTextContent().equals(buttonText))
-            {
+        for (HtmlButton button : buttons) {
+            if (button.getTextContent().equals(buttonText)) {
                 buttonFound = true;
                 button.click();
 
                 HtmlInput input = form.getInputByName("_.categoryName");
                 input.setValueAttribute(testCategoryName);
-                //_.maxConcurrentTotal ignored.
+                // _.maxConcurrentTotal ignored.
                 input = form.getInputByName("_.maxConcurrentPerNode");
-                input.setValueAttribute(""+maxConcurrentPerNode);
+                input.setValueAttribute("" + maxConcurrentPerNode);
 
-                buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath+buttonsXPath);
+                buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath + buttonsXPath);
                 buttonText = "Add Maximum Per Labeled Node";
                 buttonFound = false;
-                for(HtmlButton deeperButton: buttons) {
-                    if(deeperButton.getTextContent().equals(buttonText))
-                    {
+                for (HtmlButton deeperButton : buttons) {
+                    if (deeperButton.getTextContent().equals(buttonText)) {
                         buttonFound = true;
-                        for(int i=0; i<numberOfPairs; i++)
-                        {
+                        for (int i = 0; i < numberOfPairs; i++) {
                             List<HtmlInput> inputs;
                             int clickThenWaitForMaxTries = 3;
                             do {
@@ -233,13 +214,15 @@ public class ThrottleQueueTaskDispatcherTest {
                                 form = page.getFormByName(configFormName);
                                 inputs = form.getInputsByName("_.throttledNodeLabel");
                                 clickThenWaitForMaxTries--;
-                            } while(inputs.isEmpty() && clickThenWaitForMaxTries > 0);
+                            } while (inputs.isEmpty() && clickThenWaitForMaxTries > 0);
 
-                            assertFalse(buttonText+" button clicked; no resulting field found on "+url, inputs.isEmpty());
-                            inputs.get(i).setValueAttribute(labelRoot+(i+1));
+                            assertFalse(
+                                    buttonText + " button clicked; no resulting field found on " + url,
+                                    inputs.isEmpty());
+                            inputs.get(i).setValueAttribute(labelRoot + (i + 1));
 
                             inputs = form.getInputsByName("_.maxConcurrentPerNodeLabeled");
-                            inputs.get(i).setValueAttribute(""+(i+1));
+                            inputs.get(i).setValueAttribute("" + (i + 1));
                         }
                     }
                 }
@@ -255,26 +238,25 @@ public class ThrottleQueueTaskDispatcherTest {
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
     }
 
-    private void configureJobThrottling(FreeStyleProject project)
-    throws IOException {
-        URL url = new URL(r.getURL()+project.getUrl()+configUrlSuffix);
+    private void configureJobThrottling(FreeStyleProject project) throws IOException {
+        URL url = new URL(r.getURL() + project.getUrl() + configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
         List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         String buttonText = saveButtonText;
         boolean buttonFound = false;
 
-        for(HtmlButton button: buttons) {
-            if(button.getTextContent().equals(buttonText))
-            {
+        for (HtmlButton button : buttons) {
+            if (button.getTextContent().equals(buttonText)) {
                 buttonFound = true;
                 String checkboxName = "throttleEnabled";
                 HtmlElement checkbox = page.getElementByName(checkboxName);
-                assertNotNull(checkboxName+" checkbox not found on test job config page; plugin installed?", checkbox);
+                assertNotNull(
+                        checkboxName + " checkbox not found on test job config page; plugin installed?", checkbox);
                 checkbox.click();
 
                 List<HtmlRadioButtonInput> radios = form.getRadioButtonsByName("throttleOption");
-                for(HtmlRadioButtonInput radio: radios) {
+                for (HtmlRadioButtonInput radio : radios) {
                     radio.setChecked(radio.getValueAttribute().equals("category"));
                 }
                 checkbox = page.getElementByName("categories");
@@ -287,9 +269,8 @@ public class ThrottleQueueTaskDispatcherTest {
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
     }
 
-    private void configureNewNodeWithLabel(String label)
-    throws IOException {
-        URL url = new URL(r.getURL()+"computer/new");
+    private void configureNewNodeWithLabel(String label) throws IOException {
+        URL url = new URL(r.getURL() + "computer/new");
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName("createItem");
 
@@ -297,7 +278,7 @@ public class ThrottleQueueTaskDispatcherTest {
         input.setValueAttribute("test");
 
         List<HtmlRadioButtonInput> radios = form.getRadioButtonsByName("mode");
-        for(HtmlRadioButtonInput radio: radios) {
+        for (HtmlRadioButtonInput radio : radios) {
             radio.setChecked(radio.getValueAttribute().equals("hudson.slaves.DumbSlave"));
         }
         page = submitForm(form);
@@ -305,9 +286,8 @@ public class ThrottleQueueTaskDispatcherTest {
 
         List<HtmlForm> forms = page.getForms();
 
-        for(HtmlForm aForm: forms) {
-            if(aForm.getActionAttribute().equals("doCreateItem"))
-            {
+        for (HtmlForm aForm : forms) {
+            if (aForm.getActionAttribute().equals("doCreateItem")) {
                 form = aForm;
                 break;
             }
@@ -333,12 +313,11 @@ public class ThrottleQueueTaskDispatcherTest {
             if (buttons.isEmpty()) {
                 fail("Failed to find button by xpath: " + buttonsXPath);
             }
-            page = buttons
-                    .stream().filter(button -> button.getTextContent().equals("OK"))
+            page = buttons.stream()
+                    .filter(button -> button.getTextContent().equals("OK"))
                     .findFirst()
-                    .orElseThrow(() -> new AssertionError(String.format(
-                            "Failed to find button by xpath: %s and text 'OK'", buttonsXPath))
-                    )
+                    .orElseThrow(() -> new AssertionError(
+                            String.format("Failed to find button by xpath: %s and text 'OK'", buttonsXPath)))
                     .click();
 
         } else if (Jenkins.getVersion().isOlderThan(new VersionNumber("2.376"))) {
@@ -354,25 +333,23 @@ public class ThrottleQueueTaskDispatcherTest {
         return page;
     }
 
-    private String configureLogger()
-    throws IOException {
+    private String configureLogger() throws IOException {
         String logger = ThrottleQueueTaskDispatcher.class.getName();
         r.jenkins.getLog().doNewLogRecorder(logger);
-        URL url = new URL(r.getURL()+logUrlPrefix+logger+"/"+configUrlSuffix);
+        URL url = new URL(r.getURL() + logUrlPrefix + logger + "/" + configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
         List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         String buttonText = "Add";
         boolean buttonFound = false;
 
-        for(HtmlButton button: buttons) {
-            if(button.getTextContent().equals(buttonText))
-            {
+        for (HtmlButton button : buttons) {
+            if (button.getTextContent().equals(buttonText)) {
                 buttonFound = true;
                 button.click();
 
                 List<HtmlInput> inputs = form.getInputsByName("_.name");
-                for(HtmlInput input: inputs) {
+                for (HtmlInput input : inputs) {
                     input.setValueAttribute(logger);
                 }
                 HtmlSelect select = form.getSelectByName("level");
@@ -396,12 +373,10 @@ public class ThrottleQueueTaskDispatcherTest {
     }
 
     private boolean buttonFoundThusFormSubmitted(HtmlForm form, List<HtmlButton> buttons, String buttonText)
-    throws IOException
-    {
+            throws IOException {
         boolean buttonFound = false;
-        for(HtmlButton button: buttons) {
-            if(button.getTextContent().equals(buttonText))
-            {
+        for (HtmlButton button : buttons) {
+            if (button.getTextContent().equals(buttonText)) {
                 buttonFound = true;
                 button.click();
                 break;
@@ -410,23 +385,20 @@ public class ThrottleQueueTaskDispatcherTest {
         return buttonFound;
     }
 
-    private String expectedTracesMessage(String traceKind, boolean assertingTrue)
-    {
+    private String expectedTracesMessage(String traceKind, boolean assertingTrue) {
         StringBuilder messagePrefix = new StringBuilder("log shall");
-        if(!assertingTrue) {
+        if (!assertingTrue) {
             messagePrefix.append(" not");
         }
-        return messagePrefix+" contain '"+traceKind+"' traces";
+        return messagePrefix + " contain '" + traceKind + "' traces";
     }
 
-    private void failWithMessageIfButtonNotFoundOnPage(boolean buttonFound, String buttonText, URL url)
-    {
-        assertTrue(buttonText+" button not found on "+url, buttonFound);
+    private void failWithMessageIfButtonNotFoundOnPage(boolean buttonFound, String buttonText, URL url) {
+        assertTrue(buttonText + " button not found on " + url, buttonFound);
     }
 
-    private HtmlPage getLoggerPage(String logger)
-    throws IOException {
-        URL url = new URL(r.getURL()+logUrlPrefix+logger);
+    private HtmlPage getLoggerPage(String logger) throws IOException {
+        URL url = new URL(r.getURL() + logUrlPrefix + logger);
         return r.createWebClient().getPage(url);
     }
 }

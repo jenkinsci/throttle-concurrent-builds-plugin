@@ -11,7 +11,6 @@ import com.gargoylesoftware.htmlunit.WebClientUtil;
 import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
 import hudson.model.Job;
@@ -19,14 +18,6 @@ import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
 import hudson.util.CopyOnWriteMap;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.WithoutJenkins;
-import org.jvnet.hudson.test.recipes.LocalData;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,12 +27,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 public class ThrottleJobPropertyTest {
 
     private final Random random = new Random(System.currentTimeMillis());
 
-    @Rule public JenkinsRule j = new JenkinsRule();
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
 
     @Issue("JENKINS-19623")
     @Test
@@ -49,38 +47,35 @@ public class ThrottleJobPropertyTest {
         String alpha = "alpha", beta = "beta", gamma = "gamma"; // category names
         FreeStyleProject p1 = j.createFreeStyleProject("p1");
         FreeStyleProject p2 = j.createFreeStyleProject("p2");
-        p2.addProperty(
-                new ThrottleJobProperty(
-                        1,
-                        1,
-                        Collections.singletonList(alpha),
-                        false,
-                        TestUtil.THROTTLE_OPTION_CATEGORY,
-                        false,
-                        "",
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        p2.addProperty(new ThrottleJobProperty(
+                1,
+                1,
+                Collections.singletonList(alpha),
+                false,
+                TestUtil.THROTTLE_OPTION_CATEGORY,
+                false,
+                "",
+                ThrottleMatrixProjectOptions.DEFAULT));
         FreeStyleProject p3 = j.createFreeStyleProject("p3");
-        p3.addProperty(
-                new ThrottleJobProperty(
-                        1,
-                        1,
-                        Arrays.asList(alpha, beta),
-                        true,
-                        TestUtil.THROTTLE_OPTION_CATEGORY,
-                        false,
-                        "",
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        p3.addProperty(new ThrottleJobProperty(
+                1,
+                1,
+                Arrays.asList(alpha, beta),
+                true,
+                TestUtil.THROTTLE_OPTION_CATEGORY,
+                false,
+                "",
+                ThrottleMatrixProjectOptions.DEFAULT));
         FreeStyleProject p4 = j.createFreeStyleProject("p4");
-        p4.addProperty(
-                new ThrottleJobProperty(
-                        1,
-                        1,
-                        Arrays.asList(beta, gamma),
-                        true,
-                        TestUtil.THROTTLE_OPTION_CATEGORY,
-                        false,
-                        "",
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        p4.addProperty(new ThrottleJobProperty(
+                1,
+                1,
+                Arrays.asList(beta, gamma),
+                true,
+                TestUtil.THROTTLE_OPTION_CATEGORY,
+                false,
+                "",
+                ThrottleMatrixProjectOptions.DEFAULT));
         // TODO when core dep ≥1.480.3, add cloudbees-folder as a test dependency so we can check
         // jobs inside folders
         assertProjects(alpha, p3);
@@ -101,8 +96,7 @@ public class ThrottleJobPropertyTest {
     @WithoutJenkins
     public void testToStringWithNulls() {
         ThrottleJobProperty tjp =
-                new ThrottleJobProperty(
-                        0, 0, null, false, null, false, "", ThrottleMatrixProjectOptions.DEFAULT);
+                new ThrottleJobProperty(0, 0, null, false, null, false, "", ThrottleMatrixProjectOptions.DEFAULT);
         assertNotNull(tjp.toString());
     }
 
@@ -117,16 +111,15 @@ public class ThrottleJobPropertyTest {
         boolean expectedLimitOneJobWithMatchingParams = anyBoolean();
         String expectedParamsToUseForLimit = anyString();
 
-        ThrottleJobProperty property =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        expectedParamsToUseForLimit,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                expectedParamsToUseForLimit,
+                ThrottleMatrixProjectOptions.DEFAULT);
 
         assertEquals(expectedMaxConcurrentPerNode, property.getMaxConcurrentPerNode());
         assertEquals(expectedMaxConcurrentTotal, property.getMaxConcurrentTotal());
@@ -158,181 +151,167 @@ public class ThrottleJobPropertyTest {
         // effectively empty for us too.
         String assignedParamsToUseForLimit00 = null;
         List<String> expectedParamsToUseForLimit00 = new ArrayList<>();
-        ThrottleJobProperty property00 =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit00,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property00 = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit00,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit00, property00.getParamsToCompare());
 
         String assignedParamsToUseForLimit0 = "";
         List<String> expectedParamsToUseForLimit0 = new ArrayList<>();
-        ThrottleJobProperty property0 =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit0,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property0 = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit0, property0.getParamsToCompare());
 
         String assignedParamsToUseForLimit0a = " ";
         List<String> expectedParamsToUseForLimit0a = new ArrayList<>();
-        ThrottleJobProperty property0a =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit0a,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property0a = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0a,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit0a, property0a.getParamsToCompare());
 
         String assignedParamsToUseForLimit0b = " , ";
         List<String> expectedParamsToUseForLimit0b = new ArrayList<>();
-        ThrottleJobProperty property0b =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit0b,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property0b = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0b,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit0b, property0b.getParamsToCompare());
 
         String assignedParamsToUseForLimit0c = " ,,,  \n";
         List<String> expectedParamsToUseForLimit0c = new ArrayList<>();
-        ThrottleJobProperty property0c =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit0c,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property0c = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit0c,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit0c, property0c.getParamsToCompare());
 
         // (1) One buildarg name listed in the input becomes the only one string in the list;
         // surrounding whitespace should be truncated.
         String assignedParamsToUseForLimit1 = "ONE_PARAM";
         List<String> expectedParamsToUseForLimit1 = Collections.singletonList("ONE_PARAM");
-        ThrottleJobProperty property1 =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit1,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property1 = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit1,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit1, property1.getParamsToCompare());
 
         String assignedParamsToUseForLimit1a = " ONE_PARAM";
         List<String> expectedParamsToUseForLimit1a = Collections.singletonList("ONE_PARAM");
-        ThrottleJobProperty property1a =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit1a,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property1a = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit1a,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit1a, property1a.getParamsToCompare());
 
         String assignedParamsToUseForLimit1b = " ONE_PARAM\n";
         List<String> expectedParamsToUseForLimit1b = Collections.singletonList("ONE_PARAM");
-        ThrottleJobProperty property1b =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit1b,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property1b = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit1b,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit1b, property1b.getParamsToCompare());
 
         // (2) Two buildarg names listed in the input become two strings in the list.
         String assignedParamsToUseForLimit2 = "TWO,PARAMS";
         List<String> expectedParamsToUseForLimit2 = Arrays.asList("TWO", "PARAMS");
-        ThrottleJobProperty property2 =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit2,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property2 = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit2,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit2, property2.getParamsToCompare());
 
         // (3) Different separators are handled the same.
         String assignedParamsToUseForLimit3 = "THREE DIFFERENT,PARAMS";
         List<String> expectedParamsToUseForLimit3 = Arrays.asList("THREE", "DIFFERENT", "PARAMS");
-        ThrottleJobProperty property3 =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit3,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property3 = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit3,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit3, property3.getParamsToCompare());
 
         // (4) Several separating tokens together must go away as one: we want no empties in the
         // resulting list.
         String assignedParamsToUseForLimit4 = "FOUR ,SOMEWHAT\t,DIFFERENT , PARAMS";
-        List<String> expectedParamsToUseForLimit4 =
-                Arrays.asList("FOUR", "SOMEWHAT", "DIFFERENT", "PARAMS");
-        ThrottleJobProperty property4 =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit4,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        List<String> expectedParamsToUseForLimit4 = Arrays.asList("FOUR", "SOMEWHAT", "DIFFERENT", "PARAMS");
+        ThrottleJobProperty property4 = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit4,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit4, property4.getParamsToCompare());
 
         // (5) Java does not really have multilines, but still... note that if any whitespace should
         // be there in the carry-over of string representation, it is the coder's responsibility to
         // ensure some.
         String assignedParamsToUseForLimit5 = "Multi\nline" + "string,for	kicks\n" + "EOL";
-        List<String> expectedParamsToUseForLimit5 =
-                Arrays.asList("Multi", "linestring", "for", "kicks", "EOL");
-        ThrottleJobProperty property5 =
-                new ThrottleJobProperty(
-                        expectedMaxConcurrentPerNode,
-                        expectedMaxConcurrentTotal,
-                        expectedCategories,
-                        expectedThrottleEnabled,
-                        expectedThrottleOption,
-                        expectedLimitOneJobWithMatchingParams,
-                        assignedParamsToUseForLimit5,
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "linestring", "for", "kicks", "EOL");
+        ThrottleJobProperty property5 = new ThrottleJobProperty(
+                expectedMaxConcurrentPerNode,
+                expectedMaxConcurrentTotal,
+                expectedCategories,
+                expectedThrottleEnabled,
+                expectedThrottleOption,
+                expectedLimitOneJobWithMatchingParams,
+                assignedParamsToUseForLimit5,
+                ThrottleMatrixProjectOptions.DEFAULT);
         assertEquals(expectedParamsToUseForLimit5, property5.getParamsToCompare());
     }
 
@@ -344,25 +323,20 @@ public class ThrottleJobPropertyTest {
         List<String> unsafeList = new ArrayList<>();
         unsafeList.add(category);
 
-        ThrottleJobProperty property =
-                new ThrottleJobProperty(
-                        anyInt(),
-                        anyInt(),
-                        unsafeList,
-                        anyBoolean(),
-                        "throttle_option",
-                        anyBoolean(),
-                        anyString(),
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property = new ThrottleJobProperty(
+                anyInt(),
+                anyInt(),
+                unsafeList,
+                anyBoolean(),
+                "throttle_option",
+                anyBoolean(),
+                anyString(),
+                ThrottleMatrixProjectOptions.DEFAULT);
 
         List<String> storedCategories = property.getCategories();
-        assertEquals(
-                "contents of original and stored list should be the equal",
-                unsafeList,
-                storedCategories);
+        assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
         assertNotSame(
-                "expected unsafe list to be converted to a converted to some other"
-                        + " concurrency-safe impl",
+                "expected unsafe list to be converted to a converted to some other" + " concurrency-safe impl",
                 unsafeList,
                 storedCategories);
         assertTrue(storedCategories instanceof CopyOnWriteArrayList);
@@ -371,16 +345,15 @@ public class ThrottleJobPropertyTest {
     @Test
     @WithoutJenkins
     public void testThrottleJobConstructorHandlesNullCategories() {
-        ThrottleJobProperty property =
-                new ThrottleJobProperty(
-                        anyInt(),
-                        anyInt(),
-                        null,
-                        anyBoolean(),
-                        "throttle_option",
-                        anyBoolean(),
-                        anyString(),
-                        ThrottleMatrixProjectOptions.DEFAULT);
+        ThrottleJobProperty property = new ThrottleJobProperty(
+                anyInt(),
+                anyInt(),
+                null,
+                anyBoolean(),
+                "throttle_option",
+                anyBoolean(),
+                anyString(),
+                ThrottleMatrixProjectOptions.DEFAULT);
 
         assertEquals(Collections.emptyList(), property.getCategories());
     }
@@ -399,13 +372,9 @@ public class ThrottleJobPropertyTest {
 
         descriptor.setCategories(unsafeList);
         List<ThrottleJobProperty.ThrottleCategory> storedCategories = descriptor.getCategories();
-        assertEquals(
-                "contents of original and stored list should be the equal",
-                unsafeList,
-                storedCategories);
+        assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
         assertNotSame(
-                "expected unsafe list to be converted to a converted to some other"
-                        + " concurrency-safe impl",
+                "expected unsafe list to be converted to a converted to some other" + " concurrency-safe impl",
                 unsafeList,
                 storedCategories);
         assertTrue(storedCategories instanceof CopyOnWriteArrayList);
@@ -457,7 +426,8 @@ public class ThrottleJobPropertyTest {
         HtmlPage page = webClient.goTo("configure");
         WebClientUtil.waitForJSExec(page.getWebClient());
         HtmlForm config = page.getFormByName("config");
-        List<HtmlButton> deleteButtons = config.getByXPath("//div[text()='Multi-Project Throttle Categories']/../div//button[@title='Delete']");
+        List<HtmlButton> deleteButtons =
+                config.getByXPath("//div[text()='Multi-Project Throttle Categories']/../div//button[@title='Delete']");
         assertEquals(1, deleteButtons.size());
         deleteButtons.get(0).click();
         WebClientUtil.waitForJSExec(page.getWebClient());

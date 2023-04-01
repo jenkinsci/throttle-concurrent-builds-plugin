@@ -1,5 +1,6 @@
 package hudson.plugins.throttleconcurrents.pipeline;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.TaskListener;
@@ -10,7 +11,6 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -75,5 +75,4 @@ public class ThrottleStep extends Step implements Serializable {
             return ThrottleJobProperty.fetchDescriptor().doFillCategoryItems(item);
         }
     }
-
 }
