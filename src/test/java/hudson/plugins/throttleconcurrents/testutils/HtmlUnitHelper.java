@@ -23,11 +23,11 @@
  */
 package hudson.plugins.throttleconcurrents.testutils;
 
-import com.gargoylesoftware.htmlunit.html.HtmlButton;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
+import org.htmlunit.html.HtmlButton;
+import org.htmlunit.html.HtmlForm;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
