@@ -21,15 +21,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.gargoylesoftware.htmlunit.ElementNotFoundException;
-import com.gargoylesoftware.htmlunit.html.HtmlButton;
-import com.gargoylesoftware.htmlunit.html.HtmlElement;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.html.HtmlInput;
-import com.gargoylesoftware.htmlunit.html.HtmlOption;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.html.HtmlRadioButtonInput;
-import com.gargoylesoftware.htmlunit.html.HtmlSelect;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.throttleconcurrents.testutils.HtmlUnitHelper;
 import hudson.util.VersionNumber;
@@ -39,6 +30,15 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import jenkins.model.Jenkins;
+import org.htmlunit.ElementNotFoundException;
+import org.htmlunit.html.HtmlButton;
+import org.htmlunit.html.HtmlElement;
+import org.htmlunit.html.HtmlForm;
+import org.htmlunit.html.HtmlInput;
+import org.htmlunit.html.HtmlOption;
+import org.htmlunit.html.HtmlPage;
+import org.htmlunit.html.HtmlRadioButtonInput;
+import org.htmlunit.html.HtmlSelect;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -194,10 +194,10 @@ public class ThrottleQueueTaskDispatcherTest {
                 button.click();
 
                 HtmlInput input = form.getInputByName("_.categoryName");
-                input.setValueAttribute(testCategoryName);
+                input.setValue(testCategoryName);
                 // _.maxConcurrentTotal ignored.
                 input = form.getInputByName("_.maxConcurrentPerNode");
-                input.setValueAttribute("" + maxConcurrentPerNode);
+                input.setValue("" + maxConcurrentPerNode);
 
                 buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath + buttonsXPath);
                 buttonText = "Add Maximum Per Labeled Node";
@@ -219,10 +219,10 @@ public class ThrottleQueueTaskDispatcherTest {
                             assertFalse(
                                     buttonText + " button clicked; no resulting field found on " + url,
                                     inputs.isEmpty());
-                            inputs.get(i).setValueAttribute(labelRoot + (i + 1));
+                            inputs.get(i).setValue(labelRoot + (i + 1));
 
                             inputs = form.getInputsByName("_.maxConcurrentPerNodeLabeled");
-                            inputs.get(i).setValueAttribute("" + (i + 1));
+                            inputs.get(i).setValue("" + (i + 1));
                         }
                     }
                 }
@@ -257,7 +257,7 @@ public class ThrottleQueueTaskDispatcherTest {
 
                 List<HtmlRadioButtonInput> radios = form.getRadioButtonsByName("throttleOption");
                 for (HtmlRadioButtonInput radio : radios) {
-                    radio.setChecked(radio.getValueAttribute().equals("category"));
+                    radio.setChecked(radio.getValue().equals("category"));
                 }
                 checkbox = page.getElementByName("categories");
                 checkbox.click();
@@ -275,11 +275,11 @@ public class ThrottleQueueTaskDispatcherTest {
         HtmlForm form = page.getFormByName("createItem");
 
         HtmlInput input = form.getInputByName("name");
-        input.setValueAttribute("test");
+        input.setValue("test");
 
         List<HtmlRadioButtonInput> radios = form.getRadioButtonsByName("mode");
         for (HtmlRadioButtonInput radio : radios) {
-            radio.setChecked(radio.getValueAttribute().equals("hudson.slaves.DumbSlave"));
+            radio.setChecked(radio.getValue().equals("hudson.slaves.DumbSlave"));
         }
         page = submitForm(form);
         boolean buttonFound;
@@ -293,13 +293,13 @@ public class ThrottleQueueTaskDispatcherTest {
             }
         }
         input = form.getInputByName("_.numExecutors");
-        input.setValueAttribute("1");
+        input.setValue("1");
 
         input = form.getInputByName("_.remoteFS");
-        input.setValueAttribute("/");
+        input.setValue("/");
 
         input = form.getInputByName("_.labelString");
-        input.setValueAttribute(label);
+        input.setValue(label);
 
         List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
         buttonFound = buttonFoundThusFormSubmitted(form, buttons, saveButtonText);
@@ -350,7 +350,7 @@ public class ThrottleQueueTaskDispatcherTest {
 
                 List<HtmlInput> inputs = form.getInputsByName("_.name");
                 for (HtmlInput input : inputs) {
-                    input.setValueAttribute(logger);
+                    input.setValue(logger);
                 }
                 HtmlSelect select = form.getSelectByName("level");
                 HtmlOption option;
