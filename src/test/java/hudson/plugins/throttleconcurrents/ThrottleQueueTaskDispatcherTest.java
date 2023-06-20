@@ -247,7 +247,7 @@ public class ThrottleQueueTaskDispatcherTest {
         boolean buttonFound = false;
 
         for (HtmlButton button : buttons) {
-            if (button.getTextContent().equals(buttonText)) {
+            if (button.getTextContent().trim().equals(buttonText)) {
                 buttonFound = true;
                 String checkboxName = "throttleEnabled";
                 HtmlElement checkbox = page.getElementByName(checkboxName);
@@ -376,7 +376,7 @@ public class ThrottleQueueTaskDispatcherTest {
             throws IOException {
         boolean buttonFound = false;
         for (HtmlButton button : buttons) {
-            if (button.getTextContent().equals(buttonText)) {
+            if (button.getTextContent().trim().equals(buttonText)) {
                 buttonFound = true;
                 button.click();
                 break;
