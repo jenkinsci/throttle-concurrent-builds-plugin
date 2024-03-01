@@ -8,6 +8,7 @@ import hudson.EnvVars;
 import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Node;
+import hudson.model.Queue;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Set;
 import jenkins.model.queue.CompositeCauseOfBlockage;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.support.actions.PauseAction;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -94,6 +96,12 @@ public class TestUtil {
         } else {
             return Collections.singleton(cob.getShortDescription());
         }
+    }
+
+    static void hasPauseActionForItem(Queue.Item item) throws Exception {
+        assertTrue(item.task instanceof ExecutorStepExecution.PlaceholderTask);
+        ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask) item.task;
+        assertNotNull(task.getNode().getAction(PauseAction.class));
     }
 
     static void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
