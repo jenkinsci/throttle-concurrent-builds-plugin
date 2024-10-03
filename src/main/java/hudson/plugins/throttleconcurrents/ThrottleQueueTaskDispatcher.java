@@ -346,14 +346,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 // Checks if the build is currently in progress (could be waiting on input or paused)
                 if (run.isInProgress()) {
                     List<ParameterValue> runParams = getParametersFromRunItem(run);
-                    if(runParams.size() > 0) {
+                    if (runParams.size() > 0) {
                         runParams = doFilterParams(paramsToCompare, runParams);
                     }
 
-                    if(itemParams.containsAll(runParams)) {
+                    if (itemParams.containsAll(runParams)) {
                         return true;
                     }
-
                 }
             }
         }
