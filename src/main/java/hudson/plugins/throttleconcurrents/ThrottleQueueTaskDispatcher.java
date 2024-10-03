@@ -308,6 +308,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
         final Jenkins jenkins = Jenkins.get();
+
+        if (isThrottleBuildInProgress(item)) {
+            return true;
+        }
+
         if (isAnotherBuildWithSameParametersRunningOnNode(jenkins, item)) {
             return true;
         }
@@ -315,6 +320,41 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         for (Node node : jenkins.getNodes()) {
             if (isAnotherBuildWithSameParametersRunningOnNode(node, item)) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isThrottleBuildInProgress(Queue.Item item) {
+        ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
+        if (tjp == null) {
+            // If the property has been occasionally deleted by this call,
+            // it does not make sense to limit the throttling by parameter.
+            return false;
+        }
+
+        List<String> paramsToCompare = tjp.getParamsToCompare();
+        List<ParameterValue> itemParams = getParametersFromQueueItem(item);
+
+        if (paramsToCompare.size() > 0) {
+            itemParams = doFilterParams(paramsToCompare, itemParams);
+        }
+
+        if (item.task instanceof Job) {
+            Job<?, ?> project = (Job<?, ?>) item.task;
+            for (Run<?, ?> run : project.getBuilds()) {
+                // Checks if the build is currently in progress (could be waiting on input or paused)
+                if (run.isInProgress()) {
+                    List<ParameterValue> runParams = getParametersFromRunItem(run);
+                    if(runParams.size() > 0) {
+                        runParams = doFilterParams(paramsToCompare, runParams);
+                    }
+
+                    if(itemParams.containsAll(runParams)) {
+                        return true;
+                    }
+
+                }
             }
         }
         return false;
@@ -417,6 +457,18 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     }
                 }
             }
+        }
+        return paramsList;
+    }
+
+    public List<ParameterValue> getParametersFromRunItem(Run<?, ?> run) {
+        List<ParameterValue> paramsList;
+
+        ParametersAction params = run.getAction(ParametersAction.class);
+        if (params != null) {
+            paramsList = params.getParameters();
+        } else {
+            paramsList = new ArrayList<>();
         }
         return paramsList;
     }
