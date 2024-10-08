@@ -48,7 +48,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
     // Replaced by categories, to support, well, multiple categories per job (starting from 1.3)
@@ -423,7 +423,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
         }
 
         @Override
-        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+        public boolean configure(StaplerRequest2 req, JSONObject formData) throws FormException {
             if (!formData.has("categories")) {
                 this.categories = null;
             }

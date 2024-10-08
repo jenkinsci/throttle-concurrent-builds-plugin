@@ -252,7 +252,7 @@ public class ThrottleJobPropertyPipelineTest {
         j.assertBuildStatusSuccess(j.waitForCompletion(secondRun));
     }
 
-    static CpsFlowDefinition getJobFlow(String jobName, String label) {
+    static CpsFlowDefinition getJobFlow(String jobName, String label) throws Exception {
         return new CpsFlowDefinition(getThrottleScript(jobName, label), true);
     }
 
