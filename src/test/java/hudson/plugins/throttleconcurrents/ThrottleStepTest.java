@@ -439,11 +439,11 @@ public class ThrottleStepTest {
         j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 
-    private CpsFlowDefinition getJobFlow(String jobName, String category, String label) {
+    private CpsFlowDefinition getJobFlow(String jobName, String category, String label) throws Exception {
         return getJobFlow(jobName, Collections.singletonList(category), label);
     }
 
-    private CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label) {
+    private CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label) throws Exception {
         return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), true);
     }
 
@@ -471,7 +471,7 @@ public class ThrottleStepTest {
                 + "}\n";
     }
 
-    static CpsFlowDefinition getDeclarativeJobFlow(String jobName, String categories, String label) {
+    static CpsFlowDefinition getDeclarativeJobFlow(String jobName, String categories, String label) throws Exception {
         return new CpsFlowDefinition(
                 getDeclarativeThrottleScript(jobName, Collections.singletonList(categories), label), true);
     }
