@@ -384,7 +384,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // whether one of these executing units is an instance
         // of the queued item we were asked to compare to.
         if (computer != null) {
-            for (Executor exec : computer.getExecutors()) {
+            for (Executor exec : computer.getAllExecutors()) {
                 // TODO: refactor into a nameEquals helper method
                 final Queue.Executable currentExecutable = exec.getCurrentExecutable();
                 final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
