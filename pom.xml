@@ -113,6 +113,7 @@ THE SOFTWARE.
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-durable-task-step</artifactId>
+      <!-- TODO switch to test scope once PlaceholderTask.getNode call can be abstracted -->
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
