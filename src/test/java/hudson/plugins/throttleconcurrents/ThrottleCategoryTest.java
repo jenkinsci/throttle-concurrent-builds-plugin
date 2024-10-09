@@ -28,35 +28,38 @@ import org.junit.Test;
  * -Test methods for {@link hudson.plugins.throttleconcurrents.ThrottleJobProperty.ThrottleCategory#getNodeLabeledPairs()}.
  * @author marco.miller@ericsson.com
  */
-public class ThrottleCategoryTest
-{
+public class ThrottleCategoryTest {
     private static final String testCategoryName = "aCategory";
 
     @Test
-    public void shouldGetEmptyNodeLabeledPairsListUponInitialNull()
-    {
+    public void shouldGetEmptyNodeLabeledPairsListUponInitialNull() {
         ThrottleJobProperty.ThrottleCategory category =
-            new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null);
-        assertTrue("nodeLabeledPairs shall be empty", category.getNodeLabeledPairs().isEmpty());
+                new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null);
+        assertTrue(
+                "nodeLabeledPairs shall be empty",
+                category.getNodeLabeledPairs().isEmpty());
     }
 
     @Test
-    public void shouldGetNonEmptyNodeLabeledPairsListThatWasSet()
-    {
+    public void shouldGetNonEmptyNodeLabeledPairsListThatWasSet() {
         String expectedLabel = "aLabel";
         Integer expectedMax = 1;
 
         ThrottleJobProperty.ThrottleCategory category =
-            new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null);
+                new ThrottleJobProperty.ThrottleCategory(testCategoryName, 0, 0, null);
         List<ThrottleJobProperty.NodeLabeledPair> nodeLabeledPairs = category.getNodeLabeledPairs();
         nodeLabeledPairs.add(new ThrottleJobProperty.NodeLabeledPair(expectedLabel, expectedMax));
 
         String actualLabel = category.getNodeLabeledPairs().get(0).getThrottledNodeLabel();
         Integer actualMax = category.getNodeLabeledPairs().get(0).getMaxConcurrentPerNodeLabeled();
 
-        assertEquals("throttledNodeLabel "+actualLabel+" does not match expected "+expectedLabel,
-            expectedLabel, actualLabel);
-        assertEquals("maxConcurrentPerNodeLabeled "+actualMax+" does not match expected "+expectedMax,
-            expectedMax, actualMax);
+        assertEquals(
+                "throttledNodeLabel " + actualLabel + " does not match expected " + expectedLabel,
+                expectedLabel,
+                actualLabel);
+        assertEquals(
+                "maxConcurrentPerNodeLabeled " + actualMax + " does not match expected " + expectedMax,
+                expectedMax,
+                actualMax);
     }
 }

@@ -1,5 +1,7 @@
 package hudson.plugins.throttleconcurrents;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
@@ -30,8 +32,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.actions.BodyInvocationAction;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -48,12 +48,8 @@ import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.Placeh
 public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "deliberately mutable")
-    public static boolean USE_FLOW_EXECUTION_LIST =
-            Boolean.parseBoolean(
-                    System.getProperty(
-                            ThrottleQueueTaskDispatcher.class.getName()
-                                    + ".USE_FLOW_EXECUTION_LIST",
-                            "true"));
+    public static boolean USE_FLOW_EXECUTION_LIST = Boolean.parseBoolean(
+            System.getProperty(ThrottleQueueTaskDispatcher.class.getName() + ".USE_FLOW_EXECUTION_LIST", "true"));
 
     @Deprecated
     @Override
@@ -78,7 +74,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             return null;
         }
 
-        if (!pipelineCategories.isEmpty() || (tjp!=null && tjp.getThrottleEnabled())) {
+        if (!pipelineCategories.isEmpty() || (tjp != null && tjp.getThrottleEnabled())) {
             CauseOfBlockage cause = canRunImpl(task, tjp, pipelineCategories);
             if (cause != null) {
                 return cause;
@@ -91,7 +87,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
                         // This would mean that there are as many or more builds currently running than are allowed.
                         if (runCount >= maxConcurrentPerNode) {
-                            return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
+                            return CauseOfBlockage.fromMessage(
+                                    Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
                         }
                     }
                 } else if (tjp.getThrottleOption().equals("category")) {
@@ -125,16 +122,19 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         if (maxConcurrentPerNode > 0) {
                             for (Task catTask : categoryTasks) {
                                 if (jenkins.getQueue().isPending(catTask)) {
-                                    return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                                    return CauseOfBlockage.fromMessage(
+                                            Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                 }
                                 runCount += buildsOfProjectOnNode(node, catTask);
                             }
-                            Map<String,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
-                            for (Map.Entry<String,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                            Map<String, List<FlowNode>> throttledPipelines =
+                                    ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
+                            for (Map.Entry<String, List<FlowNode>> entry : throttledPipelines.entrySet()) {
                                 if (hasPendingPipelineForCategory(entry.getValue())) {
-                                    return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                                    return CauseOfBlockage.fromMessage(
+                                            Messages._ThrottleQueueTaskDispatcher_BuildPending());
                                 }
-                                Run<?,?> r = Run.fromExternalizableId(entry.getKey());
+                                Run<?, ?> r = Run.fromExternalizableId(entry.getKey());
                                 if (r != null) {
                                     List<FlowNode> flowNodes = entry.getValue();
                                     if (r.isBuilding()) {
@@ -144,7 +144,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                             }
                             // This would mean that there are as many or more builds currently running than are allowed.
                             if (runCount >= maxConcurrentPerNode) {
-                                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
+                                return CauseOfBlockage.fromMessage(
+                                        Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(runCount));
                             }
                         }
                     }
@@ -169,9 +170,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         List<String> pipelineCategories = categoriesForPipeline(item.task);
 
-        if (!pipelineCategories.isEmpty() || (tjp!=null && tjp.getThrottleEnabled())) {
-            if (tjp != null && tjp.isLimitOneJobWithMatchingParams() && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
-                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
+        if (!pipelineCategories.isEmpty() || (tjp != null && tjp.getThrottleEnabled())) {
+            if (tjp != null
+                    && tjp.isLimitOneJobWithMatchingParams()
+                    && isAnotherBuildWithSameParametersRunningOnAnyNode(item)) {
+                return CauseOfBlockage.fromMessage(
+                        Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters());
             }
             return canRun(item.task, tjp, pipelineCategories);
         }
@@ -182,8 +186,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private ThrottleMatrixProjectOptions getMatrixOptions(Task task) {
         ThrottleJobProperty tjp = getThrottleJobProperty(task);
 
-        if (tjp == null){
-                return ThrottleMatrixProjectOptions.DEFAULT;
+        if (tjp == null) {
+            return ThrottleMatrixProjectOptions.DEFAULT;
         }
         ThrottleMatrixProjectOptions matrixOptions = tjp.getMatrixOptions();
         return matrixOptions != null ? matrixOptions : ThrottleMatrixProjectOptions.DEFAULT;
@@ -205,7 +209,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (!matrixOptions.isThrottleMatrixConfigurations() && task instanceof MatrixConfiguration) {
             return false;
         }
-        if (!matrixOptions.isThrottleMatrixBuilds()&& task instanceof MatrixProject) {
+        if (!matrixOptions.isThrottleMatrixBuilds() && task instanceof MatrixProject) {
             return false;
         }
 
@@ -239,7 +243,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     int totalRunCount = buildsOfProjectOnAllNodes(task);
 
                     if (totalRunCount >= maxConcurrentTotal) {
-                        return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
+                        return CauseOfBlockage.fromMessage(
+                                Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
                     }
                 }
             } else if (tjp.getThrottleOption().equals("category")) {
@@ -269,16 +274,19 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
                         for (Task catTask : categoryTasks) {
                             if (jenkins.getQueue().isPending(catTask)) {
-                                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                                return CauseOfBlockage.fromMessage(
+                                        Messages._ThrottleQueueTaskDispatcher_BuildPending());
                             }
                             totalRunCount += buildsOfProjectOnAllNodes(catTask);
                         }
-                        Map<String,List<FlowNode>> throttledPipelines = ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
-                        for (Map.Entry<String,List<FlowNode>> entry : throttledPipelines.entrySet()) {
+                        Map<String, List<FlowNode>> throttledPipelines =
+                                ThrottleJobProperty.getThrottledPipelineRunsForCategory(catNm);
+                        for (Map.Entry<String, List<FlowNode>> entry : throttledPipelines.entrySet()) {
                             if (hasPendingPipelineForCategory(entry.getValue())) {
-                                return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_BuildPending());
+                                return CauseOfBlockage.fromMessage(
+                                        Messages._ThrottleQueueTaskDispatcher_BuildPending());
                             }
-                            Run<?,?> r = Run.fromExternalizableId(entry.getKey());
+                            Run<?, ?> r = Run.fromExternalizableId(entry.getKey());
                             if (r != null) {
                                 List<FlowNode> flowNodes = entry.getValue();
                                 if (r.isBuilding()) {
@@ -288,10 +296,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         }
 
                         if (totalRunCount >= maxConcurrentTotal) {
-                            return CauseOfBlockage.fromMessage(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
+                            return CauseOfBlockage.fromMessage(
+                                    Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(totalRunCount));
                         }
                     }
-
                 }
             }
         }
@@ -332,12 +340,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // whether one of these executing units is an instance
         // of the queued item we were asked to compare to.
         if (computer != null) {
-            for (Executor exec : computer.getExecutors()) {
+            for (Executor exec : computer.getAllExecutors()) {
                 // TODO: refactor into a nameEquals helper method
                 final Queue.Executable currentExecutable = exec.getCurrentExecutable();
                 final SubTask parentTask = currentExecutable != null ? currentExecutable.getParent() : null;
-                if (currentExecutable != null &&
-                        parentTask.getOwnerTask().getName().equals(item.task.getName())) {
+                if (currentExecutable != null
+                        && parentTask.getOwnerTask().getName().equals(item.task.getName())) {
                     List<ParameterValue> executingUnitParams = getParametersFromWorkUnit(exec.getCurrentWorkUnit());
                     executingUnitParams = doFilterParams(paramsToCompare, executingUnitParams);
 
@@ -353,9 +361,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     // specified params of the queued item are same (glorified key=value
                     // entries) as ones used in a running work unit, in any order.
                     if (executingUnitParams.containsAll(itemParams)) {
-                        LOGGER.log(Level.FINE, "build (" + exec.getCurrentWorkUnit() +
-                                ") with identical parameters (" +
-                                executingUnitParams + ") is already running.");
+                        LOGGER.log(
+                                Level.FINE,
+                                "build (" + exec.getCurrentWorkUnit() + ") with identical parameters ("
+                                        + executingUnitParams
+                                        + ") is already running.");
                         return true;
                     }
                 }
@@ -416,10 +426,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         ParametersAction params = item.getAction(ParametersAction.class);
         if (params != null) {
             paramsList = params.getParameters();
-        }
-        else
-        {
-            paramsList  = new ArrayList<>();
+        } else {
+            paramsList = new ArrayList<>();
         }
         return paramsList;
     }
@@ -428,10 +436,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private List<String> categoriesForPipeline(Task task) {
         // TODO avoid casting to PlaceholderTask; could task.node.id be replaced with task.affinityKey?
         if (task instanceof PlaceholderTask) {
-            PlaceholderTask placeholderTask = (PlaceholderTask)task;
+            PlaceholderTask placeholderTask = (PlaceholderTask) task;
             Queue.Executable r = task.getOwnerExecutable();
             if (r instanceof Run) {
-                Map<String, List<String>> categoriesByFlowNode = ThrottleJobProperty.getCategoriesForRunByFlowNode((Run<?, ?>) r);
+                Map<String, List<String>> categoriesByFlowNode =
+                        ThrottleJobProperty.getCategoriesForRunByFlowNode((Run<?, ?>) r);
                 if (!categoriesByFlowNode.isEmpty()) {
                     try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
                         FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
@@ -442,8 +451,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                             }
                         }
                     } catch (IOException | InterruptedException e) {
-                        LOGGER.log(Level.WARNING, "Error getting categories for pipeline {0}: {1}",
-                                new Object[] {task.getDisplayName(), e});
+                        LOGGER.log(Level.WARNING, "Error getting categories for pipeline {0}: {1}", new Object[] {
+                            task.getDisplayName(), e
+                        });
                         return new ArrayList<>();
                     }
                 }
@@ -455,21 +465,23 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     @CheckForNull
     private ThrottleJobProperty getThrottleJobProperty(Task task) {
         if (task instanceof Job) {
-            Job<?,?> p = (Job<?,?>) task;
+            Job<?, ?> p = (Job<?, ?>) task;
             if (task instanceof MatrixConfiguration) {
-                p = ((MatrixConfiguration)task).getParent();
+                p = ((MatrixConfiguration) task).getParent();
             }
             return p.getProperty(ThrottleJobProperty.class);
         }
         return null;
     }
 
-    private int pipelinesOnNode(@NonNull Node node, @NonNull Run<?,?> run, @NonNull List<FlowNode> flowNodes) {
+    private int pipelinesOnNode(@NonNull Node node, @NonNull Run<?, ?> run, @NonNull List<FlowNode> flowNodes) {
         int runCount = 0;
-        LOGGER.log(Level.FINE, "Checking for pipelines of {0} on node {1}", new Object[] {run.getDisplayName(), node.getDisplayName()});
+        LOGGER.log(Level.FINE, "Checking for pipelines of {0} on node {1}", new Object[] {
+            run.getDisplayName(), node.getDisplayName()
+        });
 
         Computer computer = node.toComputer();
-        if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
+        if (computer != null) { // Not all nodes are certain to become computers, like nodes with 0 executors.
             // Don't count flyweight tasks that might not consume an actual executor, unlike with builds.
             for (Executor e : computer.getExecutors()) {
                 runCount += pipelinesOnExecutor(run, e, flowNodes);
@@ -479,7 +491,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return runCount;
     }
 
-    private int pipelinesOnAllNodes(@NonNull Run<?,?> run, @NonNull List<FlowNode> flowNodes) {
+    private int pipelinesOnAllNodes(@NonNull Run<?, ?> run, @NonNull List<FlowNode> flowNodes) {
         final Jenkins jenkins = Jenkins.get();
         int totalRunCount = pipelinesOnNode(jenkins, run, flowNodes);
 
@@ -506,9 +518,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         // Note that we can't use WorkflowJob.class because it is not on this plugin's classpath.
         if (USE_FLOW_EXECUTION_LIST
-                && task.getClass()
-                        .getName()
-                        .equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+                && task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
             return buildsOfPipelineJob(task);
         } else {
             return buildsOfProjectOnAllNodesImpl(task);
@@ -525,10 +535,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     runCount++;
                 }
             } catch (IOException e) {
-                LOGGER.log(
-                        Level.WARNING,
-                        "Error getting number of builds for pipeline {0}: {1}",
-                        new Object[] {task.getDisplayName(), e});
+                LOGGER.log(Level.WARNING, "Error getting number of builds for pipeline {0}: {1}", new Object[] {
+                    task.getDisplayName(), e
+                });
             }
         }
 
@@ -537,12 +546,14 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOfProjectOnNodeImpl(Node node, Task task) {
         int runCount = 0;
-        LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {task.getName(), node.getDisplayName()});
+        LOGGER.log(Level.FINE, "Checking for builds of {0} on node {1}", new Object[] {
+            task.getName(), node.getDisplayName()
+        });
 
         // I think this'll be more reliable than job.getBuilds(), which seemed to not always get
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
-        if (computer != null) { //Not all nodes are certain to become computers, like nodes with 0 executors.
+        if (computer != null) { // Not all nodes are certain to become computers, like nodes with 0 executors.
             // Count flyweight tasks that might not consume an actual executor.
             for (Executor e : computer.getOneOffExecutors()) {
                 runCount += buildsOnExecutor(task, e);
@@ -587,7 +598,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
      * @return 1 if there's something currently executing on that executor and it's of that run and one of the provided
      * flow nodes, 0 otherwise.
      */
-    private int pipelinesOnExecutor(@NonNull Run<?,?> run, @NonNull Executor exec, @NonNull List<FlowNode> flowNodes) {
+    private int pipelinesOnExecutor(@NonNull Run<?, ?> run, @NonNull Executor exec, @NonNull List<FlowNode> flowNodes) {
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
         if (currentExecutable != null) {
             SubTask parent = currentExecutable.getParent();
@@ -605,12 +616,12 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private boolean isTaskThrottledPipeline(Task origTask, List<FlowNode> flowNodes) {
         if (origTask instanceof PlaceholderTask) { // TODO as in categoriesForPipeline
-            PlaceholderTask task = (PlaceholderTask)origTask;
+            PlaceholderTask task = (PlaceholderTask) origTask;
             try {
                 FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
                 return firstThrottle != null && flowNodes.contains(firstThrottle);
             } catch (IOException | InterruptedException e) {
-                    // TODO: do something?
+                // TODO: do something?
             }
         }
 
@@ -629,9 +640,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             LinearBlockHoppingScanner scanner = new LinearBlockHoppingScanner();
             scanner.setup(inner);
             for (FlowNode enclosing : scanner) {
-                if (enclosing != null &&
-                        enclosing instanceof BlockStartNode &&
-                        enclosing instanceof StepNode &&
+                if (enclosing != null
+                        && enclosing instanceof BlockStartNode
+                        && enclosing instanceof StepNode
+                        &&
                         // There are two BlockStartNodes (aka StepStartNodes) for ThrottleStep, so make sure we get the
                         // first one of those two, which will not have BodyInvocationAction.class on it.
                         enclosing.getAction(BodyInvocationAction.class) == null) {
@@ -654,28 +666,30 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
      * @author marco.miller@ericsson.com
      */
     private int getMaxConcurrentPerNodeBasedOnMatchingLabels(
-        Node node, ThrottleJobProperty.ThrottleCategory category, int maxConcurrentPerNode)
-    {
+            Node node, ThrottleJobProperty.ThrottleCategory category, int maxConcurrentPerNode) {
         List<ThrottleJobProperty.NodeLabeledPair> nodeLabeledPairs = category.getNodeLabeledPairs();
         int maxConcurrentPerNodeLabeledIfMatch = maxConcurrentPerNode;
         boolean nodeLabelsMatch = false;
         Set<LabelAtom> nodeLabels = node.getAssignedLabels();
 
-        for(ThrottleJobProperty.NodeLabeledPair nodeLabeledPair: nodeLabeledPairs) {
+        for (ThrottleJobProperty.NodeLabeledPair nodeLabeledPair : nodeLabeledPairs) {
             String throttledNodeLabel = nodeLabeledPair.getThrottledNodeLabel();
-            if(!nodeLabelsMatch && !throttledNodeLabel.isEmpty()) {
-                for(LabelAtom aNodeLabel: nodeLabels) {
+            if (!nodeLabelsMatch && !throttledNodeLabel.isEmpty()) {
+                for (LabelAtom aNodeLabel : nodeLabels) {
                     String nodeLabel = aNodeLabel.getDisplayName();
-                    if(nodeLabel.equals(throttledNodeLabel)) {
+                    if (nodeLabel.equals(throttledNodeLabel)) {
                         maxConcurrentPerNodeLabeledIfMatch = nodeLabeledPair.getMaxConcurrentPerNodeLabeled();
-                        LOGGER.log(Level.FINE, "node labels match; => maxConcurrentPerNode'' = {0}", maxConcurrentPerNodeLabeledIfMatch);
+                        LOGGER.log(
+                                Level.FINE,
+                                "node labels match; => maxConcurrentPerNode'' = {0}",
+                                maxConcurrentPerNodeLabeledIfMatch);
                         nodeLabelsMatch = true;
                         break;
                     }
                 }
             }
         }
-        if(!nodeLabelsMatch) {
+        if (!nodeLabelsMatch) {
             LOGGER.fine("node labels mismatch");
         }
         return maxConcurrentPerNodeLabeledIfMatch;

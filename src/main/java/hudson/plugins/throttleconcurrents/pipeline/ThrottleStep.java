@@ -1,6 +1,8 @@
 package hudson.plugins.throttleconcurrents.pipeline;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
+import hudson.model.Item;
 import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
 import hudson.util.FormValidation;
@@ -9,11 +11,11 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
@@ -59,6 +61,7 @@ public class ThrottleStep extends Step implements Serializable {
             return Collections.singleton(TaskListener.class);
         }
 
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
         public FormValidation doCheckCategoryName(@QueryParameter String value) {
             return ThrottleJobProperty.fetchDescriptor().doCheckCategoryName(value);
         }
@@ -67,9 +70,9 @@ public class ThrottleStep extends Step implements Serializable {
             return ThrottleJobProperty.fetchDescriptor().getCategories();
         }
 
-        public ListBoxModel doFillCategoryItems() {
-            return ThrottleJobProperty.fetchDescriptor().doFillCategoryItems();
+        @SuppressWarnings("lgtm[jenkins/csrf]")
+        public ListBoxModel doFillCategoryItems(@AncestorInPath Item item) {
+            return ThrottleJobProperty.fetchDescriptor().doFillCategoryItems(item);
         }
     }
-
 }

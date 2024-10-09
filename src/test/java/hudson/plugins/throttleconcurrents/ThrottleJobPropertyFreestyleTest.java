@@ -31,7 +31,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
-
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -44,7 +43,12 @@ import hudson.model.Queue;
 import hudson.model.StringParameterDefinition;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -57,22 +61,20 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SequenceLock;
 import org.jvnet.hudson.test.TestBuilder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 /** Tests that {@link ThrottleJobProperty} actually works for builds. */
 public class ThrottleJobPropertyFreestyleTest {
 
-    @Rule public JenkinsRule j = new JenkinsRule();
+    @Rule
+    public JenkinsRule j = new JenkinsRule();
 
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+    @ClassRule
+    public static BuildWatcher buildWatcher = new BuildWatcher();
 
-    @Rule public TemporaryFolder firstAgentTmp = new TemporaryFolder();
-    @Rule public TemporaryFolder secondAgentTmp = new TemporaryFolder();
+    @Rule
+    public TemporaryFolder firstAgentTmp = new TemporaryFolder();
+
+    @Rule
+    public TemporaryFolder secondAgentTmp = new TemporaryFolder();
 
     private List<Node> agents = new ArrayList<>();
 
@@ -129,16 +131,15 @@ public class ThrottleJobPropertyFreestyleTest {
 
         FreeStyleProject firstJob = j.createFreeStyleProject();
         firstJob.setAssignedNode(agent);
-        firstJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        firstJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock firstJobSeq = new SequenceLock();
         firstJob.getBuildersList().add(new SequenceLockBuilder(firstJobSeq));
 
@@ -147,16 +148,15 @@ public class ThrottleJobPropertyFreestyleTest {
 
         FreeStyleProject secondJob = j.createFreeStyleProject();
         secondJob.setAssignedNode(agent);
-        secondJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        secondJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock secondJobSeq = new SequenceLock();
         secondJob.getBuildersList().add(new SequenceLockBuilder(secondJobSeq));
 
@@ -170,7 +170,8 @@ public class ThrottleJobPropertyFreestyleTest {
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
-                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1)
+                        .toString()));
         assertEquals(1, agent.toComputer().countBusy());
 
         firstJobSeq.done();
@@ -193,16 +194,15 @@ public class ThrottleJobPropertyFreestyleTest {
 
         FreeStyleProject firstJob = j.createFreeStyleProject();
         firstJob.setAssignedNode(firstAgent);
-        firstJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        firstJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock firstJobSeq = new SequenceLock();
         firstJob.getBuildersList().add(new SequenceLockBuilder(firstJobSeq));
 
@@ -211,16 +211,15 @@ public class ThrottleJobPropertyFreestyleTest {
 
         FreeStyleProject secondJob = j.createFreeStyleProject();
         secondJob.setAssignedNode(secondAgent);
-        secondJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        secondJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock secondJobSeq = new SequenceLock();
         secondJob.getBuildersList().add(new SequenceLockBuilder(secondJobSeq));
 
@@ -229,16 +228,15 @@ public class ThrottleJobPropertyFreestyleTest {
 
         FreeStyleProject thirdJob = j.createFreeStyleProject();
         thirdJob.setAssignedLabel(Label.get("on-agent"));
-        thirdJob.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false,
-                        null,
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        thirdJob.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock thirdJobSeq = new SequenceLock();
         thirdJob.getBuildersList().add(new SequenceLockBuilder(thirdJobSeq));
 
@@ -252,7 +250,8 @@ public class ThrottleJobPropertyFreestyleTest {
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
-                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2).toString()));
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
+                        .toString()));
         assertEquals(1, firstAgent.toComputer().countBusy());
 
         assertEquals(1, secondAgent.toComputer().countBusy());
@@ -264,7 +263,9 @@ public class ThrottleJobPropertyFreestyleTest {
         thirdJobSeq.phase(1);
         j.jenkins.getQueue().maintain();
         assertTrue(j.jenkins.getQueue().isEmpty());
-        assertEquals(2, firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
+        assertEquals(
+                2,
+                firstAgent.toComputer().countBusy() + secondAgent.toComputer().countBusy());
 
         secondJobSeq.done();
         j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
@@ -279,22 +280,19 @@ public class ThrottleJobPropertyFreestyleTest {
 
         FreeStyleProject project = j.createFreeStyleProject();
         project.setAssignedNode(agent);
-        ParametersDefinitionProperty pdp =
-                new ParametersDefinitionProperty(
-                        new StringParameterDefinition("FOO", "foo", ""),
-                        new StringParameterDefinition("BAR", "bar", ""));
+        ParametersDefinitionProperty pdp = new ParametersDefinitionProperty(
+                new StringParameterDefinition("FOO", "foo", ""), new StringParameterDefinition("BAR", "bar", ""));
         project.addProperty(pdp);
         project.setConcurrentBuild(true);
-        project.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.emptyList(),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_PROJECT, // throttleOption
-                        true,
-                        "FOO,BAR",
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        project.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.emptyList(),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_PROJECT, // throttleOption
+                true,
+                "FOO,BAR",
+                ThrottleMatrixProjectOptions.DEFAULT));
         SequenceLock firstRunSeq = new SequenceLock();
         SequenceLock secondRunSeq = new SequenceLock();
         project.getBuildersList().add(new SequenceLockBuilder(firstRunSeq, secondRunSeq));
@@ -312,9 +310,8 @@ public class ThrottleJobPropertyFreestyleTest {
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
-                hasItem(
-                        Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters()
-                                .toString()));
+                hasItem(Messages._ThrottleQueueTaskDispatcher_OnlyOneWithMatchingParameters()
+                        .toString()));
         assertEquals(1, agent.toComputer().countBusy());
 
         firstRunSeq.done();
@@ -339,32 +336,30 @@ public class ThrottleJobPropertyFreestyleTest {
         FreeStyleProject p1 = f1.createProject(FreeStyleProject.class, "p");
         SequenceLock seq1 = new SequenceLock();
         p1.setAssignedNode(agent);
-        p1.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false, // limitOneJobWithMatchingParams
-                        null, // paramsToUse for the previous flag
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        p1.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false, // limitOneJobWithMatchingParams
+                null, // paramsToUse for the previous flag
+                ThrottleMatrixProjectOptions.DEFAULT));
         p1.getBuildersList().add(new SequenceLockBuilder(seq1));
 
         Folder f2 = j.createProject(Folder.class, "folder2");
         FreeStyleProject p2 = f2.createProject(FreeStyleProject.class, "p");
         SequenceLock seq2 = new SequenceLock();
         p2.setAssignedNode(agent);
-        p2.addProperty(
-                new ThrottleJobProperty(
-                        null, // maxConcurrentPerNode
-                        null, // maxConcurrentTotal
-                        Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
-                        true, // throttleEnabled
-                        TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                        false, // limitOneJobWithMatchingParams
-                        null, // paramsToUse for the previous flag
-                        ThrottleMatrixProjectOptions.DEFAULT));
+        p2.addProperty(new ThrottleJobProperty(
+                null, // maxConcurrentPerNode
+                null, // maxConcurrentTotal
+                Collections.singletonList(TestUtil.ONE_PER_NODE.getCategoryName()),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                false, // limitOneJobWithMatchingParams
+                null, // paramsToUse for the previous flag
+                ThrottleMatrixProjectOptions.DEFAULT));
         p2.getBuildersList().add(new SequenceLockBuilder(seq2));
 
         FreeStyleBuild b1 = p1.scheduleBuild2(0).waitForStart();
@@ -380,7 +375,8 @@ public class ThrottleJobPropertyFreestyleTest {
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
         assertThat(
                 blockageReasons,
-                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1).toString()));
+                hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1)
+                        .toString()));
         assertEquals(1, agent.toComputer().countBusy());
 
         seq1.done();

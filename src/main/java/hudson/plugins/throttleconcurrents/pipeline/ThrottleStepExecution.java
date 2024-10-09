@@ -1,5 +1,7 @@
 package hudson.plugins.throttleconcurrents.pipeline;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.throttleconcurrents.ThrottleJobProperty;
@@ -8,8 +10,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
@@ -50,12 +50,14 @@ public class ThrottleStepExecution extends StepExecution {
         }
 
         if (!duplicates.isEmpty()) {
-            listener.getLogger().println("One or more duplicate categories (" + StringUtils.join(duplicates, ", ")
-            + ") specified. Duplicates will be ignored.");
+            listener.getLogger()
+                    .println("One or more duplicate categories (" + StringUtils.join(duplicates, ", ")
+                            + ") specified. Duplicates will be ignored.");
         }
 
         if (!undefinedCategories.isEmpty()) {
-            throw new IllegalArgumentException("One or more specified categories do not exist: " + StringUtils.join(undefinedCategories, ", "));
+            throw new IllegalArgumentException(
+                    "One or more specified categories do not exist: " + StringUtils.join(undefinedCategories, ", "));
         }
 
         return unique;
@@ -80,24 +82,24 @@ public class ThrottleStepExecution extends StepExecution {
             }
         }
 
-        getContext().newBodyInvoker()
+        getContext()
+                .newBodyInvoker()
                 .withCallback(new Callback(runId, flowNodeId, getCategories()))
                 .start();
         return false;
     }
 
     @Override
-    public void stop(Throwable cause) throws Exception {
-
-    }
+    public void stop(Throwable cause) throws Exception {}
 
     private static final class Callback extends BodyExecutionCallback.TailCall {
         @CheckForNull
         private String runId;
+
         @CheckForNull
         private String flowNodeId;
-        private List<String> categories = new ArrayList<>();
 
+        private List<String> categories = new ArrayList<>();
 
         private static final long serialVersionUID = 1;
 
@@ -107,13 +109,13 @@ public class ThrottleStepExecution extends StepExecution {
             this.categories.addAll(categories);
         }
 
-        @Override protected void finished(StepContext context) throws Exception {
+        @Override
+        protected void finished(StepContext context) throws Exception {
             if (runId != null && flowNodeId != null) {
                 for (String category : categories) {
-                    ThrottleJobProperty.fetchDescriptor().removeThrottledPipelineForCategory(runId,
-                            flowNodeId,
-                            category,
-                            context.get(TaskListener.class));
+                    ThrottleJobProperty.fetchDescriptor()
+                            .removeThrottledPipelineForCategory(
+                                    runId, flowNodeId, category, context.get(TaskListener.class));
                 }
             }
         }

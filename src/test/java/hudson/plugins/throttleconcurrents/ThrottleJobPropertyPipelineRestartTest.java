@@ -10,7 +10,12 @@ import static org.junit.Assert.assertTrue;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.util.RunList;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
@@ -21,182 +26,160 @@ import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsSessionRule;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 public class ThrottleJobPropertyPipelineRestartTest {
 
-    @Rule public JenkinsSessionRule sessions = new JenkinsSessionRule();
+    @Rule
+    public JenkinsSessionRule sessions = new JenkinsSessionRule();
 
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+    @ClassRule
+    public static BuildWatcher buildWatcher = new BuildWatcher();
 
-    @Rule public TemporaryFolder firstAgentTmp = new TemporaryFolder();
-    @Rule public TemporaryFolder secondAgentTmp = new TemporaryFolder();
+    @Rule
+    public TemporaryFolder firstAgentTmp = new TemporaryFolder();
+
+    @Rule
+    public TemporaryFolder secondAgentTmp = new TemporaryFolder();
 
     @Test
     public void twoTotalWithRestart() throws Throwable {
         String[] jobNames = new String[2];
         String[] agentNames = new String[2];
-        sessions.then(
-                j -> {
-                    List<Node> agents = new ArrayList<>();
-                    Node firstAgent =
-                            TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
-                    Node secondAgent =
-                            TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
-                    agentNames[0] = firstAgent.getNodeName();
-                    agentNames[1] = secondAgent.getNodeName();
-                    TestUtil.setupCategories(TestUtil.TWO_TOTAL);
+        sessions.then(j -> {
+            List<Node> agents = new ArrayList<>();
+            Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
+            Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
+            agentNames[0] = firstAgent.getNodeName();
+            agentNames[1] = secondAgent.getNodeName();
+            TestUtil.setupCategories(TestUtil.TWO_TOTAL);
 
-                    // The following is required so that the categories remain after Jenkins
-                    // restarts.
-                    ThrottleJobProperty.DescriptorImpl descriptor =
-                            ThrottleJobProperty.fetchDescriptor();
-                    assertNotNull(descriptor);
-                    descriptor.save();
+            // The following is required so that the categories remain after Jenkins
+            // restarts.
+            ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+            assertNotNull(descriptor);
+            descriptor.save();
 
-                    WorkflowJob firstJob = j.createProject(WorkflowJob.class);
-                    jobNames[0] = firstJob.getName();
-                    firstJob.setDefinition(
-                            ThrottleJobPropertyPipelineTest.getJobFlow(
-                                    "first", firstAgent.getNodeName()));
-                    firstJob.addProperty(
-                            new ThrottleJobProperty(
-                                    null, // maxConcurrentPerNode
-                                    null, // maxConcurrentTotal
-                                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                                    true, // throttleEnabled
-                                    TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                                    false,
-                                    null,
-                                    ThrottleMatrixProjectOptions.DEFAULT));
+            WorkflowJob firstJob = j.createProject(WorkflowJob.class);
+            jobNames[0] = firstJob.getName();
+            firstJob.setDefinition(ThrottleJobPropertyPipelineTest.getJobFlow("first", firstAgent.getNodeName()));
+            firstJob.addProperty(new ThrottleJobProperty(
+                    null, // maxConcurrentPerNode
+                    null, // maxConcurrentTotal
+                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                    true, // throttleEnabled
+                    TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                    false,
+                    null,
+                    ThrottleMatrixProjectOptions.DEFAULT));
 
-                    WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
-                    SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
+            WorkflowRun firstJobFirstRun = firstJob.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("wait-first-job/1", firstJobFirstRun);
 
-                    WorkflowJob secondJob = j.createProject(WorkflowJob.class);
-                    jobNames[1] = secondJob.getName();
-                    secondJob.setDefinition(
-                            ThrottleJobPropertyPipelineTest.getJobFlow(
-                                    "second", secondAgent.getNodeName()));
-                    secondJob.addProperty(
-                            new ThrottleJobProperty(
-                                    null, // maxConcurrentPerNode
-                                    null, // maxConcurrentTotal
-                                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                                    true, // throttleEnabled
-                                    TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                                    false,
-                                    null,
-                                    ThrottleMatrixProjectOptions.DEFAULT));
+            WorkflowJob secondJob = j.createProject(WorkflowJob.class);
+            jobNames[1] = secondJob.getName();
+            secondJob.setDefinition(ThrottleJobPropertyPipelineTest.getJobFlow("second", secondAgent.getNodeName()));
+            secondJob.addProperty(new ThrottleJobProperty(
+                    null, // maxConcurrentPerNode
+                    null, // maxConcurrentTotal
+                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                    true, // throttleEnabled
+                    TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                    false,
+                    null,
+                    ThrottleMatrixProjectOptions.DEFAULT));
 
-                    WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
-                    SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
+            WorkflowRun secondJobFirstRun = secondJob.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("wait-second-job/1", secondJobFirstRun);
 
-                    WorkflowJob thirdJob = j.createProject(WorkflowJob.class);
-                    thirdJob.setDefinition(
-                            ThrottleJobPropertyPipelineTest.getJobFlow("third", "on-agent"));
-                    thirdJob.addProperty(
-                            new ThrottleJobProperty(
-                                    null, // maxConcurrentPerNode
-                                    null, // maxConcurrentTotal
-                                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
-                                    true, // throttleEnabled
-                                    TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
-                                    false,
-                                    null,
-                                    ThrottleMatrixProjectOptions.DEFAULT));
+            WorkflowJob thirdJob = j.createProject(WorkflowJob.class);
+            thirdJob.setDefinition(ThrottleJobPropertyPipelineTest.getJobFlow("third", "on-agent"));
+            thirdJob.addProperty(new ThrottleJobProperty(
+                    null, // maxConcurrentPerNode
+                    null, // maxConcurrentTotal
+                    Collections.singletonList(TestUtil.TWO_TOTAL.getCategoryName()),
+                    true, // throttleEnabled
+                    TestUtil.THROTTLE_OPTION_CATEGORY, // throttleOption
+                    false,
+                    null,
+                    ThrottleMatrixProjectOptions.DEFAULT));
 
-                    thirdJob.scheduleBuild2(0);
-                    j.jenkins.getQueue().maintain();
-                    assertFalse(j.jenkins.getQueue().isEmpty());
-                    List<Queue.Item> queuedItemList =
-                            Arrays.stream(j.jenkins.getQueue().getItems())
-                                    .collect(Collectors.toList());
-                    assertEquals(1, queuedItemList.size());
-                    Queue.Item queuedItem = queuedItemList.get(0);
-                    Set<String> blockageReasons =
-                            TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
-                    assertThat(
-                            blockageReasons,
-                            hasItem(
-                                    Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
-                                            .toString()));
-                    assertEquals(1, firstAgent.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
+            thirdJob.scheduleBuild2(0);
+            j.jenkins.getQueue().maintain();
+            assertFalse(j.jenkins.getQueue().isEmpty());
+            List<Queue.Item> queuedItemList =
+                    Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+            assertEquals(1, queuedItemList.size());
+            Queue.Item queuedItem = queuedItemList.get(0);
+            Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+            assertThat(
+                    blockageReasons,
+                    hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
+                            .toString()));
+            assertEquals(1, firstAgent.toComputer().countBusy());
+            TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
-                    assertEquals(1, secondAgent.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
-                });
-        sessions.then(
-                j -> {
-                    RunList<WorkflowRun> firstJobBuilds =
-                            j.jenkins.getItemByFullName(jobNames[0], WorkflowJob.class).getBuilds();
-                    assertEquals(1, firstJobBuilds.size());
-                    WorkflowRun firstJobFirstRun = firstJobBuilds.getLastBuild();
-                    assertNotNull(firstJobFirstRun);
+            assertEquals(1, secondAgent.toComputer().countBusy());
+            TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
+        });
+        sessions.then(j -> {
+            RunList<WorkflowRun> firstJobBuilds =
+                    j.jenkins.getItemByFullName(jobNames[0], WorkflowJob.class).getBuilds();
+            assertEquals(1, firstJobBuilds.size());
+            WorkflowRun firstJobFirstRun = firstJobBuilds.getLastBuild();
+            assertNotNull(firstJobFirstRun);
 
-                    RunList<WorkflowRun> secondJobBuilds =
-                            j.jenkins.getItemByFullName(jobNames[1], WorkflowJob.class).getBuilds();
-                    assertEquals(1, secondJobBuilds.size());
-                    WorkflowRun secondJobFirstRun = secondJobBuilds.getLastBuild();
-                    assertNotNull(secondJobFirstRun);
+            RunList<WorkflowRun> secondJobBuilds =
+                    j.jenkins.getItemByFullName(jobNames[1], WorkflowJob.class).getBuilds();
+            assertEquals(1, secondJobBuilds.size());
+            WorkflowRun secondJobFirstRun = secondJobBuilds.getLastBuild();
+            assertNotNull(secondJobFirstRun);
 
-                    j.jenkins.getQueue().maintain();
-                    while (!j.jenkins.getQueue().getBuildableItems().isEmpty()) {
-                        Thread.sleep(500);
-                        j.jenkins.getQueue().maintain();
-                    }
+            j.jenkins.getQueue().maintain();
+            while (!j.jenkins.getQueue().getBuildableItems().isEmpty()) {
+                Thread.sleep(500);
+                j.jenkins.getQueue().maintain();
+            }
 
-                    assertFalse(j.jenkins.getQueue().isEmpty());
-                    List<Queue.Item> queuedItemList =
-                            Arrays.stream(j.jenkins.getQueue().getItems())
-                                    .collect(Collectors.toList());
-                    assertEquals(1, queuedItemList.size());
-                    Queue.Item queuedItem = queuedItemList.get(0);
-                    Set<String> blockageReasons =
-                            TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
-                    assertThat(
-                            blockageReasons,
-                            hasItem(
-                                    Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
-                                            .toString()));
+            assertFalse(j.jenkins.getQueue().isEmpty());
+            List<Queue.Item> queuedItemList =
+                    Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+            assertEquals(1, queuedItemList.size());
+            Queue.Item queuedItem = queuedItemList.get(0);
+            Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+            assertThat(
+                    blockageReasons,
+                    hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityTotal(2)
+                            .toString()));
 
-                    Node firstAgent = j.jenkins.getNode(agentNames[0]);
-                    assertNotNull(firstAgent);
-                    assertEquals(1, firstAgent.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
+            Node firstAgent = j.jenkins.getNode(agentNames[0]);
+            assertNotNull(firstAgent);
+            assertEquals(1, firstAgent.toComputer().countBusy());
+            TestUtil.hasPlaceholderTaskForRun(firstAgent, firstJobFirstRun);
 
-                    Node secondAgent = j.jenkins.getNode(agentNames[1]);
-                    assertNotNull(secondAgent);
-                    assertEquals(1, secondAgent.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
+            Node secondAgent = j.jenkins.getNode(agentNames[1]);
+            assertNotNull(secondAgent);
+            assertEquals(1, secondAgent.toComputer().countBusy());
+            TestUtil.hasPlaceholderTaskForRun(secondAgent, secondJobFirstRun);
 
-                    SemaphoreStep.success("wait-first-job/1", null);
-                    j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
+            SemaphoreStep.success("wait-first-job/1", null);
+            j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
 
-                    WorkflowRun thirdJobFirstRun =
-                            (WorkflowRun) queuedItem.getFuture().waitForStart();
-                    SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
-                    j.jenkins.getQueue().maintain();
-                    assertTrue(j.jenkins.getQueue().isEmpty());
-                    assertEquals(
-                            2,
-                            firstAgent.toComputer().countBusy()
-                                    + secondAgent.toComputer().countBusy());
-                    TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);
+            WorkflowRun thirdJobFirstRun = (WorkflowRun) queuedItem.getFuture().waitForStart();
+            SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
+            j.jenkins.getQueue().maintain();
+            assertTrue(j.jenkins.getQueue().isEmpty());
+            assertEquals(
+                    2,
+                    firstAgent.toComputer().countBusy()
+                            + secondAgent.toComputer().countBusy());
+            TestUtil.hasPlaceholderTaskForRun(firstAgent, thirdJobFirstRun);
 
-                    SemaphoreStep.success("wait-second-job/1", null);
-                    j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
+            SemaphoreStep.success("wait-second-job/1", null);
+            j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
 
-                    SemaphoreStep.success("wait-third-job/1", null);
-                    j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
+            SemaphoreStep.success("wait-third-job/1", null);
+            j.assertBuildStatusSuccess(j.waitForCompletion(thirdJobFirstRun));
 
-                    TestUtil.tearDown(j, Arrays.asList(firstAgent, secondAgent));
-                });
+            TestUtil.tearDown(j, Arrays.asList(firstAgent, secondAgent));
+        });
     }
 }
