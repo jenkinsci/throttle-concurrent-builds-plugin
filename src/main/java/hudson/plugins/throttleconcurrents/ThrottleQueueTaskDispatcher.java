@@ -309,7 +309,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private boolean isAnotherBuildWithSameParametersRunningOnAnyNode(Queue.Item item) {
         final Jenkins jenkins = Jenkins.get();
 
-        if (isThrottleBuildInProgress(item)) {
+        if (isAnotherWorkflowWithSameParametersRunning(item)) {
             return true;
         }
 
@@ -325,11 +325,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         return false;
     }
 
-    private boolean isThrottleBuildInProgress(Queue.Item item) {
+    private boolean isAnotherWorkflowWithSameParametersRunning(Queue.Item item) {
         ThrottleJobProperty tjp = getThrottleJobProperty(item.task);
         if (tjp == null) {
-            // If the property has been occasionally deleted by this call,
-            // it does not make sense to limit the throttling by parameter.
             return false;
         }
 
@@ -342,17 +340,24 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         if (item.task instanceof Job) {
             Job<?, ?> project = (Job<?, ?>) item.task;
-            for (Run<?, ?> run : project.getBuilds()) {
-                // Checks if the build is currently in progress (could be waiting on input or paused)
-                if (run.isInProgress()) {
-                    List<ParameterValue> runParams = getParametersFromRunItem(run);
-                    if (runParams.size() > 0) {
-                        runParams = doFilterParams(paramsToCompare, runParams);
-                    }
+            for (FlowExecution flowExecution : FlowExecutionList.get()) {
+                try {
+                    Run<?, ?> run = (Run<?, ?>) flowExecution.getOwner().getExecutable();
+                    if (run != null && project.equals(run.getParent())) {
+                        List<ParameterValue> runParams = getParametersFromRunItem(run);
+                        if (runParams.size() > 0) {
+                            runParams = doFilterParams(paramsToCompare, runParams);
+                        }
 
-                    if (itemParams.containsAll(runParams)) {
-                        return true;
+                        if (itemParams.containsAll(runParams)) {
+                            return true;
+                        }
                     }
+                } catch (IOException e) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Error checking if there are any ongoing builds for pipeline {0}: {1}",
+                            new Object[] {project.getDisplayName(), e});
                 }
             }
         }
