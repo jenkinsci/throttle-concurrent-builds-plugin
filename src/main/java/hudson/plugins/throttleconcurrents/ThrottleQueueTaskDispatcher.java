@@ -408,9 +408,9 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                     }
                 }
             } else {
-                Queue.Executable run = unit.context.task.getOwnerExecutable();
-                if (run instanceof Run) {
-                    List<ParametersAction> actions = ((Run<?, ?>) run).getActions(ParametersAction.class);
+                Queue.Executable ownerExecutable = unit.context.task.getOwnerExecutable();
+                if (ownerExecutable instanceof Run<?, ?> run) {
+                    List<ParametersAction> actions = run.getActions(ParametersAction.class);
                     for (ParametersAction action : actions) {
                         paramsList = action.getParameters();
                     }
@@ -435,12 +435,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     @NonNull
     private List<String> categoriesForPipeline(Task task) {
         // TODO avoid casting to PlaceholderTask; could task.node.id be replaced with task.affinityKey?
-        if (task instanceof PlaceholderTask) {
-            PlaceholderTask placeholderTask = (PlaceholderTask) task;
-            Queue.Executable r = task.getOwnerExecutable();
-            if (r instanceof Run) {
-                Map<String, List<String>> categoriesByFlowNode =
-                        ThrottleJobProperty.getCategoriesForRunByFlowNode((Run<?, ?>) r);
+        if (task instanceof PlaceholderTask placeholderTask) {
+            Queue.Executable ownerExecutable = task.getOwnerExecutable();
+            if (ownerExecutable instanceof Run<?, ?> run) {
+                Map<String, List<String>> categoriesByFlowNode = ThrottleJobProperty.getCategoriesForRunByFlowNode(run);
                 if (!categoriesByFlowNode.isEmpty()) {
                     try (Timeout t = Timeout.limit(100, TimeUnit.MILLISECONDS)) {
                         FlowNode firstThrottle = firstThrottleStartNode(placeholderTask.getNode());
@@ -464,8 +462,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @CheckForNull
     private ThrottleJobProperty getThrottleJobProperty(Task task) {
-        if (task instanceof Job) {
-            Job<?, ?> p = (Job<?, ?>) task;
+        if (task instanceof Job<?, ?> p) {
             if (task instanceof MatrixConfiguration) {
                 p = ((MatrixConfiguration) task).getParent();
             }
@@ -603,7 +600,8 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         if (currentExecutable != null) {
             SubTask parent = currentExecutable.getParent();
             if (parent instanceof Task) {
-                if (run.equals(parent.getOwnerExecutable())) {
+                Queue.Executable ownerExecutable = parent.getOwnerExecutable();
+                if (ownerExecutable instanceof Run<?, ?> run2 && run.equals(run2)) {
                     if (isTaskThrottledPipeline((Task) parent, flowNodes)) {
                         return 1;
                     }
@@ -615,8 +613,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private boolean isTaskThrottledPipeline(Task origTask, List<FlowNode> flowNodes) {
-        if (origTask instanceof PlaceholderTask) { // TODO as in categoriesForPipeline
-            PlaceholderTask task = (PlaceholderTask) origTask;
+        if (origTask instanceof PlaceholderTask task) { // TODO as in categoriesForPipeline
             try {
                 FlowNode firstThrottle = firstThrottleStartNode(task.getNode());
                 return firstThrottle != null && flowNodes.contains(firstThrottle);
