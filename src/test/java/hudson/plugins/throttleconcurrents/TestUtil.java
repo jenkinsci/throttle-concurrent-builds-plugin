@@ -1,8 +1,8 @@
 package hudson.plugins.throttleconcurrents;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import hudson.EnvVars;
 import hudson.model.Computer;
@@ -11,6 +11,7 @@ import hudson.model.Node;
 import hudson.model.queue.CauseOfBlockage;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.RetentionStrategy;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -18,7 +19,6 @@ import java.util.Set;
 import jenkins.model.queue.CompositeCauseOfBlockage;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution;
-import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class TestUtil {
@@ -34,13 +34,15 @@ public class TestUtil {
     static final ThrottleJobProperty.ThrottleCategory OTHER_ONE_PER_NODE =
             new ThrottleJobProperty.ThrottleCategory("other_one_per_node", 1, 0, null);
 
+    private TestUtil() {
+        // Instantiation is prohibited
+    }
+
     private static DumbSlave createAgent(
-            JenkinsRule j, TemporaryFolder temporaryFolder, EnvVars env, int numExecutors, String label)
-            throws Exception {
+            JenkinsRule j, File temporaryFolder, EnvVars env, int numExecutors, String label) throws Exception {
         synchronized (j.jenkins) {
             int sz = j.jenkins.getNodes().size();
-            DumbSlave agent =
-                    new DumbSlave("agent" + sz, temporaryFolder.getRoot().getPath(), j.createComputerLauncher(env));
+            DumbSlave agent = new DumbSlave("agent" + sz, temporaryFolder.getPath(), j.createComputerLauncher(env));
             agent.setNumExecutors(numExecutors);
             agent.setMode(Node.Mode.NORMAL);
             agent.setLabelString(label == null ? "" : label);
@@ -54,12 +56,7 @@ public class TestUtil {
     }
 
     static Node setupAgent(
-            JenkinsRule j,
-            TemporaryFolder temporaryFolder,
-            List<Node> agents,
-            EnvVars env,
-            int numExecutors,
-            String label)
+            JenkinsRule j, File temporaryFolder, List<Node> agents, EnvVars env, int numExecutors, String label)
             throws Exception {
         DumbSlave agent = TestUtil.createAgent(j, temporaryFolder, env, numExecutors, label);
 
@@ -88,8 +85,7 @@ public class TestUtil {
     }
 
     static Set<String> getBlockageReasons(CauseOfBlockage cob) {
-        if (cob instanceof CompositeCauseOfBlockage) {
-            CompositeCauseOfBlockage ccob = (CompositeCauseOfBlockage) cob;
+        if (cob instanceof CompositeCauseOfBlockage ccob) {
             return ccob.uniqueReasons.keySet();
         } else {
             return Collections.singleton(cob.getShortDescription());
@@ -99,7 +95,9 @@ public class TestUtil {
     static void hasPlaceholderTaskForRun(Node n, WorkflowRun r) throws Exception {
         for (Executor exec : n.toComputer().getExecutors()) {
             if (exec.getCurrentExecutable() != null) {
-                assertTrue(exec.getCurrentExecutable().getParent() instanceof ExecutorStepExecution.PlaceholderTask);
+                assertInstanceOf(
+                        ExecutorStepExecution.PlaceholderTask.class,
+                        exec.getCurrentExecutable().getParent());
                 ExecutorStepExecution.PlaceholderTask task = (ExecutorStepExecution.PlaceholderTask)
                         exec.getCurrentExecutable().getParent();
                 while (task.run() == null) {
