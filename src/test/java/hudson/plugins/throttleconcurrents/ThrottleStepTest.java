@@ -2,10 +2,11 @@ package hudson.plugins.throttleconcurrents;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -20,6 +21,7 @@ import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.plugins.throttleconcurrents.pipeline.ThrottleStep;
 import hudson.util.CopyOnWriteMap;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,48 +30,48 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Semaphore;
-import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ThrottleStepTest {
+@WithJenkins
+class ThrottleStepTest {
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private JenkinsRule j;
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+    @TempDir
+    private File firstAgentTmp;
 
-    @Rule
-    public TemporaryFolder firstAgentTmp = new TemporaryFolder();
-
-    @Rule
-    public TemporaryFolder secondAgentTmp = new TemporaryFolder();
+    @TempDir
+    private File secondAgentTmp;
 
     private List<Node> agents = new ArrayList<>();
 
+    @BeforeEach
+    void setUp(JenkinsRule j) {
+        this.j = j;
+    }
+
     /** Clean up agents. */
-    @After
-    public void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
         TestUtil.tearDown(j, agents);
         agents = new ArrayList<>();
     }
 
     @Test
-    public void onePerNode() throws Exception {
+    void onePerNode() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
@@ -87,7 +89,7 @@ public class ThrottleStepTest {
         j.jenkins.getQueue().maintain();
         assertFalse(j.jenkins.getQueue().isEmpty());
         List<Queue.Item> queuedItemList =
-                Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+                Arrays.stream(j.jenkins.getQueue().getItems()).toList();
         assertEquals(1, queuedItemList.size());
         Queue.Item queuedItem = queuedItemList.get(0);
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
@@ -110,7 +112,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void duplicateCategories() throws Exception {
+    void duplicateCategories() throws Exception {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
@@ -137,7 +139,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void undefinedCategories() throws Exception {
+    void undefinedCategories() throws Exception {
         WorkflowJob job = j.createProject(WorkflowJob.class);
         job.setDefinition(new CpsFlowDefinition("throttle(['undefined', 'also-undefined']) { echo 'Hello' }", true));
 
@@ -149,7 +151,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void multipleCategories() throws Exception {
+    void multipleCategories() throws Exception {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE, TestUtil.OTHER_ONE_PER_NODE);
@@ -198,7 +200,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void onePerNodeParallel() throws Exception {
+    void onePerNodeParallel() throws Exception {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
@@ -269,7 +271,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void twoTotal() throws Exception {
+    void twoTotal() throws Exception {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.TWO_TOTAL);
@@ -318,7 +320,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void interopWithFreestyle() throws Exception {
+    void interopWithFreestyle() throws Exception {
         final Semaphore semaphore = new Semaphore(1);
 
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
@@ -356,7 +358,7 @@ public class ThrottleStepTest {
         assertFalse(j.jenkins.getQueue().isEmpty());
         assertEquals(1, j.jenkins.getQueue().getItems().length);
         Queue.Item i = j.jenkins.getQueue().getItems()[0];
-        assertTrue(i.task instanceof FreeStyleProject);
+        assertInstanceOf(FreeStyleProject.class, i.task);
 
         assertEquals(1, agent.toComputer().countBusy());
         TestUtil.hasPlaceholderTaskForRun(agent, firstJobFirstRun);
@@ -396,7 +398,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void inOptionsBlockOfDeclarativePipeline() throws Exception {
+    void inOptionsBlockOfDeclarativePipeline() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
@@ -417,7 +419,7 @@ public class ThrottleStepTest {
         assertFalse(j.jenkins.getQueue().isEmpty());
 
         List<Queue.Item> queuedItemList =
-                Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+                Arrays.stream(j.jenkins.getQueue().getItems()).toList();
         assertEquals(1, queuedItemList.size());
         Queue.Item queuedItem = queuedItemList.get(0);
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
@@ -439,19 +441,20 @@ public class ThrottleStepTest {
         j.assertBuildStatusSuccess(j.waitForCompletion(secondJobFirstRun));
     }
 
-    private CpsFlowDefinition getJobFlow(String jobName, String category, String label) throws Exception {
+    private static CpsFlowDefinition getJobFlow(String jobName, String category, String label) throws Exception {
         return getJobFlow(jobName, Collections.singletonList(category), label);
     }
 
-    private CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label) throws Exception {
+    private static CpsFlowDefinition getJobFlow(String jobName, List<String> categories, String label)
+            throws Exception {
         return new CpsFlowDefinition(getThrottleScript(jobName, categories, label), true);
     }
 
-    private String getThrottleScript(String jobName, String category, String label) {
+    private static String getThrottleScript(String jobName, String category, String label) {
         return getThrottleScript(jobName, Collections.singletonList(category), label);
     }
 
-    private String getThrottleScript(String jobName, List<String> categories, String label) {
+    private static String getThrottleScript(String jobName, List<String> categories, String label) {
         List<String> quoted = new ArrayList<>();
         for (String c : categories) {
             quoted.add("'" + c + "'");
@@ -503,7 +506,7 @@ public class ThrottleStepTest {
     }
 
     @Test
-    public void snippetizer() throws Exception {
+    void snippetizer() throws Exception {
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
         SnippetizerTester st = new SnippetizerTester(j);
@@ -519,7 +522,7 @@ public class ThrottleStepTest {
      */
     @Issue("JENKINS-49006")
     @Test
-    public void throttledPipelinesByCategoryCopyOnWrite() throws Exception {
+    void throttledPipelinesByCategoryCopyOnWrite() throws Exception {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
@@ -543,10 +546,10 @@ public class ThrottleStepTest {
         assertNotNull(descriptor);
         Map<String, List<String>> throttledPipelinesByCategory =
                 descriptor.getThrottledPipelinesForCategory(TestUtil.ONE_PER_NODE.getCategoryName());
-        assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
+        assertInstanceOf(CopyOnWriteMap.Tree.class, throttledPipelinesByCategory);
         assertEquals(2, throttledPipelinesByCategory.size());
         for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
-            assertTrue(flowNodes instanceof CopyOnWriteArrayList);
+            assertInstanceOf(CopyOnWriteArrayList.class, flowNodes);
             assertEquals(1, flowNodes.size());
         }
 
