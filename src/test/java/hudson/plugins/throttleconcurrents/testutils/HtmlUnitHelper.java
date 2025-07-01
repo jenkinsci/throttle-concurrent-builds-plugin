@@ -28,19 +28,16 @@ import java.util.ArrayList;
 import java.util.List;
 import org.htmlunit.html.HtmlButton;
 import org.htmlunit.html.HtmlForm;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * Stores helpers for HtmlUnit.
  * @author Oleg Nenashev
  * @since 1.9.0
  */
-@Restricted(NoExternalUse.class)
 public class HtmlUnitHelper {
 
     private HtmlUnitHelper() {
-        // Instantination is prohibited
+        // Instantiation is prohibited
     }
 
     /**
