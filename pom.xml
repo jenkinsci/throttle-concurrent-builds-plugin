@@ -89,6 +89,8 @@ THE SOFTWARE.
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
     <spotless.check.skip>false</spotless.check.skip>
+    <!-- https://github.com/jenkinsci/jenkins-test-harness/pull/988 -->
+    <jenkins-test-harness.version>2484.vca_2b_da_c8d4ca_</jenkins-test-harness.version>
   </properties>
 
   <dependencyManagement>
@@ -124,23 +126,6 @@ THE SOFTWARE.
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-support</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.tngtech.jgiven</groupId>
-      <artifactId>jgiven-junit</artifactId>
-      <version>2.0.2</version>
-      <scope>test</scope>
-      <exclusions>
-        <!-- Provided by Jenkins core -->
-        <exclusion>
-          <groupId>org.fusesource.jansi</groupId>
-          <artifactId>jansi</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <!-- Dependencies for test -->
