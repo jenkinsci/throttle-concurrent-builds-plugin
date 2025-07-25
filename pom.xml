@@ -89,6 +89,8 @@ THE SOFTWARE.
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
     <spotless.check.skip>false</spotless.check.skip>
+    <!-- https://github.com/jenkinsci/jenkins-test-harness/pull/988 -->
+    <jenkins-test-harness.version>2484.vca_2b_da_c8d4ca_</jenkins-test-harness.version>
   </properties>
 
   <dependencyManagement>
