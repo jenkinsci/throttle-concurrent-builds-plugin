@@ -189,8 +189,7 @@ public class ThrottleQueueTaskDispatcherTest {
         boolean buttonFound = false;
 
         for (HtmlButton button : buttons) {
-            if (button.getTextContent().equals(buttonText)) {
-                buttonFound = true;
+            if (button.asNormalizedText().equals(buttonText)) {
                 button.click();
 
                 HtmlInput input = form.getInputByName("_.categoryName");
@@ -201,9 +200,8 @@ public class ThrottleQueueTaskDispatcherTest {
 
                 buttons = HtmlUnitHelper.getButtonsByXPath(form, parentXPath + buttonsXPath);
                 buttonText = "Add Maximum Per Labeled Node";
-                buttonFound = false;
                 for (HtmlButton deeperButton : buttons) {
-                    if (deeperButton.getTextContent().equals(buttonText)) {
+                    if (deeperButton.asNormalizedText().equals(buttonText)) {
                         buttonFound = true;
                         for (int i = 0; i < numberOfPairs; i++) {
                             List<HtmlInput> inputs;
@@ -344,7 +342,7 @@ public class ThrottleQueueTaskDispatcherTest {
         boolean buttonFound = false;
 
         for (HtmlButton button : buttons) {
-            if (button.getTextContent().equals(buttonText)) {
+            if (button.asNormalizedText().equals(buttonText)) {
                 buttonFound = true;
                 button.click();
 
