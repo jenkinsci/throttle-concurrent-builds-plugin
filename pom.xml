@@ -89,6 +89,7 @@ THE SOFTWARE.
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
     <spotless.check.skip>false</spotless.check.skip>
+    <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
   </properties>
 
   <dependencyManagement>
