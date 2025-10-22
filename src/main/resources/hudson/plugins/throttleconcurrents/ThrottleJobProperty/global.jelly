@@ -1,36 +1,28 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:tc="/lib/throttleconcurrents">
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:section title="Throttle Concurrent Builds">
     <f:entry title="Multi-Project Throttle Categories" field="categories">
       <f:repeatable field="categories" add="${%Add Category}" minimum="0">
-        <tc:blockWrapper>
-          <f:entry title="Category Name" field="categoryName">
-            <f:textbox />
-          </f:entry>
-          <f:entry title="${%Maximum Total Concurrent Builds}" field="maxConcurrentTotal">
-            <f:textbox />
-          </f:entry>
-          <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
-            <f:textbox />
-          </f:entry>
-        </tc:blockWrapper>
+        <f:entry title="Category Name" field="categoryName">
+          <f:textbox clazz="required" checkMessage="${%Category Name is required}"/>
+        </f:entry>
+        <f:entry title="${%Maximum Total Concurrent Builds}" field="maxConcurrentTotal">
+          <f:number min="0"/>
+        </f:entry>
+        <f:entry title="${%Maximum Concurrent Builds Per Node}" field="maxConcurrentPerNode">
+          <f:number min="0"/>
+        </f:entry>
         <f:repeatable field="nodeLabeledPairs" add="${%Add Maximum Per Labeled Node}" minimum="0" header="${%Maximum Per Labeled Node}">
-          <tc:blockWrapper>
-            <f:entry title="${%Throttled Node Label}" field="throttledNodeLabel">
-              <f:textbox />
-            </f:entry>
-            <f:entry title="${%Maximum Concurrent Builds Per Node Labeled As Above}" field="maxConcurrentPerNodeLabeled">
-              <f:textbox />
-            </f:entry>
-          </tc:blockWrapper>
-          <div align="right">
-            <f:repeatableDeleteButton/>
-          </div>
-        </f:repeatable>
-        <div align="right">
+          <f:entry title="${%Throttled Node Label}" field="throttledNodeLabel">
+            <f:textbox />
+          </f:entry>
+          <f:entry title="${%Maximum Concurrent Builds Per Node Labeled As Above}" field="maxConcurrentPerNodeLabeled">
+            <f:number min="0"/>
+          </f:entry>
           <f:repeatableDeleteButton/>
-        </div>
+        </f:repeatable>
+        <f:repeatableDeleteButton/>
       </f:repeatable>
     </f:entry>
   </f:section>
