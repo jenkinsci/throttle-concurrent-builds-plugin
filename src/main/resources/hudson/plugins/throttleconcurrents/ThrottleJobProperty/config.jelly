@@ -15,11 +15,11 @@
 
     <f:entry title="${%Maximum Total Concurrent Builds}"
              field="maxConcurrentTotal">
-      <f:textbox />
+      <f:number min="0"/>
     </f:entry>
     <f:entry title="${%Maximum Concurrent Builds Per Node}"
              field="maxConcurrentPerNode">
-      <f:textbox />
+      <f:number min="0"/>
     </f:entry>
   
   
@@ -34,11 +34,12 @@
 
     <j:if test="${!empty(descriptor.categories)}">
       <f:entry title="${%Multi-Project Throttle Category}">
-        <j:forEach var="cat" items="${descriptor.categories}">
-          <f:checkbox name="categories" json="${cat.categoryName}" title="${cat.categoryName}"
-                      checked="${instance.categories.contains(cat.categoryName)}" />
-          <st:nbsp/>
-        </j:forEach>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <j:forEach var="cat" items="${descriptor.categories}">
+            <f:checkbox name="categories" json="${cat.categoryName}" title="${cat.categoryName}"
+                        checked="${instance.categories.contains(cat.categoryName)}" />
+          </j:forEach>
+        </div>
       </f:entry>
     </j:if>
     <!--Specific options for Matrix projects-->
