@@ -2,46 +2,45 @@ package hudson.plugins.throttleconcurrents;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.util.RunList;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.JenkinsSessionRule;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.JenkinsSessionExtension;
 
-public class ThrottleJobPropertyPipelineRestartTest {
+class ThrottleJobPropertyPipelineRestartTest {
 
-    @Rule
-    public JenkinsSessionRule sessions = new JenkinsSessionRule();
+    @RegisterExtension
+    private final JenkinsSessionExtension sessions = new JenkinsSessionExtension();
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+    @RegisterExtension
+    private static final BuildWatcherExtension buildWatcher = new BuildWatcherExtension();
 
-    @Rule
-    public TemporaryFolder firstAgentTmp = new TemporaryFolder();
+    @TempDir
+    private File firstAgentTmp;
 
-    @Rule
-    public TemporaryFolder secondAgentTmp = new TemporaryFolder();
+    @TempDir
+    private File secondAgentTmp;
 
     @Test
-    public void twoTotalWithRestart() throws Throwable {
+    void twoTotalWithRestart() throws Throwable {
         String[] jobNames = new String[2];
         String[] agentNames = new String[2];
         sessions.then(j -> {
@@ -106,7 +105,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
             j.jenkins.getQueue().maintain();
             assertFalse(j.jenkins.getQueue().isEmpty());
             List<Queue.Item> queuedItemList =
-                    Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+                    Arrays.stream(j.jenkins.getQueue().getItems()).toList();
             assertEquals(1, queuedItemList.size());
             Queue.Item queuedItem = queuedItemList.get(0);
             Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
@@ -141,7 +140,7 @@ public class ThrottleJobPropertyPipelineRestartTest {
 
             assertFalse(j.jenkins.getQueue().isEmpty());
             List<Queue.Item> queuedItemList =
-                    Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+                    Arrays.stream(j.jenkins.getQueue().getItems()).toList();
             assertEquals(1, queuedItemList.size());
             Queue.Item queuedItem = queuedItemList.get(0);
             Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());

@@ -1,12 +1,14 @@
 package hudson.plugins.throttleconcurrents;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.AbstractProject;
 import hudson.model.FreeStyleProject;
 import hudson.model.Job;
@@ -27,23 +29,21 @@ import org.htmlunit.WebClientUtil;
 import org.htmlunit.html.HtmlButton;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.html.HtmlPage;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.jvnet.hudson.test.recipes.LocalData;
 
-public class ThrottleJobPropertyTest {
+@WithJenkins
+class ThrottleJobPropertyTest {
 
-    private final Random random = new Random(System.currentTimeMillis());
-
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private static final Random random = new Random(System.currentTimeMillis());
 
     @Issue("JENKINS-19623")
     @Test
-    public void testGetCategoryProjects() throws Exception {
+    void testGetCategoryProjects(JenkinsRule j) throws Exception {
         String alpha = "alpha", beta = "beta", gamma = "gamma"; // category names
         FreeStyleProject p1 = j.createFreeStyleProject("p1");
         FreeStyleProject p2 = j.createFreeStyleProject("p2");
@@ -78,23 +78,23 @@ public class ThrottleJobPropertyTest {
                 ThrottleMatrixProjectOptions.DEFAULT));
         // TODO when core dep ≥1.480.3, add cloudbees-folder as a test dependency so we can check
         // jobs inside folders
-        assertProjects(alpha, p3);
-        assertProjects(beta, p3, p4);
-        assertProjects(gamma, p4);
-        assertProjects("delta");
+        assertProjects(j, alpha, p3);
+        assertProjects(j, beta, p3, p4);
+        assertProjects(j, gamma, p4);
+        assertProjects(j, "delta");
         p4.renameTo("p-4");
-        assertProjects(gamma, p4);
+        assertProjects(j, gamma, p4);
         p4.delete();
-        assertProjects(gamma);
+        assertProjects(j, gamma);
         AbstractProject<?, ?> p3b = j.jenkins.<AbstractProject<?, ?>>copy(p3, "p3b");
-        assertProjects(beta, p3, p3b);
+        assertProjects(j, beta, p3, p3b);
         p3.removeProperty(ThrottleJobProperty.class);
-        assertProjects(beta, p3b);
+        assertProjects(j, beta, p3b);
     }
 
     @Test
     @WithoutJenkins
-    public void testToStringWithNulls() {
+    void testToStringWithNulls() {
         ThrottleJobProperty tjp =
                 new ThrottleJobProperty(0, 0, null, false, null, false, "", ThrottleMatrixProjectOptions.DEFAULT);
         assertNotNull(tjp.toString());
@@ -102,7 +102,7 @@ public class ThrottleJobPropertyTest {
 
     @Test
     @WithoutJenkins
-    public void testThrottleJobConstructorShouldStoreArguments() {
+    void testThrottleJobConstructorShouldStoreArguments() {
         Integer expectedMaxConcurrentPerNode = anyInt();
         Integer expectedMaxConcurrentTotal = anyInt();
         List<String> expectedCategories = Collections.emptyList();
@@ -131,7 +131,7 @@ public class ThrottleJobPropertyTest {
     @Issue("JENKINS-46858")
     @Test
     @WithoutJenkins
-    public void testThrottleJobConstructorShouldParseParamsToUseForLimit() {
+    void testThrottleJobConstructorShouldParseParamsToUseForLimit() {
         Integer expectedMaxConcurrentPerNode = anyInt();
         Integer expectedMaxConcurrentTotal = anyInt();
         List<String> expectedCategories = Collections.emptyList();
@@ -301,7 +301,10 @@ public class ThrottleJobPropertyTest {
         // (5) Java does not really have multilines, but still... note that if any whitespace should
         // be there in the carry-over of string representation, it is the coder's responsibility to
         // ensure some.
-        String assignedParamsToUseForLimit5 = "Multi\nline" + "string,for	kicks\n" + "EOL";
+        String assignedParamsToUseForLimit5 = """
+                Multi
+                linestring,for	kicks
+                EOL""";
         List<String> expectedParamsToUseForLimit5 = Arrays.asList("Multi", "linestring", "for", "kicks", "EOL");
         ThrottleJobProperty property5 = new ThrottleJobProperty(
                 expectedMaxConcurrentPerNode,
@@ -317,7 +320,7 @@ public class ThrottleJobPropertyTest {
 
     @Test
     @WithoutJenkins
-    public void testThrottleJobShouldCopyCategoriesToConcurrencySafeList() {
+    void testThrottleJobShouldCopyCategoriesToConcurrencySafeList() {
         final String category = anyString();
 
         List<String> unsafeList = new ArrayList<>();
@@ -334,17 +337,17 @@ public class ThrottleJobPropertyTest {
                 ThrottleMatrixProjectOptions.DEFAULT);
 
         List<String> storedCategories = property.getCategories();
-        assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
+        assertEquals(unsafeList, storedCategories, "contents of original and stored list should be the equal");
         assertNotSame(
-                "expected unsafe list to be converted to a converted to some other" + " concurrency-safe impl",
                 unsafeList,
-                storedCategories);
-        assertTrue(storedCategories instanceof CopyOnWriteArrayList);
+                storedCategories,
+                "expected unsafe list to be converted to a converted to some other" + " concurrency-safe impl");
+        assertInstanceOf(CopyOnWriteArrayList.class, storedCategories);
     }
 
     @Test
     @WithoutJenkins
-    public void testThrottleJobConstructorHandlesNullCategories() {
+    void testThrottleJobConstructorHandlesNullCategories() {
         ThrottleJobProperty property = new ThrottleJobProperty(
                 anyInt(),
                 anyInt(),
@@ -359,11 +362,11 @@ public class ThrottleJobPropertyTest {
     }
 
     @Test
-    public void testDescriptorImplShouldAConcurrencySafeListForCategories() {
+    void testDescriptorImplShouldAConcurrencySafeListForCategories(JenkinsRule j) {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
 
-        assertTrue(descriptor.getCategories() instanceof CopyOnWriteArrayList);
+        assertInstanceOf(CopyOnWriteArrayList.class, descriptor.getCategories());
 
         final ThrottleJobProperty.ThrottleCategory category =
                 new ThrottleJobProperty.ThrottleCategory(anyString(), anyInt(), anyInt(), null);
@@ -372,12 +375,12 @@ public class ThrottleJobPropertyTest {
 
         descriptor.setCategories(unsafeList);
         List<ThrottleJobProperty.ThrottleCategory> storedCategories = descriptor.getCategories();
-        assertEquals("contents of original and stored list should be the equal", unsafeList, storedCategories);
+        assertEquals(unsafeList, storedCategories, "contents of original and stored list should be the equal");
         assertNotSame(
-                "expected unsafe list to be converted to a converted to some other" + " concurrency-safe impl",
                 unsafeList,
-                storedCategories);
-        assertTrue(storedCategories instanceof CopyOnWriteArrayList);
+                storedCategories,
+                "expected unsafe list to be converted to a converted to some other" + " concurrency-safe impl");
+        assertInstanceOf(CopyOnWriteArrayList.class, storedCategories);
     }
 
     /**
@@ -387,19 +390,19 @@ public class ThrottleJobPropertyTest {
     @Issue("JENKINS-49006")
     @LocalData
     @Test
-    public void throttledPipelinesByCategoryMigratesOldData() {
+    void throttledPipelinesByCategoryMigratesOldData(JenkinsRule j) {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
 
         Map<String, List<String>> throttledPipelinesByCategory =
                 descriptor.getThrottledPipelinesForCategory(TestUtil.TWO_TOTAL.getCategoryName());
-        assertTrue(throttledPipelinesByCategory instanceof CopyOnWriteMap.Tree);
+        assertInstanceOf(CopyOnWriteMap.Tree.class, throttledPipelinesByCategory);
         assertEquals(3, throttledPipelinesByCategory.size());
         assertEquals(
                 new HashSet<>(Arrays.asList("first-job#1", "second-job#1", "third-job#1")),
                 throttledPipelinesByCategory.keySet());
         for (List<String> flowNodes : throttledPipelinesByCategory.values()) {
-            assertTrue(flowNodes instanceof CopyOnWriteArrayList);
+            assertInstanceOf(CopyOnWriteArrayList.class, flowNodes);
             assertEquals(1, flowNodes.size());
             assertEquals("3", flowNodes.get(0));
         }
@@ -407,7 +410,7 @@ public class ThrottleJobPropertyTest {
 
     @Issue("JENKINS-54578")
     @Test
-    public void clearConfiguredCategories() throws Exception {
+    void clearConfiguredCategories(JenkinsRule j) throws Exception {
         ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
         assertNotNull(descriptor);
 
@@ -437,7 +440,7 @@ public class ThrottleJobPropertyTest {
         assertTrue(descriptor.getCategories().isEmpty());
     }
 
-    private void assertProjects(String category, AbstractProject<?, ?>... projects) {
+    private static void assertProjects(JenkinsRule j, String category, AbstractProject<?, ?>... projects) {
         j.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
             assertEquals(
@@ -452,32 +455,35 @@ public class ThrottleJobPropertyTest {
     private static class RejectAllAuthorizationStrategy extends AuthorizationStrategy {
         RejectAllAuthorizationStrategy() {}
 
+        @NonNull
         @Override
         public ACL getRootACL() {
             return new AuthorizationStrategy.Unsecured().getRootACL();
         }
 
+        @NonNull
         @Override
         public Collection<String> getGroups() {
             return Collections.emptySet();
         }
 
+        @NonNull
         @Override
-        public ACL getACL(Job<?, ?> project) {
+        public ACL getACL(@NonNull Job<?, ?> project) {
             fail("not even supposed to be looking at " + project);
             return super.getACL(project);
         }
     }
 
-    private String anyString() {
+    private static String anyString() {
         return "concurrency_" + anyInt();
     }
 
-    private boolean anyBoolean() {
+    private static boolean anyBoolean() {
         return random.nextBoolean();
     }
 
-    private int anyInt() {
+    private static int anyInt() {
         return random.nextInt(10000);
     }
 }

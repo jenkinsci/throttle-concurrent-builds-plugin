@@ -2,61 +2,62 @@ package hudson.plugins.throttleconcurrents;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.model.Node;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
 import hudson.model.StringParameterDefinition;
 import hudson.model.queue.QueueTaskFuture;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ThrottleJobPropertyPipelineTest {
+@WithJenkins
+class ThrottleJobPropertyPipelineTest {
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private JenkinsRule j;
 
-    @ClassRule
-    public static BuildWatcher buildWatcher = new BuildWatcher();
+    @TempDir
+    private File firstAgentTmp;
 
-    @Rule
-    public TemporaryFolder firstAgentTmp = new TemporaryFolder();
-
-    @Rule
-    public TemporaryFolder secondAgentTmp = new TemporaryFolder();
+    @TempDir
+    private File secondAgentTmp;
 
     private List<Node> agents = new ArrayList<>();
 
+    @BeforeEach
+    void setUp(JenkinsRule j) {
+        this.j = j;
+    }
+
     /** Clean up agents. */
-    @After
-    public void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
         TestUtil.tearDown(j, agents);
         agents = new ArrayList<>();
     }
 
-    @Ignore("TODO Doesn't work at present")
+    @Disabled("TODO Doesn't work at present")
     @Test
-    public void onePerNode() throws Exception {
+    void onePerNode() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
         TestUtil.setupCategories(TestUtil.ONE_PER_NODE);
 
@@ -93,7 +94,7 @@ public class ThrottleJobPropertyPipelineTest {
         assertFalse(j.jenkins.getQueue().isEmpty());
 
         List<Queue.Item> queuedItemList =
-                Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+                Arrays.stream(j.jenkins.getQueue().getItems()).toList();
         assertEquals(1, queuedItemList.size());
         Queue.Item queuedItem = queuedItemList.get(0);
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
@@ -116,7 +117,7 @@ public class ThrottleJobPropertyPipelineTest {
     }
 
     @Test
-    public void twoTotal() throws Exception {
+    void twoTotal() throws Exception {
         Node firstAgent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 4, "on-agent");
         Node secondAgent = TestUtil.setupAgent(j, secondAgentTmp, agents, null, 4, "on-agent");
         TestUtil.setupCategories(TestUtil.TWO_TOTAL);
@@ -167,7 +168,7 @@ public class ThrottleJobPropertyPipelineTest {
         j.jenkins.getQueue().maintain();
         assertFalse(j.jenkins.getQueue().isEmpty());
         List<Queue.Item> queuedItemList =
-                Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+                Arrays.stream(j.jenkins.getQueue().getItems()).toList();
         assertEquals(1, queuedItemList.size());
         Queue.Item queuedItem = queuedItemList.get(0);
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
@@ -202,7 +203,7 @@ public class ThrottleJobPropertyPipelineTest {
 
     @Issue("JENKINS-37809")
     @Test
-    public void limitOneJobWithMatchingParams() throws Exception {
+    void limitOneJobWithMatchingParams() throws Exception {
         Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, null);
 
         WorkflowJob project = j.createProject(WorkflowJob.class);
@@ -228,7 +229,7 @@ public class ThrottleJobPropertyPipelineTest {
         j.jenkins.getQueue().maintain();
         assertFalse(j.jenkins.getQueue().isEmpty());
         List<Queue.Item> queuedItemList =
-                Arrays.stream(j.jenkins.getQueue().getItems()).collect(Collectors.toList());
+                Arrays.stream(j.jenkins.getQueue().getItems()).toList();
         assertEquals(1, queuedItemList.size());
         Queue.Item queuedItem = queuedItemList.get(0);
         Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());

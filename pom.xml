@@ -90,6 +90,7 @@ THE SOFTWARE.
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
     <spotless.check.skip>false</spotless.check.skip>
     <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+    <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
   </properties>
 
   <dependencyManagement>
@@ -125,23 +126,6 @@ THE SOFTWARE.
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-support</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.tngtech.jgiven</groupId>
-      <artifactId>jgiven-junit</artifactId>
-      <version>2.0.3</version>
-      <scope>test</scope>
-      <exclusions>
-        <!-- Provided by Jenkins core -->
-        <exclusion>
-          <groupId>org.fusesource.jansi</groupId>
-          <artifactId>jansi</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <!-- Dependencies for test -->

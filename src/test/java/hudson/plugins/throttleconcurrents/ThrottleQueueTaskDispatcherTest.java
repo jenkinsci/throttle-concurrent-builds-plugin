@@ -16,10 +16,10 @@
  */
 package hudson.plugins.throttleconcurrents;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import hudson.model.FreeStyleProject;
 import hudson.plugins.throttleconcurrents.testutils.HtmlUnitHelper;
@@ -39,9 +39,9 @@ import org.htmlunit.html.HtmlOption;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.html.HtmlRadioButtonInput;
 import org.htmlunit.html.HtmlSelect;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * This class initiates the testing of {@link hudson.plugins.throttleconcurrents.ThrottleQueueTaskDispatcher}.<br>
@@ -49,7 +49,8 @@ import org.jvnet.hudson.test.JenkinsRule;
  * -Happens to test {@link hudson.plugins.throttleconcurrents.ThrottleQueueTaskDispatcher#getMaxConcurrentPerNodeBasedOnMatchingLabels(hudson.model.Node, hudson.plugins.throttleconcurrents.ThrottleJobProperty.ThrottleCategory, int)}.
  * @author marco.miller@ericsson.com
  */
-public class ThrottleQueueTaskDispatcherTest {
+@WithJenkins
+class ThrottleQueueTaskDispatcherTest {
     private static final String buttonsXPath = "//button";
     private static final String configFormName = "config";
     private static final String configUrlSuffix = "configure";
@@ -76,19 +77,16 @@ public class ThrottleQueueTaskDispatcherTest {
     private static final int someCategoryWideMaxConcurrentPerNode = 1;
     private static final int greaterCategoryWideMaxConcurrentPerNode = configureOneMaxLabelPair + 1;
 
-    @Rule
-    public JenkinsRule r = new JenkinsRule();
-
     /**
      * @throws ExecutionException upon Jenkins project build scheduling issue.
      * @throws InterruptedException upon Jenkins global configuration issue.
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
     @Test
-    public void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPair()
+    void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPair(JenkinsRule r)
             throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-                configureOneMaxLabelPair, noCategoryWideMaxConcurrentPerNode, expectMatch, configureNodeLabel);
+                r, configureOneMaxLabelPair, noCategoryWideMaxConcurrentPerNode, expectMatch, configureNodeLabel);
     }
 
     /**
@@ -97,10 +95,10 @@ public class ThrottleQueueTaskDispatcherTest {
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
     @Test
-    public void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPairs()
+    void testShouldConsiderTaskAsBlockableStillUponMatchingMaxLabelPairs(JenkinsRule r)
             throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-                configureTwoMaxLabelPairs, noCategoryWideMaxConcurrentPerNode, expectMatch, configureNodeLabel);
+                r, configureTwoMaxLabelPairs, noCategoryWideMaxConcurrentPerNode, expectMatch, configureNodeLabel);
     }
 
     /**
@@ -109,9 +107,10 @@ public class ThrottleQueueTaskDispatcherTest {
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
     @Test
-    public void testShouldConsiderTaskAsBlockableStillUponMatchingLabelPairWithLowestMax()
+    void testShouldConsiderTaskAsBlockableStillUponMatchingLabelPairWithLowestMax(JenkinsRule r)
             throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
+                r,
                 configureOneMaxLabelPair, // => label-pair max of 1, still to match as *the* max;
                 greaterCategoryWideMaxConcurrentPerNode, // greater than label-pair max but still
                 expectMatch,
@@ -124,10 +123,10 @@ public class ThrottleQueueTaskDispatcherTest {
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
     @Test
-    public void testShouldConsiderTaskAsBuildableStillUponMismatchingMaxLabelPairs()
+    void testShouldConsiderTaskAsBuildableStillUponMismatchingMaxLabelPairs(JenkinsRule r)
             throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-                configureTwoMaxLabelPairs, someCategoryWideMaxConcurrentPerNode, expectMismatch, configureNodeLabel);
+                r, configureTwoMaxLabelPairs, someCategoryWideMaxConcurrentPerNode, expectMismatch, configureNodeLabel);
     }
 
     /**
@@ -136,10 +135,14 @@ public class ThrottleQueueTaskDispatcherTest {
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
     @Test
-    public void testShouldConsiderTaskAsBuildableStillUponNoNodeLabel()
+    void testShouldConsiderTaskAsBuildableStillUponNoNodeLabel(JenkinsRule r)
             throws ExecutionException, InterruptedException, IOException {
         assertBasedOnMaxLabelPairMatchingOrNot(
-                configureOneMaxLabelPair, someCategoryWideMaxConcurrentPerNode, expectMismatch, configureNoNodeLabel);
+                r,
+                configureOneMaxLabelPair,
+                someCategoryWideMaxConcurrentPerNode,
+                expectMismatch,
+                configureNoNodeLabel);
     }
 
     /**
@@ -151,35 +154,36 @@ public class ThrottleQueueTaskDispatcherTest {
      * @throws InterruptedException upon Jenkins global configuration issue.
      * @throws IOException upon many potential Jenkins IO issues during test.
      */
-    private void assertBasedOnMaxLabelPairMatchingOrNot(
-            int targetedPairNumber, int maxConcurrentPerNode, boolean expectMatch, boolean configureNodeLabel)
+    private static void assertBasedOnMaxLabelPairMatchingOrNot(
+            JenkinsRule r,
+            int targetedPairNumber,
+            int maxConcurrentPerNode,
+            boolean expectMatch,
+            boolean configureNodeLabel)
             throws ExecutionException, InterruptedException, IOException {
         if (configureNodeLabel) {
             String nodeLabelSuffix = expectMatch ? "" : "other";
-            configureNewNodeWithLabel(testCategoryLabel + targetedPairNumber + nodeLabelSuffix);
+            configureNewNodeWithLabel(r, testCategoryLabel + targetedPairNumber + nodeLabelSuffix);
         }
-        configureGlobalThrottling(testCategoryLabel, targetedPairNumber, maxConcurrentPerNode);
+        configureGlobalThrottling(r, testCategoryLabel, targetedPairNumber, maxConcurrentPerNode);
 
         FreeStyleProject project = r.createFreeStyleProject();
-        configureJobThrottling(project);
-        String logger = configureLogger();
+        configureJobThrottling(r, project);
+        String logger = configureLogger(r);
         project.scheduleBuild2(0).get();
-        HtmlPage page = getLoggerPage(logger);
+        HtmlPage page = getLoggerPage(r, logger);
         if (expectMatch) {
+            assertTrue(page.asNormalizedText().contains(matchTrace), expectedTracesMessage(match, true));
             assertTrue(
-                    expectedTracesMessage(match, true), page.asNormalizedText().contains(matchTrace));
-            assertTrue(
-                    expectedTracesMessage(max, true), page.asNormalizedText().contains(maxTrace + targetedPairNumber));
+                    page.asNormalizedText().contains(maxTrace + targetedPairNumber), expectedTracesMessage(max, true));
         } else {
-            assertTrue(
-                    expectedTracesMessage(mismatch, true),
-                    page.asNormalizedText().contains(mismatchTrace));
-            assertFalse(
-                    expectedTracesMessage(max, false), page.asNormalizedText().contains(maxTrace));
+            assertTrue(page.asNormalizedText().contains(mismatchTrace), expectedTracesMessage(mismatch, true));
+            assertFalse(page.asNormalizedText().contains(maxTrace), expectedTracesMessage(max, false));
         }
     }
 
-    private void configureGlobalThrottling(String labelRoot, int numberOfPairs, int maxConcurrentPerNode)
+    private static void configureGlobalThrottling(
+            JenkinsRule r, String labelRoot, int numberOfPairs, int maxConcurrentPerNode)
             throws InterruptedException, IOException {
         URL url = new URL(r.getURL() + configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
@@ -215,8 +219,8 @@ public class ThrottleQueueTaskDispatcherTest {
                             } while (inputs.isEmpty() && clickThenWaitForMaxTries > 0);
 
                             assertFalse(
-                                    buttonText + " button clicked; no resulting field found on " + url,
-                                    inputs.isEmpty());
+                                    inputs.isEmpty(),
+                                    buttonText + " button clicked; no resulting field found on " + url);
                             inputs.get(i).setValue(labelRoot + (i + 1));
 
                             inputs = form.getInputsByName("_.maxConcurrentPerNodeLabeled");
@@ -236,7 +240,7 @@ public class ThrottleQueueTaskDispatcherTest {
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
     }
 
-    private void configureJobThrottling(FreeStyleProject project) throws IOException {
+    private static void configureJobThrottling(JenkinsRule r, FreeStyleProject project) throws IOException {
         URL url = new URL(r.getURL() + project.getUrl() + configUrlSuffix);
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName(configFormName);
@@ -250,7 +254,7 @@ public class ThrottleQueueTaskDispatcherTest {
                 String checkboxName = "throttleEnabled";
                 HtmlElement checkbox = page.getElementByName(checkboxName);
                 assertNotNull(
-                        checkboxName + " checkbox not found on test job config page; plugin installed?", checkbox);
+                        checkbox, checkboxName + " checkbox not found on test job config page; plugin installed?");
                 checkbox.click();
 
                 List<HtmlRadioButtonInput> radios = form.getRadioButtonsByName("throttleOption");
@@ -267,7 +271,7 @@ public class ThrottleQueueTaskDispatcherTest {
         failWithMessageIfButtonNotFoundOnPage(buttonFound, buttonText, url);
     }
 
-    private void configureNewNodeWithLabel(String label) throws IOException {
+    private static void configureNewNodeWithLabel(JenkinsRule r, String label) throws IOException {
         URL url = new URL(r.getURL() + "computer/new");
         HtmlPage page = r.createWebClient().getPage(url);
         HtmlForm form = page.getFormByName("createItem");
@@ -304,7 +308,7 @@ public class ThrottleQueueTaskDispatcherTest {
         failWithMessageIfButtonNotFoundOnPage(buttonFound, saveButtonText, url);
     }
 
-    private HtmlPage submitForm(HtmlForm form) throws IOException {
+    private static HtmlPage submitForm(HtmlForm form) throws IOException {
         HtmlPage page;
         if (Jenkins.getVersion().isOlderThan(new VersionNumber("2.320"))) {
             List<HtmlButton> buttons = HtmlUnitHelper.getButtonsByXPath(form, buttonsXPath);
@@ -331,7 +335,7 @@ public class ThrottleQueueTaskDispatcherTest {
         return page;
     }
 
-    private String configureLogger() throws IOException {
+    private static String configureLogger(JenkinsRule r) throws IOException {
         String logger = ThrottleQueueTaskDispatcher.class.getName();
         r.jenkins.getLog().doNewLogRecorder(logger);
         URL url = new URL(r.getURL() + logUrlPrefix + logger + "/" + configUrlSuffix);
@@ -370,7 +374,7 @@ public class ThrottleQueueTaskDispatcherTest {
         return logger;
     }
 
-    private boolean buttonFoundThusFormSubmitted(HtmlForm form, List<HtmlButton> buttons, String buttonText)
+    private static boolean buttonFoundThusFormSubmitted(HtmlForm form, List<HtmlButton> buttons, String buttonText)
             throws IOException {
         boolean buttonFound = false;
         for (HtmlButton button : buttons) {
@@ -383,7 +387,7 @@ public class ThrottleQueueTaskDispatcherTest {
         return buttonFound;
     }
 
-    private String expectedTracesMessage(String traceKind, boolean assertingTrue) {
+    private static String expectedTracesMessage(String traceKind, boolean assertingTrue) {
         StringBuilder messagePrefix = new StringBuilder("log shall");
         if (!assertingTrue) {
             messagePrefix.append(" not");
@@ -391,11 +395,11 @@ public class ThrottleQueueTaskDispatcherTest {
         return messagePrefix + " contain '" + traceKind + "' traces";
     }
 
-    private void failWithMessageIfButtonNotFoundOnPage(boolean buttonFound, String buttonText, URL url) {
-        assertTrue(buttonText + " button not found on " + url, buttonFound);
+    private static void failWithMessageIfButtonNotFoundOnPage(boolean buttonFound, String buttonText, URL url) {
+        assertTrue(buttonFound, buttonText + " button not found on " + url);
     }
 
-    private HtmlPage getLoggerPage(String logger) throws IOException {
+    private static HtmlPage getLoggerPage(JenkinsRule r, String logger) throws IOException {
         URL url = new URL(r.getURL() + logUrlPrefix + logger);
         return r.createWebClient().getPage(url);
     }
