@@ -4,11 +4,11 @@
     <j:choose>
         <j:when test="${!empty(descriptor.categories)}">
             <f:entry title="${%Categories}">
-                <j:forEach var="cat" items="${descriptor.categories}">
-                    <f:checkbox name="categories" json="${cat.categoryName}" checked="${instance.categories.contains(cat.categoryName)}" />
-                    <label class="attach-previous">${cat.categoryName}</label>
-                    <st:nbsp/>
-                </j:forEach>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <j:forEach var="cat" items="${descriptor.categories}">
+                        <f:checkbox name="categories" json="${cat.categoryName}" checked="${instance.categories.contains(cat.categoryName)}" title="${cat.categoryName}" />
+                    </j:forEach>
+                </div>
             </f:entry>
         </j:when>
         <j:otherwise>
