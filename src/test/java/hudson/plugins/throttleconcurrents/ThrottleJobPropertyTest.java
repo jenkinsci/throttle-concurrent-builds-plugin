@@ -301,8 +301,7 @@ class ThrottleJobPropertyTest {
         // (5) Java does not really have multilines, but still... note that if any whitespace should
         // be there in the carry-over of string representation, it is the coder's responsibility to
         // ensure some.
-        String assignedParamsToUseForLimit5 =
-                """
+        String assignedParamsToUseForLimit5 = """
                 Multi
                 linestring,for	kicks
                 EOL""";
