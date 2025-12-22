@@ -90,6 +90,7 @@ THE SOFTWARE.
     <gitHubRepo>jenkinsci/throttle-concurrent-builds-plugin</gitHubRepo>
     <spotless.check.skip>false</spotless.check.skip>
     <hpi.strictBundledArtifacts>true</hpi.strictBundledArtifacts>
+    <ban-junit4-imports.skip>false</ban-junit4-imports.skip>
   </properties>
 
   <dependencyManagement>
