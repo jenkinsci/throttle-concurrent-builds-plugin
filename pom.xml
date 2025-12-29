@@ -32,7 +32,7 @@ THE SOFTWARE.
   </parent>
 
   <artifactId>throttle-concurrents</artifactId>
-  <version>${revision}${changelist}</version>
+  <version>${changelist}</version>
   <packaging>hpi</packaging>
   <name>Jenkins Throttle Concurrent Builds Plug-in</name>
   <description>Plugin to throttle the number of concurrent builds of a single job per node.</description>
@@ -46,34 +46,6 @@ THE SOFTWARE.
     </license>
   </licenses>
 
-  <developers>
-    <developer>
-      <id>abayer</id>
-      <name>Andrew Bayer</name>
-      <email>andrew.bayer@gmail.com</email>
-      <timezone>-8</timezone>
-    </developer>
-    <developer>
-      <id>basil</id>
-      <name>Basil Crow</name>
-      <email>me@basilcrow.com</email>
-      <timezone>-8</timezone>
-    </developer>
-    <developer>
-      <id>oleg_nenashev</id>
-      <name>Oleg Nenashev</name>
-      <email>o.v.nenashev@gmail.com</email>
-      <timezone>+3</timezone>
-    </developer>
-  </developers>
-
-  <contributors>
-    <contributor>
-      <name>Darren Ball</name>
-      <email>balldarrens@gmail.com</email>
-    </contributor>
-  </contributors>
-
   <scm>
     <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
     <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
@@ -82,8 +54,7 @@ THE SOFTWARE.
   </scm>
 
   <properties>
-    <revision>2.19</revision>
-    <changelist>-SNAPSHOT</changelist>
+    <changelist>999999-SNAPSHOT</changelist>
     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
     <jenkins.baseline>2.479</jenkins.baseline>
     <jenkins.version>${jenkins.baseline}.3</jenkins.version>
