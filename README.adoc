@@ -10,7 +10,7 @@ ifdef::env-github[]
 :warning-caption: :warning:
 endif::[]
 
-https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/[image:https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/badge/icon[Build Status]]
+https://ci.jenkins.io/job/Plugins/job/throttle-concurrent-builds-plugin/job/master/[image:https://ci.jenkins.io/buildStatus/icon?job=Plugins%2Fthrottle-concurrent-builds-plugin%2Fmaster[Build Status]]
 https://github.com/jenkinsci/throttle-concurrent-builds-plugin/graphs/contributors[image:https://img.shields.io/github/contributors/jenkinsci/throttle-concurrent-builds-plugin.svg[Contributors]]
 https://plugins.jenkins.io/throttle-concurrents[image:https://img.shields.io/jenkins/plugin/v/throttle-concurrents.svg[Jenkins Plugin]]
 https://github.com/jenkinsci/throttle-concurrent-builds-plugin/releases/latest[image:https://img.shields.io/github/release/jenkinsci/throttle-concurrent-builds-plugin.svg?label=changelog[GitHub release]]
