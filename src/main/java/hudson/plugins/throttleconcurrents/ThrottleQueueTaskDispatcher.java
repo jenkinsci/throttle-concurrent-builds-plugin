@@ -66,8 +66,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private CauseOfBlockage canTakeImpl(Node node, Task task) {
         final Jenkins jenkins = Jenkins.get();
-        ThrottleJobProperty tjp = getThrottleJobProperty(task);
+
         List<String> pipelineCategories = categoriesForPipeline(task);
+
+        if (task instanceof PlaceholderTask placeholderTask) {
+            // when dealing with a pipeline job, ThrottleJobProperty is defined in the
+            // WorkflowJob wrapped in a PlaceHolderTask so update task to ensure correct
+            // throttling of such job
+            task = placeholderTask.getOwnerTask();
+        }
+
+        ThrottleJobProperty tjp = getThrottleJobProperty(task);
 
         // Handle multi-configuration filters
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
@@ -75,10 +84,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         if (!pipelineCategories.isEmpty() || (tjp != null && tjp.getThrottleEnabled())) {
-            CauseOfBlockage cause = canRunImpl(task, tjp, pipelineCategories);
-            if (cause != null) {
-                return cause;
-            }
             if (tjp != null) {
                 if (tjp.getThrottleOption().equals("project")) {
                     if (tjp.getMaxConcurrentPerNode() > 0) {
@@ -551,9 +556,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
         if (computer != null) { // Not all nodes are certain to become computers, like nodes with 0 executors.
-            // Count flyweight tasks that might not consume an actual executor.
-            for (Executor e : computer.getOneOffExecutors()) {
-                runCount += buildsOnExecutor(task, e);
+            if (!task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+                // Count flyweight tasks that might not consume an actual executor, but not for pipeline
+                // jobs as one-off executors are used by the built-in node to track and coordinate
+                // their builds on slave nodes
+                for (Executor e : computer.getOneOffExecutors()) {
+                    runCount += buildsOnExecutor(task, e);
+                }
             }
 
             for (Executor e : computer.getExecutors()) {
@@ -577,10 +586,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
-        if (currentExecutable != null && task.equals(currentExecutable.getParent())) {
-            runCount++;
+        if (currentExecutable != null) {
+            SubTask executorTask = currentExecutable.getParent();
+            if (executorTask instanceof PlaceholderTask placeholderTask) {
+                // when dealing with a pipeline job, we need to extract the wrapped
+                // WorkflowJob to ensure correct run counts
+                executorTask = placeholderTask.getOwnerTask();
+            }
+            if (task.equals(executorTask)) {
+                runCount++;
+            }
         }
-
         return runCount;
     }
 
