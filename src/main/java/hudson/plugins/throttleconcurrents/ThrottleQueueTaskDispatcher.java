@@ -556,9 +556,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
         if (computer != null) { // Not all nodes are certain to become computers, like nodes with 0 executors.
-            // Count flyweight tasks that might not consume an actual executor.
-            for (Executor e : computer.getOneOffExecutors()) {
-                runCount += buildsOnExecutor(task, e);
+            if (!task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+                // Count flyweight tasks that might not consume an actual executor, but not for pipeline
+                // jobs as one-off executors are used by the built-in node to track and coordinate
+                // their builds on slave nodes
+                for (Executor e : computer.getOneOffExecutors()) {
+                    runCount += buildsOnExecutor(task, e);
+                }
             }
 
             for (Executor e : computer.getExecutors()) {
