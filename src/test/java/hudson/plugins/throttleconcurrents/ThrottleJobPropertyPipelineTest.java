@@ -56,7 +56,112 @@ class ThrottleJobPropertyPipelineTest {
     }
 
     @Test
-    void onePerNode() throws Exception {
+    void onePerNodeForProject() throws Exception {
+
+        Jenkins.get().setLabelString("built-in");
+        Jenkins.get().save();
+
+        Node agent = TestUtil.setupAgent(j, firstAgentTmp, agents, null, 2, "on-agent");
+
+        // two jobs will be created on the slave node and on the built-in node
+        Node[] nodes = {agent, Jenkins.get()};
+
+        ArrayList<ArrayList<WorkflowRun>> jobsRuns = new ArrayList<ArrayList<WorkflowRun>>();
+
+        int expectedQueueSize = 1;
+
+        // create pipeline project
+        WorkflowJob project = j.createProject(WorkflowJob.class);
+        project.addProperty(new ThrottleJobProperty(
+                1, // maxConcurrentPerNode
+                0, // maxConcurrentTotal
+                Collections.emptyList(),
+                true, // throttleEnabled
+                TestUtil.THROTTLE_OPTION_PROJECT, // throttleOption
+                false,
+                null,
+                ThrottleMatrixProjectOptions.DEFAULT));
+
+        // create two jobs per node
+        for (Node node : nodes) {
+            ArrayList<WorkflowRun> jobRuns = new ArrayList<WorkflowRun>();
+
+            // ensure job run only on node
+            project.setDefinition(getJobFlow(node.getLabelString(), node.getLabelString()));
+
+            // start first job
+            WorkflowRun jobFirstRun = project.scheduleBuild2(0).waitForStart();
+            SemaphoreStep.waitForStart("wait-" + node.getLabelString() + "-job/1", jobFirstRun);
+
+            // start second job
+            WorkflowRun jobSecondRun = project.scheduleBuild2(0).waitForStart();
+            j.waitForMessage("Still waiting to schedule task", jobSecondRun);
+            j.jenkins.getQueue().maintain();
+
+            // second job should be blocked as it is at most one running job per node
+            assertFalse(j.jenkins.getQueue().isEmpty());
+            List<Queue.Item> queuedItemList =
+                    Arrays.stream(j.jenkins.getQueue().getItems()).toList();
+            // queue size should be 1 after creating jobs on first node and 2 after
+            // creating jobs on second node
+            assertEquals(expectedQueueSize++, queuedItemList.size());
+
+            // check jobs are blocked because another job is already running on associated node
+            for (Queue.Item queuedItem : queuedItemList) {
+                Set<String> blockageReasons = TestUtil.getBlockageReasons(queuedItem.getCauseOfBlockage());
+                assertThat(
+                        blockageReasons,
+                        hasItem(Messages._ThrottleQueueTaskDispatcher_MaxCapacityOnNode(1)
+                                .toString()));
+            }
+
+            // first job should be running
+            assertEquals(1, node.toComputer().countBusy());
+            TestUtil.hasPlaceholderTaskForRun(node, jobFirstRun);
+
+            jobRuns.add(jobFirstRun);
+            jobRuns.add(jobSecondRun);
+            jobsRuns.add(jobRuns);
+        }
+
+        // terminate first job on each node, check second one can start afterwards
+        for (int i = 0; i < nodes.length; ++i) {
+            Node node = nodes[i];
+            WorkflowRun jobFirstRun = jobsRuns.get(i).get(0);
+            WorkflowRun jobSecondRun = jobsRuns.get(i).get(1);
+
+            // terminate first job
+            SemaphoreStep.success("wait-" + node.getLabelString() + "-job/1", null);
+            j.assertBuildStatusSuccess(j.waitForCompletion(jobFirstRun));
+            SemaphoreStep.waitForStart("wait-" + node.getLabelString() + "-job/2", jobSecondRun);
+            j.jenkins.getQueue().maintain();
+
+            if (i == 0) {
+                // after terminating first job on first node,
+                // second job on second node should still be in the queue
+                assertFalse(j.jenkins.getQueue().isEmpty());
+
+            } else {
+                // after terminating first job on second node,
+                // second job on second node should no longer be in the queue
+                assertTrue(j.jenkins.getQueue().isEmpty());
+            }
+
+            // second job should be running
+            assertEquals(1, node.toComputer().countBusy());
+            TestUtil.hasPlaceholderTaskForRun(node, jobSecondRun);
+
+            // terminate second job
+            SemaphoreStep.success("wait-" + node.getLabelString() + "-job/2", null);
+            j.assertBuildStatusSuccess(j.waitForCompletion(jobSecondRun));
+
+            // no more jobs should be running on the node
+            assertEquals(0, node.toComputer().countBusy());
+        }
+    }
+
+    @Test
+    void onePerNodeForCategory() throws Exception {
 
         Jenkins.get().setLabelString("built-in");
         Jenkins.get().save();
