@@ -49,7 +49,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "deliberately mutable")
     public static boolean USE_FLOW_EXECUTION_LIST = Boolean.parseBoolean(
-            System.getProperty(ThrottleQueueTaskDispatcher.class.getName() + ".USE_FLOW_EXECUTION_LIST", "true"));
+            System.getProperty(ThrottleQueueTaskDispatcher.class.getName() + ".USE_FLOW_EXECUTION_LIST", "false"));
 
     @Deprecated
     @Override
@@ -84,6 +84,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         }
 
         if (!pipelineCategories.isEmpty() || (tjp != null && tjp.getThrottleEnabled())) {
+            CauseOfBlockage cause = canRunImpl(task, tjp, pipelineCategories);
+            if (cause != null) {
+                return cause;
+            }
             if (tjp != null) {
                 if (tjp.getThrottleOption().equals("project")) {
                     if (tjp.getMaxConcurrentPerNode() > 0) {
@@ -101,10 +105,6 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                 }
             } else if (!pipelineCategories.isEmpty()) {
                 return throttleCheckForCategoriesOnNode(node, jenkins, pipelineCategories);
-            }
-            CauseOfBlockage cause = canRunImpl(task, tjp, pipelineCategories);
-            if (cause != null) {
-                return cause;
             }
         }
 

@@ -133,7 +133,7 @@ class ThrottleJobPropertyPipelineRestartTest {
             assertNotNull(secondJobFirstRun);
 
             j.jenkins.getQueue().maintain();
-            while (!j.jenkins.getQueue().getBuildableItems().isEmpty()) {
+            while (!(j.jenkins.getQueue().getItems().length == 1)) {
                 Thread.sleep(500);
                 j.jenkins.getQueue().maintain();
             }
@@ -162,7 +162,8 @@ class ThrottleJobPropertyPipelineRestartTest {
             SemaphoreStep.success("wait-first-job/1", null);
             j.assertBuildStatusSuccess(j.waitForCompletion(firstJobFirstRun));
 
-            WorkflowRun thirdJobFirstRun = (WorkflowRun) queuedItem.getFuture().waitForStart();
+            WorkflowRun thirdJobFirstRun =
+                    (WorkflowRun) queuedItem.getFuture().waitForStart().getParentExecutable();
             SemaphoreStep.waitForStart("wait-third-job/1", thirdJobFirstRun);
             j.jenkins.getQueue().maintain();
             assertTrue(j.jenkins.getQueue().isEmpty());
