@@ -41,6 +41,7 @@ import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.graph.StepNode;
 import org.jenkinsci.plugins.workflow.graphanalysis.LinearBlockHoppingScanner;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.support.actions.PauseAction;
 import org.jenkinsci.plugins.workflow.support.concurrent.Timeout;
 import org.jenkinsci.plugins.workflow.support.steps.ExecutorStepExecution.PlaceholderTask;
 
@@ -54,14 +55,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     @Deprecated
     @Override
     public @CheckForNull CauseOfBlockage canTake(Node node, Task task) {
+        CauseOfBlockage cause = null;
         if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
-            return canTakeImpl(node, task);
+            cause = canTakeImpl(node, task);
+        } else {
+            // Throttle-concurrent-builds requires READ permissions for all projects.
+            try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+                cause = canTakeImpl(node, task);
+            }
         }
-
-        // Throttle-concurrent-builds requires READ permissions for all projects.
-        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
-            return canTakeImpl(node, task);
-        }
+        updatePauseAction(task, cause);
+        return cause;
     }
 
     private CauseOfBlockage canTakeImpl(Node node, Task task) {
@@ -218,14 +222,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     private CauseOfBlockage canRun(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
+        CauseOfBlockage cause = null;
         if (Jenkins.getAuthentication().equals(ACL.SYSTEM)) {
-            return canRunImpl(task, tjp, pipelineCategories);
+            cause = canRunImpl(task, tjp, pipelineCategories);
+        } else {
+            // Throttle-concurrent-builds requires READ permissions for all projects.
+            try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
+                cause = canRunImpl(task, tjp, pipelineCategories);
+            }
         }
-
-        // Throttle-concurrent-builds requires READ permissions for all projects.
-        try (ACLContext ctx = ACL.as(ACL.SYSTEM)) {
-            return canRunImpl(task, tjp, pipelineCategories);
-        }
+        updatePauseAction(task, cause);
+        return cause;
     }
 
     private CauseOfBlockage canRunImpl(Task task, ThrottleJobProperty tjp, List<String> pipelineCategories) {
@@ -690,6 +697,32 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             LOGGER.fine("node labels mismatch");
         }
         return maxConcurrentPerNodeLabeledIfMatch;
+    }
+
+    private void updatePauseAction(Task task, CauseOfBlockage cause) {
+        if (task instanceof PlaceholderTask) {
+            PlaceholderTask placeholderTask = (PlaceholderTask) task;
+            try {
+                FlowNode flowNode = placeholderTask.getNode();
+                if (flowNode == null) {
+                    return;
+                }
+
+                if (cause != null) {
+                    if (PauseAction.getCurrentPause(flowNode) == null) {
+                        flowNode.addAction(new PauseAction(cause.getShortDescription()));
+                    }
+                } else {
+                    if (PauseAction.getCurrentPause(flowNode) != null) {
+                        PauseAction.endCurrentPause(flowNode);
+                    }
+                }
+            } catch (IOException | InterruptedException e) {
+                LOGGER.log(Level.WARNING, "Error setting pause action on pipeline {0}: {1}", new Object[] {
+                    task.getDisplayName(), e
+                });
+            }
+        }
     }
 
     private static final Logger LOGGER = Logger.getLogger(ThrottleQueueTaskDispatcher.class.getName());
