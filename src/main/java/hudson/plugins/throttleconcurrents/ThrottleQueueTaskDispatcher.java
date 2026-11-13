@@ -49,7 +49,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "deliberately mutable")
     public static boolean USE_FLOW_EXECUTION_LIST = Boolean.parseBoolean(
-            System.getProperty(ThrottleQueueTaskDispatcher.class.getName() + ".USE_FLOW_EXECUTION_LIST", "true"));
+            System.getProperty(ThrottleQueueTaskDispatcher.class.getName() + ".USE_FLOW_EXECUTION_LIST", "false"));
 
     @Deprecated
     @Override
@@ -66,8 +66,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private CauseOfBlockage canTakeImpl(Node node, Task task) {
         final Jenkins jenkins = Jenkins.get();
-        ThrottleJobProperty tjp = getThrottleJobProperty(task);
+
         List<String> pipelineCategories = categoriesForPipeline(task);
+
+        if (task instanceof PlaceholderTask placeholderTask) {
+            // when dealing with a pipeline job, ThrottleJobProperty is defined in the
+            // WorkflowJob wrapped in a PlaceholderTask so update task to ensure correct
+            // throttling of such job
+            task = placeholderTask.getOwnerTask();
+        }
+
+        ThrottleJobProperty tjp = getThrottleJobProperty(task);
 
         // Handle multi-configuration filters
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
@@ -551,9 +560,13 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // a build right after it was launched, for some reason.
         Computer computer = node.toComputer();
         if (computer != null) { // Not all nodes are certain to become computers, like nodes with 0 executors.
-            // Count flyweight tasks that might not consume an actual executor.
-            for (Executor e : computer.getOneOffExecutors()) {
-                runCount += buildsOnExecutor(task, e);
+            if (!task.getClass().getName().equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+                // Count flyweight tasks that might not consume an actual executor, but not for pipeline
+                // jobs as one-off executors are used by the built-in node to track and coordinate
+                // their builds on slave nodes
+                for (Executor e : computer.getOneOffExecutors()) {
+                    runCount += buildsOnExecutor(task, e);
+                }
             }
 
             for (Executor e : computer.getExecutors()) {
@@ -577,10 +590,21 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     private int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
         final Queue.Executable currentExecutable = exec.getCurrentExecutable();
-        if (currentExecutable != null && task.equals(currentExecutable.getParent())) {
-            runCount++;
+        if (currentExecutable != null) {
+            final SubTask executorTask = currentExecutable.getParent();
+            if (task.equals(executorTask)) {
+                runCount++;
+            } else if (executorTask instanceof PlaceholderTask placeholderTask) {
+                // For pipeline executions, project-level throttling may be comparing
+                // either against the PlaceholderTask itself or against the owning
+                // WorkflowJob. Preserve the direct parent-task match above and also
+                // allow the owner task to match here.
+                Queue.Task ownerTask = placeholderTask.getOwnerTask();
+                if (ownerTask != null && task.equals(ownerTask)) {
+                    runCount++;
+                }
+            }
         }
-
         return runCount;
     }
 

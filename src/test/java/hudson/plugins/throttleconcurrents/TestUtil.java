@@ -33,6 +33,8 @@ public class TestUtil {
             new ThrottleJobProperty.ThrottleCategory("two_total", 0, 2, null);
     static final ThrottleJobProperty.ThrottleCategory OTHER_ONE_PER_NODE =
             new ThrottleJobProperty.ThrottleCategory("other_one_per_node", 1, 0, null);
+    static final ThrottleJobProperty.ThrottleCategory TWO_TOTAL_ONE_PER_NODE =
+            new ThrottleJobProperty.ThrottleCategory("two_total_one_per_node", 1, 2, null);
 
     private TestUtil() {
         // Instantiation is prohibited
