@@ -589,7 +589,16 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
     private int buildsOnExecutor(Task task, Executor exec) {
         int runCount = 0;
-        final Queue.Executable currentExecutable = exec.getCurrentExecutable();
+        Queue.Executable currentExecutable = exec.getCurrentExecutable();
+        final WorkUnit currentWorkUnit = exec.getCurrentWorkUnit();
+
+        if (currentExecutable == null && currentWorkUnit != null) {
+            // Executor.getCurrentExecutable() can return null when the executor is holding an
+            // asynchronous pipeline step (PlaceholderTask) in a brief transition state.
+            // Use the underlying WorkUnit instead to get the reference to the pipeline executable.
+            currentExecutable = currentWorkUnit.work.getOwnerExecutable();
+        }
+
         if (currentExecutable != null) {
             final SubTask executorTask = currentExecutable.getParent();
             if (task.equals(executorTask)) {
