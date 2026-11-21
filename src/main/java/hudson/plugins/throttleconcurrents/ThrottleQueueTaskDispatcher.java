@@ -71,6 +71,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         // Handle multi-configuration filters
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
+            // Even if the job is not explicitly throttled, check shared hardware limits.
+            CauseOfBlockage sharedHardwareBlock = checkSharedHardwareThrottle(node);
+            if (sharedHardwareBlock != null) {
+                return sharedHardwareBlock;
+            }
             return null;
         }
 
@@ -99,7 +104,24 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             }
         }
 
-        return null;
+        // Check shared hardware limits for explicitly throttled jobs as well.
+        return checkSharedHardwareThrottle(node);
+    }
+
+    /**
+     * Check shared hardware throttle limits for a node.
+     * This is an implicit check that applies to all jobs regardless of their throttle configuration.
+     *
+     * @param node the node being considered
+     * @return a cause of blockage if the machine is at capacity, null otherwise
+     */
+    private CauseOfBlockage checkSharedHardwareThrottle(Node node) {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        if (descriptor == null) {
+            return null;
+        }
+        SharedHardwareThrottleManager manager = descriptor.getSharedHardwareThrottle();
+        return manager.checkMachineCapacity(node);
     }
 
     private CauseOfBlockage throttleCheckForCategoriesOnNode(Node node, Jenkins jenkins, List<String> categories) {

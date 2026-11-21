@@ -25,5 +25,28 @@
         <f:repeatableDeleteButton/>
       </f:repeatable>
     </f:entry>
+
+    <f:advanced>
+      <f:section title="${%Shared Hardware Throttling}">
+        <j:set var="sw" value="${instance.sharedHardwareThrottle}"/>
+        <f:entry title="${%Label Key for Machine Assignment}" field="sharedHardwareThrottle.labelKey">
+          <f:textbox default="THROTTLE_SHARED_HARDWARE"/>
+        </f:entry>
+        <f:entry title="${%Label Key for Machine Max Capacity}" field="sharedHardwareThrottle.maxLabelKey">
+          <f:textbox default="THROTTLE_SHARED_HARDWARE_MAX"/>
+        </f:entry>
+        <f:entry title="${%Machine Capacities}" field="sharedHardwareThrottle.machineCapacities">
+          <f:repeatable field="sharedHardwareThrottle.machineCapacities" add="${%Add Machine}" minimum="0">
+            <f:entry title="${%Machine Name}" field="machineName">
+              <f:textbox clazz="required" checkMessage="${%Machine Name is required}"/>
+            </f:entry>
+            <f:entry title="${%Max Total Weight}" field="maxWeight">
+              <f:number min="1"/>
+            </f:entry>
+            <f:repeatableDeleteButton/>
+          </f:repeatable>
+        </f:entry>
+      </f:section>
+    </f:advanced>
   </f:section>
 </j:jelly>

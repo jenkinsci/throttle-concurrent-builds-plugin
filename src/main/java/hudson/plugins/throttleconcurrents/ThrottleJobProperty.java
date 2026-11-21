@@ -387,6 +387,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
 
         private Map<String, Map<String, List<String>>> throttledPipelinesByCategory;
 
+        /** Shared hardware throttle manager for per-machine capacity limits. */
+        private SharedHardwareThrottleManager sharedHardwareThrottle;
+
         /** Map from category names, to properties including that category. */
         private transient Map<String, Map<ThrottleJobProperty, Void>> propertiesByCategory = new HashMap<>();
         /** A sync object for {@link #propertiesByCategory} */
@@ -485,6 +488,18 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             }
 
             return categories;
+        }
+
+        @NonNull
+        public SharedHardwareThrottleManager getSharedHardwareThrottle() {
+            if (sharedHardwareThrottle == null) {
+                sharedHardwareThrottle = new SharedHardwareThrottleManager();
+            }
+            return sharedHardwareThrottle;
+        }
+
+        public void setSharedHardwareThrottle(SharedHardwareThrottleManager sharedHardwareThrottle) {
+            this.sharedHardwareThrottle = sharedHardwareThrottle;
         }
 
         @SuppressWarnings("lgtm[jenkins/csrf]")
