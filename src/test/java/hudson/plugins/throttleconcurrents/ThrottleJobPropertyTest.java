@@ -475,6 +475,7 @@ class ThrottleJobPropertyTest {
         // Simulate UI form submission with shared hardware throttle configuration
         JenkinsRule.WebClient webClient = j.createWebClient();
         HtmlPage page = webClient.goTo("configure");
+        WebClientUtil.waitForJSExec(page.getWebClient());
         HtmlForm form = page.getFormByName("config");
 
         // Set shared hardware throttle values via form fields

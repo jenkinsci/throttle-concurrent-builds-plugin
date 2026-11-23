@@ -432,7 +432,32 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
                 this.categories = null;
             }
 
-            // Bind all fields including nested sharedHardwareThrottle
+            // Create sharedHardwareThrottle from flat form data keys
+            String labelKey = formData.optString("labelKey");
+            String maxLabelKey = formData.optString("maxLabelKey");
+            int fallbackCapacityFactor = formData.optInt("fallbackCapacityFactor", 0);
+
+            if (!labelKey.isEmpty() || !maxLabelKey.isEmpty() || fallbackCapacityFactor > 0) {
+                // Form has shared hardware throttle data, create object
+                List<SharedHardwareThrottleManager.MachineCapacityPair> machineCapacities =
+                        formData.has("machineCapacities")
+                                ? (List<SharedHardwareThrottleManager.MachineCapacityPair>) req.bindJSONToList(
+                                        SharedHardwareThrottleManager.MachineCapacityPair.class,
+                                        formData.opt("machineCapacities"))
+                                : new ArrayList<>();
+
+                sharedHardwareThrottle = new SharedHardwareThrottleManager(
+                        labelKey, maxLabelKey, machineCapacities, fallbackCapacityFactor);
+                // Remove the extracted keys from formData to avoid errors
+                formData.remove("labelKey");
+                formData.remove("maxLabelKey");
+                formData.remove("fallbackCapacityFactor");
+                formData.remove("machineCapacities");
+            } else {
+                sharedHardwareThrottle = new SharedHardwareThrottleManager();
+            }
+
+            // Bind remaining top-level fields
             req.bindJSON(this, formData);
 
             save();
