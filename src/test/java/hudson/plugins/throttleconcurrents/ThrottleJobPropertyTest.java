@@ -28,6 +28,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.htmlunit.WebClientUtil;
 import org.htmlunit.html.HtmlButton;
 import org.htmlunit.html.HtmlForm;
+import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
@@ -483,22 +484,34 @@ class ThrottleJobPropertyTest {
         form.getInputByName("_.sharedHardwareThrottle.maxLabelKey").setValue("MAX_LABEL_KEY_FROM_UI");
         form.getInputByName("_.sharedHardwareThrottle.fallbackCapacityFactor").setValue("42");
 
-        // Add a machine capacity entry
-        HtmlButton addButton = form.getButtonsByName("sharedHardwareThrottle.machineCapacities.add").stream()
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("No add button found for machineCapacities"));
-        addButton.click();
+        String advancedButtonXPath = "//div[contains(@class,'advancedBody')]"
+                + "[.//button[contains(@class,'repeatable-add') and normalize-space(.)='Add Machine']]"
+                + "/preceding-sibling::div[contains(@class,'advancedLink')]"
+                + "//button[contains(@class,'advanced-button')]";
+        List<HtmlButton> advancedButtons = form.getByXPath(advancedButtonXPath);
+        assertEquals(1, advancedButtons.size());
+        advancedButtons.get(0).click();
+        WebClientUtil.waitForJSExec(webClient);
 
-        // Fill in the machine capacity fields
-        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[0].machineName")
-                .setValue("machine-01");
-        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[0].maxWeight")
-                .setValue("16");
+        // Add two machine capacity entries
+        String addButtonXPath =
+                "//button[contains(@class,'repeatable-add') and normalize-space(.)='Add Machine']";
+        for (int i = 0; i < 2; i++) {
+            List<HtmlButton> addButtons = form.getByXPath(addButtonXPath);
+            assertEquals(1, addButtons.size());
+            addButtons.get(0).click();
+            WebClientUtil.waitForJSExec(webClient);
+        }
 
-        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[1].machineName")
-                .setValue("machine-B");
-        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[1].maxWeight")
-                .setValue("32");
+        // Fill the repeated fields; Jenkins names each input relative to its repeatable row.
+        List<HtmlInput> machineNameInputs = form.getInputsByName("_.machineName");
+        List<HtmlInput> maxWeightInputs = form.getInputsByName("_.maxWeight");
+        assertEquals(2, machineNameInputs.size());
+        assertEquals(2, maxWeightInputs.size());
+        machineNameInputs.get(0).setValue("machine-01");
+        maxWeightInputs.get(0).setValue("16");
+        machineNameInputs.get(1).setValue("machine-B");
+        maxWeightInputs.get(1).setValue("32");
 
         // Submit the form
         j.submit(form);
