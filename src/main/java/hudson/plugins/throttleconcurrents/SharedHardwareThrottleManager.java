@@ -224,7 +224,11 @@ public final class SharedHardwareThrottleManager {
         int maxCapacity = -1;
 
         Jenkins jenkins = Jenkins.get();
-        for (Node node : jenkins.getNodes()) {
+        var nodes = jenkins.getNodes();
+        if (nodes == null) {
+            return -1;
+        }
+        for (Node node : nodes) {
             // First check if this node declares its own cost for the same machine
             MachineInfo nodeInfo = parseNodeLabels(node);
             if (nodeInfo == null || !nodeInfo.machineName.equals(machineName)) {
@@ -302,12 +306,14 @@ public final class SharedHardwareThrottleManager {
         }
 
         // 2. Check configured machine capacities (takes precedence over label discovery)
-        for (MachineCapacityPair pair : machineCapacities) {
-            if (pair.getMachineName() != null && pair.getMachineName().equals(machineName)) {
-                int configured = pair.getMaxWeight();
-                hasConfiguredCapacity = true;
-                if (maxCapacity < 0 || configured < maxCapacity) {
-                    maxCapacity = configured;
+        if (machineCapacities != null) {
+            for (MachineCapacityPair pair : machineCapacities) {
+                if (pair.getMachineName() != null && pair.getMachineName().equals(machineName)) {
+                    int configured = pair.getMaxWeight();
+                    hasConfiguredCapacity = true;
+                    if (maxCapacity < 0 || configured < maxCapacity) {
+                        maxCapacity = configured;
+                    }
                 }
             }
         }
@@ -353,7 +359,11 @@ public final class SharedHardwareThrottleManager {
         Jenkins jenkins = Jenkins.get();
         int totalWeight = 0;
 
-        for (Node node : jenkins.getNodes()) {
+        var nodes = jenkins.getNodes();
+        if (nodes == null) {
+            return 0;
+        }
+        for (Node node : nodes) {
             MachineInfo info = parseNodeLabels(node);
             if (info == null || !info.machineName.equals(machineName)) {
                 continue;
@@ -451,7 +461,11 @@ public final class SharedHardwareThrottleManager {
      */
     private void warnInsufficientCapacityForNodes(@NonNull String machineName, int maxCapacity) {
         Jenkins jenkins = Jenkins.get();
-        for (Node node : jenkins.getNodes()) {
+        var nodes = jenkins.getNodes();
+        if (nodes == null) {
+            return;
+        }
+        for (Node node : nodes) {
             MachineInfo info = parseNodeLabels(node);
             if (info == null || !info.machineName.equals(machineName)) {
                 continue;
