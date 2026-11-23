@@ -109,6 +109,17 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
     }
 
     /**
+     * Rate-limit map for exception warnings in checkSharedHardwareThrottle().
+     * Maps node display name to the last time a warning was logged.
+     * Prevents hundreds of WARNING-level log entries per second when a persistent
+     * exception (e.g., NPE) occurs in the shared hardware throttle check.
+     */
+    private final java.util.Map<String, Long> lastExceptionWarningTime = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Minimum interval (in milliseconds) between exception warnings for the same node. */
+    private static final long EXCEPTION_WARNING_INTERVAL_MS = 30_000;
+
+    /**
      * Check shared hardware throttle limits for a node.
      * This is an implicit check that applies to all jobs regardless of their throttle configuration.
      *
@@ -116,12 +127,35 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
      * @return a cause of blockage if the machine is at capacity, null otherwise
      */
     private CauseOfBlockage checkSharedHardwareThrottle(Node node) {
-        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
-        if (descriptor == null) {
+        if (node == null) {
             return null;
         }
-        SharedHardwareThrottleManager manager = descriptor.getSharedHardwareThrottle();
-        return manager.checkMachineCapacity(node);
+        try {
+            ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+            if (descriptor == null) {
+                return null;
+            }
+            SharedHardwareThrottleManager manager = descriptor.getSharedHardwareThrottle();
+            if (manager == null) {
+                return null;
+            }
+            return manager.checkMachineCapacity(node);
+        } catch (Exception e) {
+            // Never let an exception in the shared hardware check block the entire queue dispatcher.
+            // This method is called hundreds of times per second; rate-limit warnings to avoid log spam.
+            String nodeDisplayName = node.getDisplayName();
+            long now = System.currentTimeMillis();
+            Long lastLogged = lastExceptionWarningTime.get(nodeDisplayName);
+            if (lastLogged == null || (now - lastLogged) >= EXCEPTION_WARNING_INTERVAL_MS) {
+                lastExceptionWarningTime.put(nodeDisplayName, now);
+                LOGGER.log(
+                        Level.WARNING,
+                        "Exception in shared hardware throttle check for node {0} -- skipping",
+                        new Object[] {nodeDisplayName});
+                LOGGER.log(Level.FINE, "Full stack trace for shared hardware throttle exception", e);
+            }
+            return null;
+        }
     }
 
     private CauseOfBlockage throttleCheckForCategoriesOnNode(Node node, Jenkins jenkins, List<String> categories) {
