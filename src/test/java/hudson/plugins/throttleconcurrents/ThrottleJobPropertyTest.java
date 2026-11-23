@@ -467,6 +467,60 @@ class ThrottleJobPropertyTest {
         assertEquals(7, restored.getFallbackCapacityFactor());
     }
 
+    @Test
+    void sharedHardwareConfigurationIsPersistedViaUIFormSubmission(JenkinsRule j) throws Exception {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
+
+        // Simulate UI form submission with shared hardware throttle configuration
+        JenkinsRule.WebClient webClient = j.createWebClient();
+        HtmlPage page = webClient.goTo("configure");
+        HtmlForm form = page.getFormByName("config");
+
+        // Set shared hardware throttle values via form fields
+        form.getInputByName("_.sharedHardwareThrottle.labelKey").setValue("LABEL_KEY_FROM_UI");
+        form.getInputByName("_.sharedHardwareThrottle.maxLabelKey").setValue("MAX_LABEL_KEY_FROM_UI");
+        form.getInputByName("_.sharedHardwareThrottle.fallbackCapacityFactor").setValue("42");
+
+        // Add a machine capacity entry
+        HtmlButton addButton = form.getButtonsByName("sharedHardwareThrottle.machineCapacities.add").stream()
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No add button found for machineCapacities"));
+        addButton.click();
+
+        // Fill in the machine capacity fields
+        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[0].machineName")
+                .setValue("machine-01");
+        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[0].maxWeight")
+                .setValue("16");
+
+        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[1].machineName")
+                .setValue("machine-B");
+        form.getInputByName("_.sharedHardwareThrottle.machineCapacities[1].maxWeight")
+                .setValue("32");
+
+        // Submit the form
+        j.submit(form);
+
+        // Verify the configuration was persisted
+        descriptor.load();
+        SharedHardwareThrottleManager restored = descriptor.getSharedHardwareThrottle();
+        assertNotNull(restored);
+        assertEquals("LABEL_KEY_FROM_UI", restored.getLabelKey());
+        assertEquals("MAX_LABEL_KEY_FROM_UI", restored.getMaxLabelKey());
+        assertEquals(42, restored.getFallbackCapacityFactor());
+        assertEquals(2, restored.getMachineCapacities().size());
+
+        SharedHardwareThrottleManager.MachineCapacityPair capacity =
+                restored.getMachineCapacities().get(0);
+        assertEquals("machine-01", capacity.getMachineName());
+        assertEquals(16, capacity.getMaxWeight());
+
+        capacity = restored.getMachineCapacities().get(1);
+        assertEquals("machine-B", capacity.getMachineName());
+        assertEquals(32, capacity.getMaxWeight());
+    }
+
     private static void assertProjects(JenkinsRule j, String category, AbstractProject<?, ?>... projects) {
         j.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
