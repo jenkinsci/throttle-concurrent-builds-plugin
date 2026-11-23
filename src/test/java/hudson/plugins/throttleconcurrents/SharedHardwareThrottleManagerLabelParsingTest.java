@@ -308,20 +308,40 @@ class SharedHardwareThrottleManagerLabelParsingTest {
     /* ------------------------------------------------------------------ */
 
     @Test
-    void shouldBlockWhenCapacityLessThanNodeWeight(JenkinsRule r) throws Exception {
-        // Node weight is 10, but capacity is only 1 -- node can never accept work
+    void shouldBlockWhenConfiguredCapacityLessThanNodeWeight(JenkinsRule r) throws Exception {
+        // Node weight is 10, but configured capacity is only 1 -- node can never accept work
+        // Configured capacities are enforced strictly without the heaviest-agent floor adjustment
         hudson.slaves.DumbSlave node =
                 r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerH:10"));
-        node.setLabelString("THROTTLE_SHARED_HARDWARE=ServerH:10 THROTTLE_SHARED_HARDWARE_MAX=ServerH:1");
 
         SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+        java.util.List<SharedHardwareThrottleManager.MachineCapacityPair> capacities = new java.util.ArrayList<>();
+        capacities.add(new SharedHardwareThrottleManager.MachineCapacityPair("ServerH", 1));
+        manager.setMachineCapacities(capacities);
 
         hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node);
-        assertNotNull(blockage, "Should block when capacity is less than node weight");
+        assertNotNull(blockage, "Should block when configured capacity is less than node weight");
     }
 
     @Test
-    void shouldBlockWhenConfiguredCapacityLessThanNodeWeight(JenkinsRule r) throws Exception {
+    void shouldRaiseLabelDiscoveredCapacityToHeaviestAgentWeight(JenkinsRule r) throws Exception {
+        // Node weight is 10, label-discovered MAX is only 1
+        // The heaviest-agent floor should raise the capacity to 10
+        hudson.slaves.DumbSlave node =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerK:10"));
+        node.setLabelString("THROTTLE_SHARED_HARDWARE=ServerK:10 THROTTLE_SHARED_HARDWARE_MAX=ServerK:1");
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+
+        int maxCapacity = manager.getMaxCapacity("ServerK");
+        assertEquals(10, maxCapacity, "Label-discovered capacity should be raised to heaviest agent weight");
+
+        hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node);
+        assertNull(blockage, "Should not block when label-discovered capacity is raised to heaviest agent weight");
+    }
+
+    @Test
+    void shouldBlockWhenConfiguredCapacityLessThanHeavyNodeWeight(JenkinsRule r) throws Exception {
         // Node weight is 100, configured capacity is 1
         hudson.slaves.DumbSlave node =
                 r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerI:100"));
