@@ -232,12 +232,16 @@ public final class SharedHardwareThrottleManager {
      * Discover the max capacity for a machine from node labels.
      * Looks for labels like {@code THROTTLE_SHARED_HARDWARE_MAX=ServerA:20} on all nodes
      * that also declare their cost for the same machine.
+     * <p>If multiple nodes declare different MAX values for the same machine, the lowest value
+     * is honored and a WARNING is logged (rate-limited) to alert the administrator of the conflict.</p>
      *
      * @param machineName the machine name to look up
      * @return the discovered max capacity, or -1 if not found
      */
     private int discoverMaxCapacityFromNodes(@NonNull String machineName) {
         int maxCapacity = -1;
+        // Track all discovered values to detect conflicts
+        java.util.List<String> conflictDetails = new java.util.ArrayList<>();
 
         Jenkins jenkins = Jenkins.get();
         for (Node node : jenkins.getNodes()) {
@@ -259,6 +263,7 @@ public final class SharedHardwareThrottleManager {
                     String value = labelName.substring(maxLabelKey.length() + 1);
                     MachineInfo parsed = parseMachineValue(value);
                     if (parsed != null && parsed.machineName.equals(machineName)) {
+                        conflictDetails.add(parsed.weight + " (from " + node.getDisplayName() + ")");
                         if (maxCapacity < 0 || parsed.weight < maxCapacity) {
                             maxCapacity = parsed.weight;
                             LOGGER.log(
@@ -267,6 +272,26 @@ public final class SharedHardwareThrottleManager {
                                     new Object[] {parsed.weight, machineName, node.getDisplayName()});
                         }
                     }
+                }
+            }
+        }
+
+        // Log warning if multiple nodes declare different MAX values for the same machine
+        if (conflictDetails.size() > 1) {
+            // Check if all values are the same
+            boolean allSame = conflictDetails.stream().distinct().count() == 1;
+            if (!allSame) {
+                // Rate-limit this warning to once per machine per 30 seconds
+                ensureCacheInitialized();
+                String conflictKey = "conflict:" + machineName;
+                Long lastLogged = lastNoCapacityLogTime.get(conflictKey);
+                if (lastLogged == null || (System.currentTimeMillis() - lastLogged) >= NO_CAPACITY_LOG_INTERVAL_MS) {
+                    lastNoCapacityLogTime.put(conflictKey, System.currentTimeMillis());
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Machine {0}: conflicting max capacity values declared by nodes on the same machine: {1}. "
+                                    + "Using the lowest value: {2}.",
+                            new Object[] {machineName, conflictDetails, maxCapacity});
                 }
             }
         }

@@ -287,6 +287,66 @@ class SharedHardwareThrottleManagerLabelParsingTest {
     }
 
     @Test
+    void shouldLogConflictWhenMultipleNodesDeclareDifferentMaxValues(JenkinsRule r) throws Exception {
+        // Two nodes on the same machine, declaring different max capacities
+        hudson.slaves.DumbSlave node1 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerL:1"));
+        node1.setLabelString("THROTTLE_SHARED_HARDWARE=ServerL:1 THROTTLE_SHARED_HARDWARE_MAX=ServerL:30");
+
+        hudson.slaves.DumbSlave node2 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerL:2"));
+        node2.setLabelString("THROTTLE_SHARED_HARDWARE=ServerL:2 THROTTLE_SHARED_HARDWARE_MAX=ServerL:15");
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+
+        int maxCapacity = manager.getMaxCapacity("ServerL");
+        assertEquals(
+                15, maxCapacity, "Should pick the lowest max capacity when multiple nodes declare different values");
+    }
+
+    @Test
+    void shouldNotLogConflictWhenMultipleNodesDeclareSameMaxValue(JenkinsRule r) throws Exception {
+        // Two nodes on the same machine, declaring the same max capacity -- no conflict
+        hudson.slaves.DumbSlave node1 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerM:1"));
+        node1.setLabelString("THROTTLE_SHARED_HARDWARE=ServerM:1 THROTTLE_SHARED_HARDWARE_MAX=ServerM:20");
+
+        hudson.slaves.DumbSlave node2 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerM:2"));
+        node2.setLabelString("THROTTLE_SHARED_HARDWARE=ServerM:2 THROTTLE_SHARED_HARDWARE_MAX=ServerM:20");
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+
+        int maxCapacity = manager.getMaxCapacity("ServerM");
+        assertEquals(20, maxCapacity, "Should use the declared max capacity when all nodes agree");
+    }
+
+    @Test
+    void shouldApplyHeaviestAgentFloorWithConflictingMaxValues(JenkinsRule r) throws Exception {
+        // Two nodes on the same machine: one declares MAX=5, the other MAX=10
+        // The lowest MAX is 5, but the heaviest agent weight is 8
+        // The heaviest-agent floor should raise the capacity to 8
+        hudson.slaves.DumbSlave node1 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerN:3"));
+        node1.setLabelString("THROTTLE_SHARED_HARDWARE=ServerN:3 THROTTLE_SHARED_HARDWARE_MAX=ServerN:10");
+
+        hudson.slaves.DumbSlave node2 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerN:8"));
+        node2.setLabelString("THROTTLE_SHARED_HARDWARE=ServerN:8 THROTTLE_SHARED_HARDWARE_MAX=ServerN:5");
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+
+        int maxCapacity = manager.getMaxCapacity("ServerN");
+        assertEquals(
+                8,
+                maxCapacity,
+                "Lowest MAX (5) should be raised to heaviest agent weight (8) for label-discovered capacity");
+
+        hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node2);
+        assertNull(blockage, "Should not block the heaviest agent when capacity is raised to its weight");
+    }
+
+    @Test
     void shouldNotThrottleWhenConfiguredCapacityMatchesLabel(JenkinsRule r) throws Exception {
         // Node declares max capacity via labels as 20
         hudson.slaves.DumbSlave node =
