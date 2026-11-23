@@ -9,7 +9,9 @@ import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
@@ -50,6 +52,32 @@ public final class SharedHardwareThrottleManager {
     /** Map from machine name to configured max weight capacity. */
     @NonNull
     private List<MachineCapacityPair> machineCapacities;
+
+    /**
+     * Cache for capacity lookup results to avoid redundant computation and log spam.
+     * Maps machine name to the last known max capacity (-1 if unknown).
+     * The cache is invalidated when configuration changes.
+     */
+    private final Map<String, Integer> capacityCache = new ConcurrentHashMap<>();
+
+    /**
+     * Tracks the last time we logged "no max capacity" for each machine, to rate-limit
+     * the log messages. Jenkins calls canTake() hundreds of times per second.
+     */
+    private final Map<String, Long> lastNoCapacityLogTime = new ConcurrentHashMap<>();
+
+    /** Minimum interval (in milliseconds) between "no max capacity" log messages for the same machine. */
+    private static final long NO_CAPACITY_LOG_INTERVAL_MS = 30_000;
+
+    /**
+     * TTL (in milliseconds) for the capacity cache. After this duration, the cached value
+     * is considered stale and recomputed. This balances performance with responsiveness
+     * to node label changes.
+     */
+    private static final long CAPACITY_CACHE_TTL_MS = 10_000;
+
+    /** Tracks the last time each machine's capacity was cached. */
+    private final Map<String, Long> capacityCacheTime = new ConcurrentHashMap<>();
 
     public SharedHardwareThrottleManager() {
         this.labelKey = DEFAULT_LABEL_KEY;
@@ -95,6 +123,10 @@ public final class SharedHardwareThrottleManager {
     @DataBoundSetter
     public void setMachineCapacities(@NonNull List<MachineCapacityPair> machineCapacities) {
         this.machineCapacities = machineCapacities != null ? new ArrayList<>(machineCapacities) : new ArrayList<>();
+        // Invalidate cache when configuration changes
+        capacityCache.clear();
+        capacityCacheTime.clear();
+        lastNoCapacityLogTime.clear();
     }
 
     /**
@@ -236,10 +268,22 @@ public final class SharedHardwareThrottleManager {
      * <p>When a configured capacity exists and differs from a label-discovered capacity,
      * the configured value is trusted and the discrepancy is logged.</p>
      *
+     * <p>The result is cached for a short TTL to avoid redundant node iteration on every call,
+     * as this method is called hundreds of times per second by the Jenkins queue dispatcher.</p>
+     *
      * @param machineName the machine name
      * @return the max capacity, or -1 if unknown (throttle should not apply)
      */
     public int getMaxCapacity(@NonNull String machineName) {
+        // Check cache first
+        Long cachedTime = capacityCacheTime.get(machineName);
+        if (cachedTime != null && (System.currentTimeMillis() - cachedTime) < CAPACITY_CACHE_TTL_MS) {
+            Integer cached = capacityCache.get(machineName);
+            if (cached != null) {
+                return cached;
+            }
+        }
+
         int maxCapacity = -1;
         boolean hasConfiguredCapacity = false;
 
@@ -289,9 +333,14 @@ public final class SharedHardwareThrottleManager {
 
         // Ensure at least 1 if we found a capacity
         if (maxCapacity > 0) {
+            capacityCache.put(machineName, maxCapacity);
+            capacityCacheTime.put(machineName, System.currentTimeMillis());
             return maxCapacity;
         }
-        return maxCapacity;
+        // Cache the -1 result too, so we don't re-scan nodes on every call
+        capacityCache.put(machineName, -1);
+        capacityCacheTime.put(machineName, System.currentTimeMillis());
+        return -1;
     }
 
     /**
@@ -330,6 +379,11 @@ public final class SharedHardwareThrottleManager {
     /**
      * Check if a new work unit can be assigned to a node based on shared hardware limits.
      *
+     * <p>This method is called frequently by the Jenkins queue dispatcher (hundreds of times
+     * per second when there is work in the queue). To avoid log spam, the "no max capacity"
+     * message is rate-limited to once per machine per 30 seconds, and capacity lookup results
+     * are cached.</p>
+     *
      * @param node the node being considered
      * @return a cause of blockage if the machine is at capacity, null otherwise
      */
@@ -344,10 +398,16 @@ public final class SharedHardwareThrottleManager {
         int maxCapacity = getMaxCapacity(info.machineName);
         if (maxCapacity < 0) {
             // Unknown machine capacity; do not throttle
-            LOGGER.log(
-                    Level.FINE,
-                    "No max capacity configured for machine {0} on node {1}, skipping shared hardware throttle",
-                    new Object[] {info.machineName, node.getDisplayName()});
+            // Rate-limit this log message to avoid spam when Jenkins calls canTake() hundreds of times/sec
+            long now = System.currentTimeMillis();
+            Long lastLogged = lastNoCapacityLogTime.get(info.machineName);
+            if (lastLogged == null || (now - lastLogged) >= NO_CAPACITY_LOG_INTERVAL_MS) {
+                lastNoCapacityLogTime.put(info.machineName, now);
+                LOGGER.log(
+                        Level.FINE,
+                        "No max capacity configured for machine {0} on node {1}, skipping shared hardware throttle",
+                        new Object[] {info.machineName, node.getDisplayName()});
+            }
             return null;
         }
 
