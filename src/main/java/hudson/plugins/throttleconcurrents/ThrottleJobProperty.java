@@ -438,11 +438,14 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             }
 
             req.bindJSON(this, formData);
-            LOGGER.log(Level.FINE, "Configured sharedHardwareThrottle: labelKey={0}, maxLabelKey={1}, capacities={2}", new Object[] {
-                sharedHardwareThrottle.getLabelKey(),
-                sharedHardwareThrottle.getMaxLabelKey(),
-                sharedHardwareThrottle.getMachineCapacities()
-            });
+            LOGGER.log(
+                    Level.FINE,
+                    "Configured sharedHardwareThrottle: labelKey={0}, maxLabelKey={1}, capacities={2}",
+                    new Object[] {
+                        sharedHardwareThrottle.getLabelKey(),
+                        sharedHardwareThrottle.getMaxLabelKey(),
+                        sharedHardwareThrottle.getMachineCapacities()
+                    });
             save();
             return true;
         }
