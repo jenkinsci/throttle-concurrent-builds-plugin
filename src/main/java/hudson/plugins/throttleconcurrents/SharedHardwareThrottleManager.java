@@ -31,7 +31,7 @@ import org.kohsuke.stapler.DataBoundSetter;
  * and registering it as a Jenkins {@link hudson.Extension}. This allows cloud plugins or
  * other infrastructure plugins to provide dynamic capacity limits.</p>
  */
-public final class SharedHardwareThrottleManager {
+public final class SharedHardwareThrottleManager extends AbstractDescribableImpl<SharedHardwareThrottleManager> {
 
     private static final Logger LOGGER = Logger.getLogger(SharedHardwareThrottleManager.class.getName());
 
@@ -654,6 +654,14 @@ public final class SharedHardwareThrottleManager {
             public String getDisplayName() {
                 return "";
             }
+        }
+    }
+
+    @hudson.Extension
+    public static class DescriptorImpl extends Descriptor<SharedHardwareThrottleManager> {
+        @Override
+        public String getDisplayName() {
+            return "Shared Hardware Throttle";
         }
     }
 
