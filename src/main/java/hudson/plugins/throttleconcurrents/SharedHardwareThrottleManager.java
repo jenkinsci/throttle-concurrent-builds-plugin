@@ -411,6 +411,13 @@ public final class SharedHardwareThrottleManager {
             return null;
         }
 
+        int currentWeight = getCurrentWeightUsed(info.machineName);
+        int remaining = maxCapacity - currentWeight;
+
+        LOGGER.log(Level.FINE, "Machine {0}: capacity {1}, current weight {2}, remaining {3}, node weight {4}", new Object[] {
+            info.machineName, maxCapacity, currentWeight, remaining, info.weight
+        });
+
         // Warn if capacity is insufficient for this node's weight -- node can never accept work
         if (maxCapacity < info.weight) {
             LOGGER.log(
@@ -423,11 +430,8 @@ public final class SharedHardwareThrottleManager {
         // Warn if capacity is insufficient for any other node on the same machine
         warnInsufficientCapacityForNodes(info.machineName, maxCapacity);
 
-        int currentWeight = getCurrentWeightUsed(info.machineName);
-        int remaining = maxCapacity - currentWeight;
-
         if (remaining < info.weight) {
-            LOGGER.log(Level.FINE, "Machine {0} at capacity: {1}/{2} weight used, need {3} more", new Object[] {
+            LOGGER.log(Level.FINE, "Machine {0} at capacity: {1}/{2} weight used, need {3} more -- BLOCKING", new Object[] {
                 info.machineName, currentWeight, maxCapacity, info.weight
             });
             return hudson.model.queue.CauseOfBlockage.fromMessage(
