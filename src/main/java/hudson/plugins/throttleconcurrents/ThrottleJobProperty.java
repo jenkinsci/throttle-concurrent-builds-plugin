@@ -47,6 +47,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
 
@@ -431,13 +432,8 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
                 this.categories = null;
             }
 
-            // Ensure sharedHardwareThrottle is initialized before binding
-            // so Stapler can bind to its nested fields
-            if (sharedHardwareThrottle == null) {
-                sharedHardwareThrottle = new SharedHardwareThrottleManager();
-            }
-
             req.bindJSON(this, formData);
+
             LOGGER.log(
                     Level.FINE,
                     "Configured sharedHardwareThrottle: labelKey={0}, maxLabelKey={1}, capacities={2}",
@@ -512,6 +508,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             return sharedHardwareThrottle;
         }
 
+        @DataBoundSetter
         public void setSharedHardwareThrottle(SharedHardwareThrottleManager sharedHardwareThrottle) {
             this.sharedHardwareThrottle = sharedHardwareThrottle;
         }

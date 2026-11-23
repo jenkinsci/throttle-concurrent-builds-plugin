@@ -28,7 +28,7 @@
 
     <f:advanced>
       <f:section title="${%Shared Hardware Throttling}">
-        <j:set var="sw" value="${instance.sharedHardwareThrottle}"/>
+        <st:bindvar var="sw" value="${instance.sharedHardwareThrottle}"/>
         <f:entry title="${%Label Key for Machine Assignment}" field="sharedHardwareThrottle.labelKey">
           <f:textbox default="THROTTLE_SHARED_HARDWARE"/>
         </f:entry>
