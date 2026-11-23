@@ -431,7 +431,18 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
                 this.categories = null;
             }
 
+            // Ensure sharedHardwareThrottle is initialized before binding
+            // so Stapler can bind to its nested fields
+            if (sharedHardwareThrottle == null) {
+                sharedHardwareThrottle = new SharedHardwareThrottleManager();
+            }
+
             req.bindJSON(this, formData);
+            LOGGER.log(Level.FINE, "Configured sharedHardwareThrottle: labelKey={0}, maxLabelKey={1}, capacities={2}", new Object[] {
+                sharedHardwareThrottle.getLabelKey(),
+                sharedHardwareThrottle.getMaxLabelKey(),
+                sharedHardwareThrottle.getMachineCapacities()
+            });
             save();
             return true;
         }

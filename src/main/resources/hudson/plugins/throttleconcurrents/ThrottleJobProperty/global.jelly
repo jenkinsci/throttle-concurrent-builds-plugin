@@ -35,7 +35,7 @@
         <f:entry title="${%Label Key for Machine Max Capacity}" field="sharedHardwareThrottle.maxLabelKey">
           <f:textbox default="THROTTLE_SHARED_HARDWARE_MAX"/>
         </f:entry>
-        <f:entry title="${%Machine Capacities}" field="sharedHardwareThrottle.machineCapacities">
+        <f:entry title="${%Machine Capacities}">
           <f:repeatable field="sharedHardwareThrottle.machineCapacities" add="${%Add Machine}" minimum="0">
             <f:entry title="${%Machine Name}" field="machineName">
               <f:textbox clazz="required" checkMessage="${%Machine Name is required}"/>
