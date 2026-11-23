@@ -427,4 +427,95 @@ class SharedHardwareThrottleManagerLabelParsingTest {
         hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node);
         assertNull(blockage, "Should allow when capacity equals node weight and no executors are running");
     }
+
+    /* ------------------------------------------------------------------ */
+    /*  Fallback capacity factor tests                                     */
+    /* ------------------------------------------------------------------ */
+
+    @Test
+    void shouldNotApplyFallbackWhenDisabledByDefault(JenkinsRule r) throws Exception {
+        // No capacity configured, no MAX label, fallback factor is 0 (default)
+        hudson.slaves.DumbSlave node =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerP:3"));
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+
+        int maxCapacity = manager.getMaxCapacity("ServerP");
+        assertEquals(-1, maxCapacity, "Should return -1 when fallback is disabled (default)");
+
+        hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node);
+        assertNull(blockage, "Should not throttle when fallback is disabled");
+    }
+
+    @Test
+    void shouldApplyFallbackCapacityFactor(JenkinsRule r) throws Exception {
+        // Two agents on ServerQ: weights 2 and 3. No MAX label, no configured capacity.
+        // Fallback factor = 5, so capacity = 3 * 5 = 15
+        hudson.slaves.DumbSlave node1 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerQ:2"));
+        hudson.slaves.DumbSlave node2 =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerQ:3"));
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+        manager.setFallbackCapacityFactor(5);
+
+        int maxCapacity = manager.getMaxCapacity("ServerQ");
+        assertEquals(15, maxCapacity, "Fallback capacity should be heaviest weight (3) * factor (5) = 15");
+
+        hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node1);
+        assertNull(blockage, "Should not block when fallback capacity allows work");
+    }
+
+    @Test
+    void shouldNotApplyFallbackWhenConfiguredCapacityExists(JenkinsRule r) throws Exception {
+        // Configured capacity takes precedence over fallback
+        hudson.slaves.DumbSlave node =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerR:4"));
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+        java.util.List<SharedHardwareThrottleManager.MachineCapacityPair> capacities = new java.util.ArrayList<>();
+        capacities.add(new SharedHardwareThrottleManager.MachineCapacityPair("ServerR", 10));
+        manager.setMachineCapacities(capacities);
+        manager.setFallbackCapacityFactor(5);
+
+        int maxCapacity = manager.getMaxCapacity("ServerR");
+        assertEquals(10, maxCapacity, "Configured capacity should take precedence over fallback");
+    }
+
+    @Test
+    void shouldNotApplyFallbackWhenLabelDiscoveredCapacityExists(JenkinsRule r) throws Exception {
+        // Label-discovered capacity takes precedence over fallback
+        hudson.slaves.DumbSlave node =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerS:2"));
+        node.setLabelString("THROTTLE_SHARED_HARDWARE=ServerS:2 THROTTLE_SHARED_HARDWARE_MAX=ServerS:20");
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+        manager.setFallbackCapacityFactor(5);
+
+        int maxCapacity = manager.getMaxCapacity("ServerS");
+        assertEquals(20, maxCapacity, "Label-discovered capacity should take precedence over fallback");
+    }
+
+    @Test
+    void shouldApplyFallbackWithFactor1(JenkinsRule r) throws Exception {
+        // Factor of 1 means capacity = heaviest agent weight
+        hudson.slaves.DumbSlave node =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerT:7"));
+
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+        manager.setFallbackCapacityFactor(1);
+
+        int maxCapacity = manager.getMaxCapacity("ServerT");
+        assertEquals(7, maxCapacity, "Fallback with factor 1 should equal heaviest agent weight");
+    }
+
+    @Test
+    void shouldNotApplyFallbackWhenNoAgentsOnMachine(JenkinsRule r) throws Exception {
+        // Fallback factor is set, but no agents declare this machine
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager();
+        manager.setFallbackCapacityFactor(5);
+
+        int maxCapacity = manager.getMaxCapacity("UnknownServer");
+        assertEquals(-1, maxCapacity, "Should return -1 when no agents found on the machine");
+    }
 }

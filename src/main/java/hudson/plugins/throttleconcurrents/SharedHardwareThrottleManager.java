@@ -54,6 +54,14 @@ public final class SharedHardwareThrottleManager {
     private List<MachineCapacityPair> machineCapacities;
 
     /**
+     * Fallback capacity factor applied when no other capacity is known for a machine.
+     * The effective capacity is computed as: heaviest agent weight on the machine × this factor.
+     * A value of 0 means the fallback is disabled (default).
+     * A value of 1 or greater enables the fallback.
+     */
+    private int fallbackCapacityFactor;
+
+    /**
      * Cache for capacity lookup results to avoid redundant computation and log spam.
      * Maps machine name to the last known max capacity (-1 if unknown).
      * The cache is invalidated when configuration changes.
@@ -98,6 +106,7 @@ public final class SharedHardwareThrottleManager {
         this.labelKey = DEFAULT_LABEL_KEY;
         this.maxLabelKey = DEFAULT_MAX_LABEL_KEY;
         this.machineCapacities = new ArrayList<>();
+        this.fallbackCapacityFactor = 0;
     }
 
     @DataBoundConstructor
@@ -108,6 +117,7 @@ public final class SharedHardwareThrottleManager {
         this.labelKey = labelKey != null && !labelKey.isEmpty() ? labelKey : DEFAULT_LABEL_KEY;
         this.maxLabelKey = maxLabelKey != null && !maxLabelKey.isEmpty() ? maxLabelKey : DEFAULT_MAX_LABEL_KEY;
         this.machineCapacities = machineCapacities != null ? new ArrayList<>(machineCapacities) : new ArrayList<>();
+        this.fallbackCapacityFactor = 0;
     }
 
     @NonNull
@@ -138,6 +148,20 @@ public final class SharedHardwareThrottleManager {
     @DataBoundSetter
     public void setMachineCapacities(@NonNull List<MachineCapacityPair> machineCapacities) {
         this.machineCapacities = machineCapacities != null ? new ArrayList<>(machineCapacities) : new ArrayList<>();
+        // Invalidate cache when configuration changes
+        ensureCacheInitialized();
+        capacityCache.clear();
+        capacityCacheTime.clear();
+        lastNoCapacityLogTime.clear();
+    }
+
+    public int getFallbackCapacityFactor() {
+        return fallbackCapacityFactor;
+    }
+
+    @DataBoundSetter
+    public void setFallbackCapacityFactor(int fallbackCapacityFactor) {
+        this.fallbackCapacityFactor = fallbackCapacityFactor;
         // Invalidate cache when configuration changes
         ensureCacheInitialized();
         capacityCache.clear();
@@ -331,6 +355,7 @@ public final class SharedHardwareThrottleManager {
      * 1. External {@link MachineCapacityProvider} extensions (highest priority, lowest value wins)
      * 2. Configured {@link #machineCapacities} in global config (takes precedence over label discovery)
      * 3. Discovered from node labels (MAX labels) -- used only if no configured capacity exists
+     * 4. Fallback capacity factor -- used only if no other capacity is found and factor is configured
      *
      * <p>When a configured capacity exists and differs from a label-discovered capacity,
      * the configured value is trusted and the discrepancy is logged.</p>
@@ -339,6 +364,9 @@ public final class SharedHardwareThrottleManager {
      * at least the weight of the heaviest known agent on that machine, so agents are never
      * blocked by an unrealistically low auto-discovered capacity. Configured capacities are
      * enforced strictly without this floor adjustment.</p>
+     *
+     * <p>The fallback capacity factor (step 4) computes capacity as: heaviest agent weight × factor.
+     * A factor of 0 means the fallback is disabled (default). A factor of 1 or greater enables it.</p>
      *
      * <p>The result is cached for a short TTL to avoid redundant node iteration on every call,
      * as this method is called hundreds of times per second by the Jenkins queue dispatcher.</p>
@@ -418,6 +446,19 @@ public final class SharedHardwareThrottleManager {
                                 + "raising to {2}",
                         new Object[] {machineName, maxCapacity, heaviest});
                 maxCapacity = heaviest;
+            }
+        }
+
+        // 4. Fallback capacity factor -- used only if no other capacity is found
+        if (maxCapacity < 0 && fallbackCapacityFactor >= 1) {
+            int heaviest = getHeaviestAgentWeight(machineName);
+            if (heaviest >= 1) {
+                maxCapacity = heaviest * fallbackCapacityFactor;
+                LOGGER.log(
+                        Level.FINE,
+                        "Machine {0}: no capacity configured; applying fallback factor {1} to heaviest "
+                                + "agent weight {2} = {3}",
+                        new Object[] {machineName, fallbackCapacityFactor, heaviest, maxCapacity});
             }
         }
 

@@ -528,6 +528,25 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             return FormValidation.ok();
         }
 
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckFallbackCapacityFactor(@QueryParameter String value) {
+            if (Util.fixEmptyAndTrim(value) != null) {
+                try {
+                    int v = Integer.parseInt(value);
+                    if (v < 0) {
+                        return FormValidation.error("Fallback capacity factor must be 0 or greater.");
+                    }
+                    if (v == 0) {
+                        return FormValidation.warning(
+                                "Factor is 0 (disabled). Machines without an explicitly configured capacity will not be throttled.");
+                    }
+                } catch (NumberFormatException e) {
+                    return FormValidation.error("Fallback capacity factor must be a valid number (0 or greater).");
+                }
+            }
+            return FormValidation.ok();
+        }
+
         @SuppressWarnings("lgtm[jenkins/csrf]")
         public ListBoxModel doFillCategoryItems(@AncestorInPath Item item) {
             if (item != null) {
