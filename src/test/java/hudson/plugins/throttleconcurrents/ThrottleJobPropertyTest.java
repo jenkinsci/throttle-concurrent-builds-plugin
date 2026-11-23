@@ -440,6 +440,33 @@ class ThrottleJobPropertyTest {
         assertTrue(descriptor.getCategories().isEmpty());
     }
 
+    @Test
+    void sharedHardwareFallbackCapacityFactorIsPersisted(JenkinsRule j) throws Exception {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertNotNull(descriptor);
+
+        // Set fallback capacity factor to 7 with custom label keys
+        SharedHardwareThrottleManager manager =
+                new SharedHardwareThrottleManager("CUSTOM_MACHINE_LABEL", "CUSTOM_MAX_LABEL", new ArrayList<>(), 7);
+        descriptor.setSharedHardwareThrottle(manager);
+        descriptor.save();
+
+        // Verify it was saved with all custom values
+        SharedHardwareThrottleManager saved = descriptor.getSharedHardwareThrottle();
+        assertEquals("CUSTOM_MACHINE_LABEL", saved.getLabelKey());
+        assertEquals("CUSTOM_MAX_LABEL", saved.getMaxLabelKey());
+        assertEquals(7, saved.getFallbackCapacityFactor());
+
+        // Reload the configuration
+        descriptor.load();
+
+        // Verify all values were restored, including the fallback capacity factor
+        SharedHardwareThrottleManager restored = descriptor.getSharedHardwareThrottle();
+        assertEquals("CUSTOM_MACHINE_LABEL", restored.getLabelKey());
+        assertEquals("CUSTOM_MAX_LABEL", restored.getMaxLabelKey());
+        assertEquals(7, restored.getFallbackCapacityFactor());
+    }
+
     private static void assertProjects(JenkinsRule j, String category, AbstractProject<?, ?>... projects) {
         j.jenkins.setAuthorizationStrategy(new RejectAllAuthorizationStrategy());
         try {
