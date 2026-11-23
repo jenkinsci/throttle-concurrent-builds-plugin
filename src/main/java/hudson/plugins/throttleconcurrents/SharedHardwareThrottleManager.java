@@ -57,14 +57,16 @@ public final class SharedHardwareThrottleManager {
      * Cache for capacity lookup results to avoid redundant computation and log spam.
      * Maps machine name to the last known max capacity (-1 if unknown).
      * The cache is invalidated when configuration changes.
+     * <p>Declared non-final because XStream deserialization (used by Jenkins config persistence)
+     * skips final field initializers, leaving them null. These are lazily initialized on first use.</p>
      */
-    private final Map<String, Integer> capacityCache = new ConcurrentHashMap<>();
+    private Map<String, Integer> capacityCache;
 
     /**
      * Tracks the last time we logged "no max capacity" for each machine, to rate-limit
      * the log messages. Jenkins calls canTake() hundreds of times per second.
      */
-    private final Map<String, Long> lastNoCapacityLogTime = new ConcurrentHashMap<>();
+    private Map<String, Long> lastNoCapacityLogTime;
 
     /** Minimum interval (in milliseconds) between "no max capacity" log messages for the same machine. */
     private static final long NO_CAPACITY_LOG_INTERVAL_MS = 30_000;
@@ -77,7 +79,20 @@ public final class SharedHardwareThrottleManager {
     private static final long CAPACITY_CACHE_TTL_MS = 10_000;
 
     /** Tracks the last time each machine's capacity was cached. */
-    private final Map<String, Long> capacityCacheTime = new ConcurrentHashMap<>();
+    private Map<String, Long> capacityCacheTime;
+
+    /** Lazily initialize all cache maps. Safe to call multiple times. */
+    private void ensureCacheInitialized() {
+        if (capacityCache == null) {
+            capacityCache = new ConcurrentHashMap<>();
+        }
+        if (lastNoCapacityLogTime == null) {
+            lastNoCapacityLogTime = new ConcurrentHashMap<>();
+        }
+        if (capacityCacheTime == null) {
+            capacityCacheTime = new ConcurrentHashMap<>();
+        }
+    }
 
     public SharedHardwareThrottleManager() {
         this.labelKey = DEFAULT_LABEL_KEY;
@@ -124,6 +139,7 @@ public final class SharedHardwareThrottleManager {
     public void setMachineCapacities(@NonNull List<MachineCapacityPair> machineCapacities) {
         this.machineCapacities = machineCapacities != null ? new ArrayList<>(machineCapacities) : new ArrayList<>();
         // Invalidate cache when configuration changes
+        ensureCacheInitialized();
         capacityCache.clear();
         capacityCacheTime.clear();
         lastNoCapacityLogTime.clear();
@@ -275,6 +291,7 @@ public final class SharedHardwareThrottleManager {
      * @return the max capacity, or -1 if unknown (throttle should not apply)
      */
     public int getMaxCapacity(@NonNull String machineName) {
+        ensureCacheInitialized();
         // Check cache first
         Long cachedTime = capacityCacheTime.get(machineName);
         if (cachedTime != null && (System.currentTimeMillis() - cachedTime) < CAPACITY_CACHE_TTL_MS) {
