@@ -135,11 +135,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             if (descriptor == null) {
                 return null;
             }
-            SharedHardwareThrottleManager manager = descriptor.getSharedHardwareThrottle();
-            if (manager == null) {
-                return null;
-            }
-            return manager.checkMachineCapacity(node);
+            return descriptor.getSharedHardwareThrottle().checkMachineCapacity(node);
         } catch (Exception e) {
             // Never let an exception in the shared hardware check block the entire queue dispatcher.
             // This method is called hundreds of times per second; rate-limit warnings to avoid log spam.
