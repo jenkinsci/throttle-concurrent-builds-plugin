@@ -513,6 +513,21 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             this.sharedHardwareThrottle = sharedHardwareThrottle;
         }
 
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckMaxWeight(@QueryParameter String value) {
+            if (Util.fixEmptyAndTrim(value) != null) {
+                try {
+                    int v = Integer.parseInt(value);
+                    if (v < 1) {
+                        return FormValidation.warning("Max total weight must be 1 or greater; will be treated as 1.");
+                    }
+                } catch (NumberFormatException e) {
+                    return FormValidation.error("Max total weight must be a valid number (1 or greater).");
+                }
+            }
+            return FormValidation.ok();
+        }
+
         @SuppressWarnings("lgtm[jenkins/csrf]")
         public ListBoxModel doFillCategoryItems(@AncestorInPath Item item) {
             if (item != null) {
