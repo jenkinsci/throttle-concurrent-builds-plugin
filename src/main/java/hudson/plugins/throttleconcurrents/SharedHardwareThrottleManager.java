@@ -275,6 +275,32 @@ public final class SharedHardwareThrottleManager {
     }
 
     /**
+     * Find the heaviest agent weight on a machine.
+     * Looks at all nodes that declare themselves on the given machine and finds the
+     * maximum weight among them. This is used as a floor for label-discovered capacities
+     * to ensure agents are never blocked by an unrealistically low auto-discovered capacity.
+     *
+     * @param machineName the machine name
+     * @return the heaviest agent weight, or -1 if no agents found on that machine
+     */
+    private int getHeaviestAgentWeight(@NonNull String machineName) {
+        int heaviest = -1;
+
+        Jenkins jenkins = Jenkins.get();
+        for (Node node : jenkins.getNodes()) {
+            MachineInfo info = parseNodeLabels(node);
+            if (info == null || !info.machineName.equals(machineName)) {
+                continue;
+            }
+            if (info.weight > heaviest) {
+                heaviest = info.weight;
+            }
+        }
+
+        return heaviest;
+    }
+
+    /**
      * Get the max weight capacity for a machine.
      * Resolution order:
      * 1. External {@link MachineCapacityProvider} extensions (highest priority, lowest value wins)
@@ -283,6 +309,11 @@ public final class SharedHardwareThrottleManager {
      *
      * <p>When a configured capacity exists and differs from a label-discovered capacity,
      * the configured value is trusted and the discrepancy is logged.</p>
+     *
+     * <p>For label-discovered capacities (not configured), the effective minimum is raised to
+     * at least the weight of the heaviest known agent on that machine, so agents are never
+     * blocked by an unrealistically low auto-discovered capacity. Configured capacities are
+     * enforced strictly without this floor adjustment.</p>
      *
      * <p>The result is cached for a short TTL to avoid redundant node iteration on every call,
      * as this method is called hundreds of times per second by the Jenkins queue dispatcher.</p>
@@ -347,6 +378,21 @@ public final class SharedHardwareThrottleManager {
                         "Machine {0}: configured capacity {1} differs from label-discovered capacity {2}; "
                                 + "using configured value",
                         new Object[] {machineName, maxCapacity, discoveredCapacity});
+            }
+        }
+
+        // For label-discovered capacities (no configured capacity), ensure the effective minimum
+        // is at least the weight of the heaviest known agent on this machine.
+        // Configured capacities are enforced strictly without this floor adjustment.
+        if (!hasConfiguredCapacity && maxCapacity >= 0) {
+            int heaviest = getHeaviestAgentWeight(machineName);
+            if (heaviest > maxCapacity) {
+                LOGGER.log(
+                        Level.FINE,
+                        "Machine {0}: label-discovered capacity {1} is less than heaviest agent weight {2}; "
+                                + "raising to {2}",
+                        new Object[] {machineName, maxCapacity, heaviest});
+                maxCapacity = heaviest;
             }
         }
 
