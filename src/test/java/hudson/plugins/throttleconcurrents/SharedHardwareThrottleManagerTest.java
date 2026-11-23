@@ -49,28 +49,31 @@ class SharedHardwareThrottleManagerTest {
         capacities.add(new SharedHardwareThrottleManager.MachineCapacityPair("ServerA", 20));
 
         SharedHardwareThrottleManager manager =
-                new SharedHardwareThrottleManager("CUSTOM_KEY", "CUSTOM_MAX", capacities);
+                new SharedHardwareThrottleManager("CUSTOM_KEY", "CUSTOM_MAX", capacities, 5);
 
         assertEquals("CUSTOM_KEY", manager.getLabelKey());
         assertEquals("CUSTOM_MAX", manager.getMaxLabelKey());
         assertEquals(1, manager.getMachineCapacities().size());
+        assertEquals(5, manager.getFallbackCapacityFactor());
     }
 
     @Test
     void shouldFallbackToDefaultsWhenNullValuesPassed() {
-        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager(null, null, null);
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager(null, null, null, 0);
 
         assertEquals("THROTTLE_SHARED_HARDWARE", manager.getLabelKey());
         assertEquals("THROTTLE_SHARED_HARDWARE_MAX", manager.getMaxLabelKey());
         assertNotNull(manager.getMachineCapacities());
+        assertEquals(0, manager.getFallbackCapacityFactor());
     }
 
     @Test
     void shouldFallbackToDefaultsWhenEmptyValuesPassed() {
-        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager("", "", null);
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager("", "", null, 0);
 
         assertEquals("THROTTLE_SHARED_HARDWARE", manager.getLabelKey());
         assertEquals("THROTTLE_SHARED_HARDWARE_MAX", manager.getMaxLabelKey());
+        assertEquals(0, manager.getFallbackCapacityFactor());
     }
 
     @Test

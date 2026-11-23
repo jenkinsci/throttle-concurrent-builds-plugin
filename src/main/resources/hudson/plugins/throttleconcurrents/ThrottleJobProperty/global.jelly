@@ -48,7 +48,7 @@
         </f:entry>
         <f:entry title="${%Fallback Capacity Factor}" field="sharedHardwareThrottle.fallbackCapacityFactor"
                  checkUrl="sharedHardwareThrottle/.+checkFallbackCapacityFactor">
-          <f:number default="0"/>
+          <f:number default="0" min="0"/>
         </f:entry>
       </f:section>
     </f:advanced>

@@ -222,6 +222,10 @@ Configuration::
 * **Label Key** — The label prefix used to find machine assignment labels. Default: `THROTTLE_SHARED_HARDWARE`.
 * **Max Label Key** — The label prefix used to discover max capacity from node labels. Default: `THROTTLE_SHARED_HARDWARE_MAX`.
 * **Machine Capacities** — A list of machine names and their max total weight capacity.
+* **Fallback Capacity Factor** — An optional multiplier applied when no other capacity is known for a machine.
+  When set to a value >= 1, the max capacity for a machine is calculated as: (heaviest known agent weight on that machine) × (fallback capacity factor).
+  For example, if agents on `ServerA` have weights of 2 and 3, and the fallback factor is 5, the assumed max capacity becomes 15 (5 × 3).
+  Set to 0 to disable fallback (default: 0, disabled).
 
 Capacity resolution order (lowest value wins)::
 
@@ -243,6 +247,7 @@ unclassified:
         maxWeight: 20
       - machineName: "ServerB"
         maxWeight: 10
+      fallbackCapacityFactor: 5
 ----
 
 Example::

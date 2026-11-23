@@ -113,11 +113,12 @@ public final class SharedHardwareThrottleManager {
     public SharedHardwareThrottleManager(
             @NonNull String labelKey,
             @NonNull String maxLabelKey,
-            @NonNull List<MachineCapacityPair> machineCapacities) {
+            @NonNull List<MachineCapacityPair> machineCapacities,
+            int fallbackCapacityFactor) {
         this.labelKey = labelKey != null && !labelKey.isEmpty() ? labelKey : DEFAULT_LABEL_KEY;
         this.maxLabelKey = maxLabelKey != null && !maxLabelKey.isEmpty() ? maxLabelKey : DEFAULT_MAX_LABEL_KEY;
         this.machineCapacities = machineCapacities != null ? new ArrayList<>(machineCapacities) : new ArrayList<>();
-        this.fallbackCapacityFactor = 0;
+        this.fallbackCapacityFactor = fallbackCapacityFactor >= 0 ? fallbackCapacityFactor : 0;
     }
 
     @NonNull
