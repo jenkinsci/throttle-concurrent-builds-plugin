@@ -480,9 +480,9 @@ class ThrottleJobPropertyTest {
         HtmlForm form = page.getFormByName("config");
 
         // Set shared hardware throttle values via form fields
-        form.getInputByName("_.sharedHardwareThrottle.labelKey").setValue("LABEL_KEY_FROM_UI");
-        form.getInputByName("_.sharedHardwareThrottle.maxLabelKey").setValue("MAX_LABEL_KEY_FROM_UI");
-        form.getInputByName("_.sharedHardwareThrottle.fallbackCapacityFactor").setValue("42");
+        form.getInputByName("_.labelKey").setValue("LABEL_KEY_FROM_UI");
+        form.getInputByName("_.maxLabelKey").setValue("MAX_LABEL_KEY_FROM_UI");
+        form.getInputByName("_.fallbackCapacityFactor").setValue("42");
 
         String advancedButtonXPath = "//div[contains(@class,'advancedBody')]"
                 + "[.//button[contains(@class,'repeatable-add') and normalize-space(.)='Add Machine']]"
@@ -494,8 +494,7 @@ class ThrottleJobPropertyTest {
         WebClientUtil.waitForJSExec(webClient);
 
         // Add two machine capacity entries
-        String addButtonXPath =
-                "//button[contains(@class,'repeatable-add') and normalize-space(.)='Add Machine']";
+        String addButtonXPath = "//button[contains(@class,'repeatable-add') and normalize-space(.)='Add Machine']";
         for (int i = 0; i < 2; i++) {
             List<HtmlButton> addButtons = form.getByXPath(addButtonXPath);
             assertEquals(1, addButtons.size());
@@ -533,6 +532,39 @@ class ThrottleJobPropertyTest {
         capacity = restored.getMachineCapacities().get(1);
         assertEquals("machine-B", capacity.getMachineName());
         assertEquals(32, capacity.getMaxWeight());
+    }
+
+    @Test
+    void sharedHardwareConfigurationIsShownInUIAfterSave(JenkinsRule j) throws Exception {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        descriptor.setSharedHardwareThrottle(new SharedHardwareThrottleManager(
+                "SAVED_LABEL",
+                "SAVED_MAX_LABEL",
+                Arrays.asList(new SharedHardwareThrottleManager.MachineCapacityPair("saved-machine", 12)),
+                5));
+        descriptor.save();
+
+        JenkinsRule.WebClient webClient = j.createWebClient();
+        HtmlPage page = webClient.goTo("configure");
+        WebClientUtil.waitForJSExec(webClient);
+        HtmlForm form = page.getFormByName("config");
+
+        assertEquals("SAVED_LABEL", form.getInputByName("_.labelKey").getValue());
+        assertEquals("SAVED_MAX_LABEL", form.getInputByName("_.maxLabelKey").getValue());
+        assertEquals("5", form.getInputByName("_.fallbackCapacityFactor").getValue());
+        assertEquals(1, form.getInputsByName("_.machineName").size());
+        assertEquals(
+                "saved-machine", form.getInputsByName("_.machineName").get(0).getValue());
+        assertEquals("12", form.getInputsByName("_.maxWeight").get(0).getValue());
+
+        // Saving the unchanged form must keep the values
+        j.submit(form);
+        SharedHardwareThrottleManager after = descriptor.getSharedHardwareThrottle();
+        assertEquals("SAVED_LABEL", after.getLabelKey());
+        assertEquals("SAVED_MAX_LABEL", after.getMaxLabelKey());
+        assertEquals(5, after.getFallbackCapacityFactor());
+        assertEquals(1, after.getMachineCapacities().size());
+        assertEquals("saved-machine", after.getMachineCapacities().get(0).getMachineName());
     }
 
     private static void assertProjects(JenkinsRule j, String category, AbstractProject<?, ?>... projects) {

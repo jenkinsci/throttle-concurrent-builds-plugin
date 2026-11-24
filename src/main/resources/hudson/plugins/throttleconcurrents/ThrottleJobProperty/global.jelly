@@ -28,27 +28,26 @@
 
     <f:advanced>
       <f:section title="${%Shared Hardware Throttling}">
-        <st:bindvar var="sw" value="${instance.sharedHardwareThrottle}"/>
-        <f:entry title="${%Label Key for Machine Assignment}" field="sharedHardwareThrottle.labelKey">
-          <f:textbox default="THROTTLE_SHARED_HARDWARE"/>
+        <j:set var="sw" value="${descriptor.sharedHardwareThrottle}"/>
+        <f:entry title="${%Label Key for Machine Assignment}" field="labelKey">
+          <f:textbox value="${sw.labelKey}" default="THROTTLE_SHARED_HARDWARE"/>
         </f:entry>
-        <f:entry title="${%Label Key for Machine Max Capacity}" field="sharedHardwareThrottle.maxLabelKey">
-          <f:textbox default="THROTTLE_SHARED_HARDWARE_MAX"/>
+        <f:entry title="${%Label Key for Machine Max Capacity}" field="maxLabelKey">
+          <f:textbox value="${sw.maxLabelKey}" default="THROTTLE_SHARED_HARDWARE_MAX"/>
         </f:entry>
         <f:entry title="${%Machine Capacities}">
-          <f:repeatable field="sharedHardwareThrottle.machineCapacities" add="${%Add Machine}" minimum="0">
+          <f:repeatable var="instance" name="machineCapacities" items="${sw.machineCapacities}" add="${%Add Machine}" minimum="0">
             <f:entry title="${%Machine Name}" field="machineName">
               <f:textbox clazz="required" checkMessage="${%Machine Name is required}"/>
             </f:entry>
-            <f:entry title="${%Max Total Weight}" field="maxWeight" checkUrl="sharedHardwareThrottle/.+checkMaxWeight">
+            <f:entry title="${%Max Total Weight}" field="maxWeight">
               <f:number min="1"/>
             </f:entry>
             <f:repeatableDeleteButton/>
           </f:repeatable>
         </f:entry>
-        <f:entry title="${%Fallback Capacity Factor}" field="sharedHardwareThrottle.fallbackCapacityFactor"
-                 checkUrl="sharedHardwareThrottle/.+checkFallbackCapacityFactor">
-          <f:number default="0" min="0"/>
+        <f:entry title="${%Fallback Capacity Factor}" field="fallbackCapacityFactor">
+          <f:number value="${sw.fallbackCapacityFactor}" default="0" min="0"/>
         </f:entry>
       </f:section>
     </f:advanced>
