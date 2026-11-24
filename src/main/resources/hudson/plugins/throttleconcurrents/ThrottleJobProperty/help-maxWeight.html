@@ -1,0 +1,11 @@
+<?jelly escape-by-default='true'?>
+<div>
+  Maximum total weight capacity for this physical machine. Must be a valid number (1 or greater).
+  <p><strong>Warning:</strong> This configured value is enforced strictly and will override any
+  capacity values declared via node labels (e.g., <code>THROTTLE_SHARED_HARDWARE_MAX</code>).
+  If set too low, it may block agents that require more weight points than the configured
+  capacity allows.</p>
+  <p>Conversely, when capacity is discovered only from node labels (without a configured value
+  here), the effective minimum will be at least the weight of the heaviest known agent on that
+  machine, so agents are never blocked by an unrealistically low auto-discovered capacity.</p>
+</div>
