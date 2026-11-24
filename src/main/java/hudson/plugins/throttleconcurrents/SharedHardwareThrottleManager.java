@@ -5,6 +5,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.model.Executor;
 import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Queue;
@@ -542,7 +543,7 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
      * Calculate the total weight currently used on a machine across all its nodes.
      *
      * @param machineName the machine name
-     * @return the total weight of currently running executors on that machine
+     * @return the total weight of busy executors on that machine, including assigned work units
      */
     public int getCurrentWeightUsed(@NonNull String machineName) {
         Jenkins jenkins = Jenkins.get();
@@ -554,21 +555,24 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
                 continue;
             }
 
-            // Count running executors on this node
-            int runningExecutors = 0;
+            // Count busy executors, including work units assigned by the queue but not yet started.
             var computer = node.toComputer();
             if (computer != null) {
-                for (var executor : computer.getAllExecutors()) {
-                    if (executor.isBusy() && executor.getCurrentExecutable() != null) {
-                        runningExecutors++;
-                    }
-                }
+                totalWeight += countBusyExecutors(computer.getAllExecutors()) * info.weight;
             }
-
-            totalWeight += runningExecutors * info.weight;
         }
 
         return totalWeight;
+    }
+
+    static int countBusyExecutors(Iterable<? extends Executor> executors) {
+        int count = 0;
+        for (Executor executor : executors) {
+            if (executor.isBusy()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**

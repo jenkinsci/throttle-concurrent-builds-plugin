@@ -21,7 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import hudson.model.Executor;
 import hudson.model.FreeStyleProject;
+import hudson.model.Queue;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -390,6 +392,25 @@ class SharedHardwareThrottleManagerLabelParsingTest {
 
         hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node);
         assertNotNull(blockage, "Should block when configured capacity is less than node weight");
+    }
+
+    @Test
+    void shouldCountBusyExecutorBeforeExecutableStarts(JenkinsRule r) throws Exception {
+        hudson.slaves.DumbSlave node =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerPending:1"));
+        Executor assignedExecutor = new Executor(node.toComputer(), 100) {
+            @Override
+            public boolean isBusy() {
+                return true;
+            }
+
+            @Override
+            public Queue.Executable getCurrentExecutable() {
+                return null;
+            }
+        };
+
+        assertEquals(1, SharedHardwareThrottleManager.countBusyExecutors(List.of(assignedExecutor)));
     }
 
     @Test
