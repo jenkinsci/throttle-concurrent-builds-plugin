@@ -22,10 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import hudson.model.FreeStyleProject;
+import hudson.model.labels.LabelAtom;
 import hudson.plugins.throttleconcurrents.testutils.HtmlUnitHelper;
 import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -76,6 +78,24 @@ class ThrottleQueueTaskDispatcherTest {
     private static final int noCategoryWideMaxConcurrentPerNode = 0;
     private static final int someCategoryWideMaxConcurrentPerNode = 1;
     private static final int greaterCategoryWideMaxConcurrentPerNode = configureOneMaxLabelPair + 1;
+
+    @Test
+    void shouldApplySharedHardwareLimitToCategoryThrottledJobs(JenkinsRule r) throws Exception {
+        hudson.slaves.DumbSlave node = r.createOnlineSlave(new LabelAtom("THROTTLE_SHARED_HARDWARE=ServerTest:2"));
+        ThrottleJobProperty.fetchDescriptor()
+                .setSharedHardwareThrottle(new SharedHardwareThrottleManager(
+                        SharedHardwareThrottleManager.DEFAULT_LABEL_KEY,
+                        SharedHardwareThrottleManager.DEFAULT_MAX_LABEL_KEY,
+                        Collections.singletonList(
+                                new SharedHardwareThrottleManager.MachineCapacityPair("ServerTest", 1)),
+                        0));
+
+        FreeStyleProject project = r.createFreeStyleProject();
+        project.addProperty(new ThrottleJobProperty(
+                0, 0, Collections.singletonList(testCategoryName), true, "category", false, null, null));
+
+        assertNotNull(new ThrottleQueueTaskDispatcher().canTake(node, project));
+    }
 
     /**
      * @throws ExecutionException upon Jenkins project build scheduling issue.

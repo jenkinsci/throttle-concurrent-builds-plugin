@@ -5,7 +5,10 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.ExtensionList;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.model.Job;
 import hudson.model.Node;
+import hudson.model.Queue;
+import hudson.model.Run;
 import hudson.model.labels.LabelAtom;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -581,10 +584,47 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
      */
     @CheckForNull
     public hudson.model.queue.CauseOfBlockage checkMachineCapacity(@NonNull Node node) {
+        return checkMachineCapacity(node, null);
+    }
+
+    /**
+     * Check if a new work unit can be assigned to a node based on shared hardware limits.
+     *
+     * @param node the node being considered
+     * @param task the queued task being considered, if available
+     * @return a cause of blockage if the machine is at capacity, null otherwise
+     */
+    @CheckForNull
+    public hudson.model.queue.CauseOfBlockage checkMachineCapacity(@NonNull Node node, @CheckForNull Queue.Task task) {
         MachineInfo info = parseNodeLabels(node);
         if (info == null) {
             // No shared hardware label; throttle does not apply
             return null;
+        }
+
+        if (task != null && LOGGER.isLoggable(Level.FINEST)) {
+            String requestedLabel = task.getAssignedLabel() == null
+                    ? "<any agent>"
+                    : task.getAssignedLabel().getExpression();
+            String buildNameAndNumber = "unavailable";
+            Queue.Executable ownerExecutable = task.getOwnerExecutable();
+            if (ownerExecutable instanceof Run<?, ?> run) {
+                buildNameAndNumber = run.getFullDisplayName();
+            } else if (task instanceof Job<?, ?> job) {
+                buildNameAndNumber = job.getFullDisplayName() + " #" + job.getNextBuildNumber();
+            }
+            LOGGER.log(
+                    Level.FINEST,
+                    "Shared hardware request for task {0}, build {1}, requested label expression {2}; "
+                            + "candidate agent {3} (machine {4}, requested weight {5})",
+                    new Object[] {
+                        task.getFullDisplayName(),
+                        buildNameAndNumber,
+                        requestedLabel,
+                        node.getDisplayName(),
+                        info.machineName,
+                        info.weight
+                    });
         }
 
         int maxCapacity = getMaxCapacity(info.machineName);

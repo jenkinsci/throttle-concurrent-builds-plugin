@@ -72,7 +72,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
         // Handle multi-configuration filters
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
             // Even if the job is not explicitly throttled, check shared hardware limits.
-            CauseOfBlockage sharedHardwareBlock = checkSharedHardwareThrottle(node);
+            CauseOfBlockage sharedHardwareBlock = checkSharedHardwareThrottle(node, task);
             if (sharedHardwareBlock != null) {
                 return sharedHardwareBlock;
             }
@@ -97,15 +97,22 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         }
                     }
                 } else if (tjp.getThrottleOption().equals("category")) {
-                    return throttleCheckForCategoriesOnNode(node, jenkins, tjp.getCategories());
+                    CauseOfBlockage categoryBlock =
+                            throttleCheckForCategoriesOnNode(node, jenkins, tjp.getCategories());
+                    if (categoryBlock != null) {
+                        return categoryBlock;
+                    }
                 }
             } else if (!pipelineCategories.isEmpty()) {
-                return throttleCheckForCategoriesOnNode(node, jenkins, pipelineCategories);
+                CauseOfBlockage categoryBlock = throttleCheckForCategoriesOnNode(node, jenkins, pipelineCategories);
+                if (categoryBlock != null) {
+                    return categoryBlock;
+                }
             }
         }
 
         // Check shared hardware limits for explicitly throttled jobs as well.
-        return checkSharedHardwareThrottle(node);
+        return checkSharedHardwareThrottle(node, task);
     }
 
     /**
@@ -124,9 +131,10 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
      * This is an implicit check that applies to all jobs regardless of their throttle configuration.
      *
      * @param node the node being considered
+     * @param task the queued task being considered
      * @return a cause of blockage if the machine is at capacity, null otherwise
      */
-    private CauseOfBlockage checkSharedHardwareThrottle(Node node) {
+    private CauseOfBlockage checkSharedHardwareThrottle(Node node, Task task) {
         if (node == null) {
             return null;
         }
@@ -135,7 +143,7 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
             if (descriptor == null) {
                 return null;
             }
-            return descriptor.getSharedHardwareThrottle().checkMachineCapacity(node);
+            return descriptor.getSharedHardwareThrottle().checkMachineCapacity(node, task);
         } catch (Exception e) {
             // Never let an exception in the shared hardware check block the entire queue dispatcher.
             // This method is called hundreds of times per second; rate-limit warnings to avoid log spam.

@@ -19,7 +19,16 @@ package hudson.plugins.throttleconcurrents;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import hudson.model.FreeStyleProject;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
@@ -381,6 +390,55 @@ class SharedHardwareThrottleManagerLabelParsingTest {
 
         hudson.model.queue.CauseOfBlockage blockage = manager.checkMachineCapacity(node);
         assertNotNull(blockage, "Should block when configured capacity is less than node weight");
+    }
+
+    @Test
+    void shouldLogAgentAndQueuedTaskDetailsAtFinest(JenkinsRule r) throws Exception {
+        hudson.slaves.DumbSlave node =
+                r.createOnlineSlave(new hudson.model.labels.LabelAtom("THROTTLE_SHARED_HARDWARE=ServerLog:1"));
+        FreeStyleProject project = r.createFreeStyleProject("request-context");
+        project.setAssignedLabel(node.getSelfLabel());
+
+        List<SharedHardwareThrottleManager.MachineCapacityPair> capacities = new ArrayList<>();
+        capacities.add(new SharedHardwareThrottleManager.MachineCapacityPair("ServerLog", 20));
+        SharedHardwareThrottleManager manager = new SharedHardwareThrottleManager(
+                SharedHardwareThrottleManager.DEFAULT_LABEL_KEY,
+                SharedHardwareThrottleManager.DEFAULT_MAX_LABEL_KEY,
+                capacities,
+                0);
+
+        List<String> messages = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (isLoggable(record)) {
+                    messages.add(MessageFormat.format(record.getMessage(), record.getParameters()));
+                }
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        handler.setLevel(Level.ALL);
+        Logger logger = Logger.getLogger(SharedHardwareThrottleManager.class.getName());
+        Level previousLevel = logger.getLevel();
+        logger.setLevel(Level.FINEST);
+        logger.addHandler(handler);
+        try {
+            assertNull(manager.checkMachineCapacity(node, project));
+        } finally {
+            logger.removeHandler(handler);
+            logger.setLevel(previousLevel);
+        }
+
+        String loggedMessages = String.join("\n", messages);
+        assertTrue(loggedMessages.contains(project.getFullDisplayName()));
+        assertTrue(loggedMessages.contains(project.getFullDisplayName() + " #" + project.getNextBuildNumber()));
+        assertTrue(loggedMessages.contains(node.getSelfLabel().getExpression()));
+        assertTrue(loggedMessages.contains("candidate agent " + node.getDisplayName()));
     }
 
     @Test
