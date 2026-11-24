@@ -588,7 +588,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
         public void load() {
             super.load();
             initThrottledPipelines();
-            LOGGER.log(Level.FINE, "load: {0}", throttledPipelinesByCategory);
+            LOGGER.log(Level.FINE, "load: {0}", describeState());
+        }
+
+        /** Describe the persisted state of this descriptor, for logging. */
+        private synchronized String describeState() {
+            return "{categories=" + categories + ", throttledPipelinesByCategory=" + throttledPipelinesByCategory
+                    + ", sharedHardwareThrottle=" + sharedHardwareThrottle + "}";
         }
 
         private synchronized void initThrottledPipelines() {
@@ -657,7 +663,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
         @Override
         public void save() {
             super.save();
-            LOGGER.log(Level.FINE, "save: {0}", throttledPipelinesByCategory);
+            LOGGER.log(Level.FINE, "save: {0}", describeState());
         }
 
         @NonNull
@@ -790,6 +796,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             return nodeLabeledPairs;
         }
 
+        @Override
+        public String toString() {
+            return "ThrottleCategory{categoryName=" + categoryName + ", maxConcurrentPerNode="
+                    + getMaxConcurrentPerNode() + ", maxConcurrentTotal=" + getMaxConcurrentTotal()
+                    + ", nodeLabeledPairs=" + getNodeLabeledPairs() + "}";
+        }
+
         @Extension
         public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
             @Override
@@ -824,6 +837,11 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
                 maxConcurrentPerNodeLabeled = 0;
             }
             return maxConcurrentPerNodeLabeled;
+        }
+
+        @Override
+        public String toString() {
+            return getThrottledNodeLabel() + "=" + getMaxConcurrentPerNodeLabeled();
         }
 
         @Extension

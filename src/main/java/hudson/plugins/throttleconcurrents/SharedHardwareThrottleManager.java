@@ -160,6 +160,13 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
         return fallbackCapacityFactor;
     }
 
+    @Override
+    public String toString() {
+        return "SharedHardwareThrottleManager{labelKey=" + labelKey + ", maxLabelKey=" + maxLabelKey
+                + ", machineCapacities=" + machineCapacities + ", fallbackCapacityFactor=" + fallbackCapacityFactor
+                + "}";
+    }
+
     @DataBoundSetter
     public void setFallbackCapacityFactor(int fallbackCapacityFactor) {
         this.fallbackCapacityFactor = fallbackCapacityFactor;
@@ -646,6 +653,11 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
                 return 1;
             }
             return maxWeight;
+        }
+
+        @Override
+        public String toString() {
+            return machineName + "=" + getMaxWeight();
         }
 
         @hudson.Extension
