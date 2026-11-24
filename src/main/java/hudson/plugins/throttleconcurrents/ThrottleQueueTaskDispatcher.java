@@ -71,6 +71,11 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
 
         // Handle multi-configuration filters
         if (!shouldBeThrottled(task, tjp) && pipelineCategories.isEmpty()) {
+            // Even if the job is not explicitly throttled, check shared hardware limits.
+            CauseOfBlockage sharedHardwareBlock = checkSharedHardwareThrottle(node, task);
+            if (sharedHardwareBlock != null) {
+                return sharedHardwareBlock;
+            }
             return null;
         }
 
@@ -92,14 +97,69 @@ public class ThrottleQueueTaskDispatcher extends QueueTaskDispatcher {
                         }
                     }
                 } else if (tjp.getThrottleOption().equals("category")) {
-                    return throttleCheckForCategoriesOnNode(node, jenkins, tjp.getCategories());
+                    CauseOfBlockage categoryBlock =
+                            throttleCheckForCategoriesOnNode(node, jenkins, tjp.getCategories());
+                    if (categoryBlock != null) {
+                        return categoryBlock;
+                    }
                 }
             } else if (!pipelineCategories.isEmpty()) {
-                return throttleCheckForCategoriesOnNode(node, jenkins, pipelineCategories);
+                CauseOfBlockage categoryBlock = throttleCheckForCategoriesOnNode(node, jenkins, pipelineCategories);
+                if (categoryBlock != null) {
+                    return categoryBlock;
+                }
             }
         }
 
-        return null;
+        // Check shared hardware limits for explicitly throttled jobs as well.
+        return checkSharedHardwareThrottle(node, task);
+    }
+
+    /**
+     * Rate-limit map for exception warnings in checkSharedHardwareThrottle().
+     * Maps node display name to the last time a warning was logged.
+     * Prevents hundreds of WARNING-level log entries per second when a persistent
+     * exception (e.g., NPE) occurs in the shared hardware throttle check.
+     */
+    private final java.util.Map<String, Long> lastExceptionWarningTime = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Minimum interval (in milliseconds) between exception warnings for the same node. */
+    private static final long EXCEPTION_WARNING_INTERVAL_MS = 30_000;
+
+    /**
+     * Check shared hardware throttle limits for a node.
+     * This is an implicit check that applies to all jobs regardless of their throttle configuration.
+     *
+     * @param node the node being considered
+     * @param task the queued task being considered
+     * @return a cause of blockage if the machine is at capacity, null otherwise
+     */
+    private CauseOfBlockage checkSharedHardwareThrottle(Node node, Task task) {
+        if (node == null) {
+            return null;
+        }
+        try {
+            ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+            if (descriptor == null) {
+                return null;
+            }
+            return descriptor.getSharedHardwareThrottle().checkMachineCapacity(node, task);
+        } catch (Exception e) {
+            // Never let an exception in the shared hardware check block the entire queue dispatcher.
+            // This method is called hundreds of times per second; rate-limit warnings to avoid log spam.
+            String nodeDisplayName = node.getDisplayName();
+            long now = System.currentTimeMillis();
+            Long lastLogged = lastExceptionWarningTime.get(nodeDisplayName);
+            if (lastLogged == null || (now - lastLogged) >= EXCEPTION_WARNING_INTERVAL_MS) {
+                lastExceptionWarningTime.put(nodeDisplayName, now);
+                LOGGER.log(
+                        Level.WARNING,
+                        "Exception in shared hardware throttle check for node {0} -- skipping",
+                        new Object[] {nodeDisplayName});
+                LOGGER.log(Level.FINE, "Full stack trace for shared hardware throttle exception", e);
+            }
+            return null;
+        }
     }
 
     private CauseOfBlockage throttleCheckForCategoriesOnNode(Node node, Jenkins jenkins, List<String> categories) {

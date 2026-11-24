@@ -47,6 +47,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowExecutionOwner;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest2;
 
@@ -387,6 +388,9 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
 
         private Map<String, Map<String, List<String>>> throttledPipelinesByCategory;
 
+        /** Shared hardware throttle manager for per-machine capacity limits. */
+        private SharedHardwareThrottleManager sharedHardwareThrottle;
+
         /** Map from category names, to properties including that category. */
         private transient Map<String, Map<ThrottleJobProperty, Void>> propertiesByCategory = new HashMap<>();
         /** A sync object for {@link #propertiesByCategory} */
@@ -424,11 +428,46 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
 
         @Override
         public boolean configure(StaplerRequest2 req, JSONObject formData) throws FormException {
+            // Create sharedHardwareThrottle from flat form data keys
+            String labelKey = formData.optString("labelKey");
+            String maxLabelKey = formData.optString("maxLabelKey");
+            int fallbackCapacityFactor = formData.optInt("fallbackCapacityFactor", 0);
+
+            SharedHardwareThrottleManager newSharedHardwareThrottle;
+            if (!labelKey.isEmpty() || !maxLabelKey.isEmpty() || fallbackCapacityFactor > 0) {
+                // Form has shared hardware throttle data, create object
+                List<SharedHardwareThrottleManager.MachineCapacityPair> machineCapacities =
+                        formData.has("machineCapacities")
+                                ? (List<SharedHardwareThrottleManager.MachineCapacityPair>) req.bindJSONToList(
+                                        SharedHardwareThrottleManager.MachineCapacityPair.class,
+                                        formData.opt("machineCapacities"))
+                                : new ArrayList<>();
+
+                String problem =
+                        SharedHardwareThrottleManager.validateConfiguration(labelKey, maxLabelKey, machineCapacities);
+                if (problem != null) {
+                    throw new FormException(problem, "labelKey");
+                }
+
+                newSharedHardwareThrottle = new SharedHardwareThrottleManager(
+                        labelKey, maxLabelKey, machineCapacities, fallbackCapacityFactor);
+                // Remove the extracted keys from formData to avoid errors
+                formData.remove("labelKey");
+                formData.remove("maxLabelKey");
+                formData.remove("fallbackCapacityFactor");
+                formData.remove("machineCapacities");
+            } else {
+                newSharedHardwareThrottle = new SharedHardwareThrottleManager();
+            }
+
             if (!formData.has("categories")) {
                 this.categories = null;
             }
+            sharedHardwareThrottle = newSharedHardwareThrottle;
 
+            // Bind remaining top-level fields
             req.bindJSON(this, formData);
+
             save();
             return true;
         }
@@ -487,6 +526,65 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             return categories;
         }
 
+        @NonNull
+        public SharedHardwareThrottleManager getSharedHardwareThrottle() {
+            if (sharedHardwareThrottle == null) {
+                sharedHardwareThrottle = new SharedHardwareThrottleManager();
+            }
+            return sharedHardwareThrottle;
+        }
+
+        @DataBoundSetter
+        public void setSharedHardwareThrottle(SharedHardwareThrottleManager sharedHardwareThrottle) {
+            this.sharedHardwareThrottle = sharedHardwareThrottle;
+        }
+
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckLabelKey(@QueryParameter String value, @QueryParameter String maxLabelKey) {
+            String problem = SharedHardwareThrottleManager.validateLabelKeys(value, maxLabelKey);
+            return problem == null ? FormValidation.ok() : FormValidation.error(problem);
+        }
+
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckMaxLabelKey(@QueryParameter String value, @QueryParameter String labelKey) {
+            String problem = SharedHardwareThrottleManager.validateLabelKeys(labelKey, value);
+            return problem == null ? FormValidation.ok() : FormValidation.error(problem);
+        }
+
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckMaxWeight(@QueryParameter String value) {
+            if (Util.fixEmptyAndTrim(value) != null) {
+                try {
+                    int v = Integer.parseInt(value);
+                    if (v < 1) {
+                        return FormValidation.warning("Max total weight must be 1 or greater; will be treated as 1.");
+                    }
+                } catch (NumberFormatException e) {
+                    return FormValidation.error("Max total weight must be a valid number (1 or greater).");
+                }
+            }
+            return FormValidation.ok();
+        }
+
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckFallbackCapacityFactor(@QueryParameter String value) {
+            if (Util.fixEmptyAndTrim(value) != null) {
+                try {
+                    int v = Integer.parseInt(value);
+                    if (v < 0) {
+                        return FormValidation.error("Fallback capacity factor must be 0 or greater.");
+                    }
+                    if (v == 0) {
+                        return FormValidation.warning(
+                                "Factor is 0 (disabled). Machines without an explicitly configured capacity will not be throttled.");
+                    }
+                } catch (NumberFormatException e) {
+                    return FormValidation.error("Fallback capacity factor must be a valid number (0 or greater).");
+                }
+            }
+            return FormValidation.ok();
+        }
+
         @SuppressWarnings("lgtm[jenkins/csrf]")
         public ListBoxModel doFillCategoryItems(@AncestorInPath Item item) {
             if (item != null) {
@@ -510,7 +608,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
         public void load() {
             super.load();
             initThrottledPipelines();
-            LOGGER.log(Level.FINE, "load: {0}", throttledPipelinesByCategory);
+            LOGGER.log(Level.FINE, "load: {0}", describeState());
+        }
+
+        /** Describe the persisted state of this descriptor, for logging. */
+        private synchronized String describeState() {
+            return "{categories=" + categories + ", throttledPipelinesByCategory=" + throttledPipelinesByCategory
+                    + ", sharedHardwareThrottle=" + sharedHardwareThrottle + "}";
         }
 
         private synchronized void initThrottledPipelines() {
@@ -579,7 +683,7 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
         @Override
         public void save() {
             super.save();
-            LOGGER.log(Level.FINE, "save: {0}", throttledPipelinesByCategory);
+            LOGGER.log(Level.FINE, "save: {0}", describeState());
         }
 
         @NonNull
@@ -712,6 +816,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
             return nodeLabeledPairs;
         }
 
+        @Override
+        public String toString() {
+            return "ThrottleCategory{categoryName=" + categoryName + ", maxConcurrentPerNode="
+                    + getMaxConcurrentPerNode() + ", maxConcurrentTotal=" + getMaxConcurrentTotal()
+                    + ", nodeLabeledPairs=" + getNodeLabeledPairs() + "}";
+        }
+
         @Extension
         public static class DescriptorImpl extends Descriptor<ThrottleCategory> {
             @Override
@@ -746,6 +857,11 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
                 maxConcurrentPerNodeLabeled = 0;
             }
             return maxConcurrentPerNodeLabeled;
+        }
+
+        @Override
+        public String toString() {
+            return getThrottledNodeLabel() + "=" + getMaxConcurrentPerNodeLabeled();
         }
 
         @Extension

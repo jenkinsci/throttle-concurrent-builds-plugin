@@ -1,0 +1,18 @@
+<?jelly escape-by-default='true'?>
+<div>
+  Multiplier applied to the heaviest agent weight when no other capacity is known for a machine.
+  <p>The effective capacity is computed as: <code>heaviest agent weight &times; factor</code>.</p>
+  <p>Examples:</p>
+  <ul>
+    <li>If agents on <code>ServerA</code> have weights 2 and 3, and the factor is 5, the capacity
+    is <code>3 &times; 5 = 15</code>.</li>
+    <li>If the factor is 1, the capacity equals the heaviest agent weight (only that single agent
+    can run at a time, or maybe a few smaller ones).</li>
+  </ul>
+  <p>Set to <code>0</code> (default) to disable the fallback. When disabled, machines without an
+  explicitly configured capacity (via node labels or the machine capacity list above) will not be
+  throttled -- any available executor accepts work immediately.</p>
+  <p>This fallback is applied only when no other capacity source is found: no external provider,
+  no configured machine capacity, and no "Label Key for Machine Assignment" (defaults to
+  <code>THROTTLE_SHARED_HARDWARE_MAX</code>) label on any node for that machine.</p>
+</div>

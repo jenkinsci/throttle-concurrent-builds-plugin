@@ -203,6 +203,63 @@ pipeline {
 }
 ----
 
+=== Shared Hardware Throttling
+
+This plugin supports implicit throttling of builds across agents that share the same physical hardware.
+This is useful when multiple Jenkins agents (e.g., containers or VMs via swarm) run on the same physical machine, and you want to limit the total concurrent workload on that machine.
+
+How it works::
+
+* Assign a label to each agent in the format `THROTTLE_SHARED_HARDWARE=MACHINENAME(:WEIGHT)`.
+* For example, `THROTTLE_SHARED_HARDWARE=ServerA:2` declares that the agent runs on `ServerA` and each of its executors costs `2` weight points.
+* Configure the max total weight capacity for each machine in **Manage Jenkins** → **Configure System** → **Throttle Concurrent Builds** → **Shared Hardware Throttling**.
+* When the total weight of running executors on a machine reaches its capacity, new work is blocked from being assigned to any agent on that machine.
+* The `WEIGHT` part is optional. If omitted or invalid, it defaults to `1`.
+* If no max capacity is configured for a `MACHINENAME`, throttling is skipped for that machine (available executors accept work immediately).
+
+Configuration::
+
+* **Label Key** — The label prefix used to find machine assignment labels. Default: `THROTTLE_SHARED_HARDWARE`.
+* **Max Label Key** — The label prefix used to discover max capacity from node labels. Default: `THROTTLE_SHARED_HARDWARE_MAX`.
+* **Machine Capacities** — A list of machine names and their max total weight capacity.
+* **Fallback Capacity Factor** — An optional multiplier applied when no other capacity is known for a machine.
+  When set to a value >= 1, the max capacity for a machine is calculated as: (heaviest known agent weight on that machine) × (fallback capacity factor).
+  For example, if agents on `ServerA` have weights of 2 and 3, and the fallback factor is 5, the assumed max capacity becomes 15 (5 × 3).
+  Set to 0 to disable fallback (default: 0, disabled).
+
+Capacity resolution order (lowest value wins)::
+
+1. External plugins implementing the `MachineCapacityProvider` SPI (e.g., cloud plugins).
+2. Configured machine capacities in global configuration.
+3. Discovered from node labels using the max label key (e.g., `THROTTLE_SHARED_HARDWARE_MAX=ServerA:20`).
+
+JCasC configuration::
+
+[source,yaml]
+----
+unclassified:
+  throttleJobProperty:
+    sharedHardwareThrottle:
+      labelKey: "THROTTLE_SHARED_HARDWARE"
+      maxLabelKey: "THROTTLE_SHARED_HARDWARE_MAX"
+      machineCapacities:
+      - machineName: "ServerA"
+        maxWeight: 20
+      - machineName: "ServerB"
+        maxWeight: 10
+      fallbackCapacityFactor: 5
+----
+
+Example::
+
+You have two physical hosts, `ServerA` (capacity 20) and `ServerB` (capacity 10), each running multiple swarm agents.
+
+* Agents on `ServerA` have the label `THROTTLE_SHARED_HARDWARE=ServerA:2` (each executor costs 2 weight points).
+* Agents on `ServerB` have the label `THROTTLE_SHARED_HARDWARE=ServerB:1` (each executor costs 1 weight point).
+* When `ServerA` has 10 executors running (10 × 2 = 20 weight), no new work is assigned to any agent on `ServerA` until some finish.
+
+This throttling applies implicitly to all jobs — no `throttle()` step or job property is needed.
+
 == Unsupported use cases
 
 This section contains links to the use cases which are *not* supported.
