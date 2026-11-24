@@ -16,6 +16,7 @@ import hudson.model.Queue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationStrategy;
 import hudson.util.CopyOnWriteMap;
+import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,6 +26,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import org.htmlunit.WebClientUtil;
 import org.htmlunit.html.HtmlButton;
 import org.htmlunit.html.HtmlForm;
@@ -565,6 +570,139 @@ class ThrottleJobPropertyTest {
         assertEquals(5, after.getFallbackCapacityFactor());
         assertEquals(1, after.getMachineCapacities().size());
         assertEquals("saved-machine", after.getMachineCapacities().get(0).getMachineName());
+    }
+
+    @Test
+    @WithoutJenkins
+    void sharedHardwareConfigurationValidation() {
+        List<SharedHardwareThrottleManager.MachineCapacityPair> unique = Arrays.asList(
+                new SharedHardwareThrottleManager.MachineCapacityPair("A", 1),
+                new SharedHardwareThrottleManager.MachineCapacityPair("B", 2));
+        List<SharedHardwareThrottleManager.MachineCapacityPair> duplicate = Arrays.asList(
+                new SharedHardwareThrottleManager.MachineCapacityPair("A", 1),
+                new SharedHardwareThrottleManager.MachineCapacityPair("B", 2),
+                new SharedHardwareThrottleManager.MachineCapacityPair(" A ", 3));
+
+        assertEquals(null, SharedHardwareThrottleManager.validateConfiguration("X", "Y", unique));
+        assertEquals(null, SharedHardwareThrottleManager.validateConfiguration("", "", null));
+        assertNotNull(SharedHardwareThrottleManager.validateConfiguration("X", "X", unique));
+        // Empty values mean the (different) defaults, but an explicit default clashes with an empty counterpart
+        assertNotNull(SharedHardwareThrottleManager.validateConfiguration(
+                SharedHardwareThrottleManager.DEFAULT_MAX_LABEL_KEY, "", unique));
+        assertNotNull(SharedHardwareThrottleManager.validateConfiguration("X", "Y", duplicate));
+    }
+
+    @Test
+    void sharedHardwareLabelKeyFormValidation(JenkinsRule j) {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        assertEquals(FormValidation.Kind.OK, descriptor.doCheckLabelKey("A", "B").kind);
+        assertEquals(FormValidation.Kind.ERROR, descriptor.doCheckLabelKey("A", "A").kind);
+        assertEquals(FormValidation.Kind.OK, descriptor.doCheckMaxLabelKey("B", "A").kind);
+        assertEquals(FormValidation.Kind.ERROR, descriptor.doCheckMaxLabelKey("A", "A").kind);
+    }
+
+    @Test
+    void sharedHardwareEqualLabelKeysAreRejectedOnSave(JenkinsRule j) throws Exception {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        descriptor.setSharedHardwareThrottle(
+                new SharedHardwareThrottleManager("OLD_LABEL", "OLD_MAX_LABEL", new ArrayList<>(), 3));
+        descriptor.save();
+
+        JenkinsRule.WebClient webClient = j.createWebClient();
+        HtmlPage page = webClient.goTo("configure");
+        WebClientUtil.waitForJSExec(webClient);
+        HtmlForm form = page.getFormByName("config");
+        form.getInputByName("_.labelKey").setValue("SAME_LABEL");
+        form.getInputByName("_.maxLabelKey").setValue("SAME_LABEL");
+        // Jenkins re-displays the form on a rejected save, the stored configuration must stay as it was
+        j.submit(form);
+
+        assertEquals("OLD_LABEL", descriptor.getSharedHardwareThrottle().getLabelKey());
+        assertEquals("OLD_MAX_LABEL", descriptor.getSharedHardwareThrottle().getMaxLabelKey());
+    }
+
+    @Test
+    void sharedHardwareDuplicateMachineNamesAreRejectedOnSave(JenkinsRule j) throws Exception {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        descriptor.setSharedHardwareThrottle(
+                new SharedHardwareThrottleManager("OLD_LABEL", "OLD_MAX_LABEL", new ArrayList<>(), 3));
+        descriptor.save();
+
+        JenkinsRule.WebClient webClient = j.createWebClient();
+        HtmlPage page = webClient.goTo("configure");
+        WebClientUtil.waitForJSExec(webClient);
+        HtmlForm form = page.getFormByName("config");
+
+        String advancedButtonXPath = "//div[contains(@class,'advancedBody')]"
+                + "[.//button[contains(@class,'repeatable-add') and normalize-space(.)='Add Machine']]"
+                + "/preceding-sibling::div[contains(@class,'advancedLink')]"
+                + "//button[contains(@class,'advanced-button')]";
+        List<HtmlButton> advancedButtons = form.getByXPath(advancedButtonXPath);
+        assertEquals(1, advancedButtons.size());
+        advancedButtons.get(0).click();
+        WebClientUtil.waitForJSExec(webClient);
+
+        String addButtonXPath = "//button[contains(@class,'repeatable-add') and normalize-space(.)='Add Machine']";
+        for (int i = 0; i < 2; i++) {
+            List<HtmlButton> addButtons = form.getByXPath(addButtonXPath);
+            addButtons.get(0).click();
+            WebClientUtil.waitForJSExec(webClient);
+        }
+        List<HtmlInput> machineNameInputs = form.getInputsByName("_.machineName");
+        List<HtmlInput> maxWeightInputs = form.getInputsByName("_.maxWeight");
+        assertEquals(2, machineNameInputs.size());
+        machineNameInputs.get(0).setValue("dup");
+        maxWeightInputs.get(0).setValue("4");
+        machineNameInputs.get(1).setValue("dup");
+        maxWeightInputs.get(1).setValue("8");
+
+        j.submit(form);
+        assertEquals("OLD_LABEL", descriptor.getSharedHardwareThrottle().getLabelKey());
+        assertTrue(descriptor.getSharedHardwareThrottle().getMachineCapacities().isEmpty());
+    }
+
+    @Test
+    void descriptorLogsSharedHardwareConfiguration(JenkinsRule j) {
+        ThrottleJobProperty.DescriptorImpl descriptor = ThrottleJobProperty.fetchDescriptor();
+        List<String> messages = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                messages.add(new java.text.MessageFormat(record.getMessage()).format(record.getParameters()));
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        Logger logger = Logger.getLogger(ThrottleJobProperty.DescriptorImpl.class.getName());
+        Level oldLevel = logger.getLevel();
+        logger.setLevel(Level.FINE);
+        handler.setLevel(Level.FINE);
+        logger.addHandler(handler);
+        try {
+            descriptor.setSharedHardwareThrottle(new SharedHardwareThrottleManager(
+                    "LOGGED_LABEL",
+                    "LOGGED_MAX_LABEL",
+                    Arrays.asList(new SharedHardwareThrottleManager.MachineCapacityPair("logged-machine", 9)),
+                    2));
+            descriptor.save();
+            descriptor.load();
+        } finally {
+            logger.removeHandler(handler);
+            logger.setLevel(oldLevel);
+        }
+
+        assertEquals(2, messages.size(), messages::toString);
+        for (String message : messages) {
+            assertTrue(message.contains("LOGGED_LABEL"), message);
+            assertTrue(message.contains("LOGGED_MAX_LABEL"), message);
+            assertTrue(message.contains("logged-machine=9"), message);
+        }
+        assertTrue(messages.get(0).startsWith("save: "), messages.get(0));
+        assertTrue(messages.get(1).startsWith("load: "), messages.get(1));
     }
 
     private static void assertProjects(JenkinsRule j, String category, AbstractProject<?, ?>... projects) {

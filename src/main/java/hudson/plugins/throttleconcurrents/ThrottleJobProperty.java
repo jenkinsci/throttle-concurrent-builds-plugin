@@ -428,15 +428,12 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
 
         @Override
         public boolean configure(StaplerRequest2 req, JSONObject formData) throws FormException {
-            if (!formData.has("categories")) {
-                this.categories = null;
-            }
-
             // Create sharedHardwareThrottle from flat form data keys
             String labelKey = formData.optString("labelKey");
             String maxLabelKey = formData.optString("maxLabelKey");
             int fallbackCapacityFactor = formData.optInt("fallbackCapacityFactor", 0);
 
+            SharedHardwareThrottleManager newSharedHardwareThrottle;
             if (!labelKey.isEmpty() || !maxLabelKey.isEmpty() || fallbackCapacityFactor > 0) {
                 // Form has shared hardware throttle data, create object
                 List<SharedHardwareThrottleManager.MachineCapacityPair> machineCapacities =
@@ -446,7 +443,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
                                         formData.opt("machineCapacities"))
                                 : new ArrayList<>();
 
-                sharedHardwareThrottle = new SharedHardwareThrottleManager(
+                String problem =
+                        SharedHardwareThrottleManager.validateConfiguration(labelKey, maxLabelKey, machineCapacities);
+                if (problem != null) {
+                    throw new FormException(problem, "labelKey");
+                }
+
+                newSharedHardwareThrottle = new SharedHardwareThrottleManager(
                         labelKey, maxLabelKey, machineCapacities, fallbackCapacityFactor);
                 // Remove the extracted keys from formData to avoid errors
                 formData.remove("labelKey");
@@ -454,8 +457,13 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
                 formData.remove("fallbackCapacityFactor");
                 formData.remove("machineCapacities");
             } else {
-                sharedHardwareThrottle = new SharedHardwareThrottleManager();
+                newSharedHardwareThrottle = new SharedHardwareThrottleManager();
             }
+
+            if (!formData.has("categories")) {
+                this.categories = null;
+            }
+            sharedHardwareThrottle = newSharedHardwareThrottle;
 
             // Bind remaining top-level fields
             req.bindJSON(this, formData);
@@ -529,6 +537,18 @@ public class ThrottleJobProperty extends JobProperty<Job<?, ?>> {
         @DataBoundSetter
         public void setSharedHardwareThrottle(SharedHardwareThrottleManager sharedHardwareThrottle) {
             this.sharedHardwareThrottle = sharedHardwareThrottle;
+        }
+
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckLabelKey(@QueryParameter String value, @QueryParameter String maxLabelKey) {
+            String problem = SharedHardwareThrottleManager.validateLabelKeys(value, maxLabelKey);
+            return problem == null ? FormValidation.ok() : FormValidation.error(problem);
+        }
+
+        @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})
+        public FormValidation doCheckMaxLabelKey(@QueryParameter String value, @QueryParameter String labelKey) {
+            String problem = SharedHardwareThrottleManager.validateLabelKeys(labelKey, value);
+            return problem == null ? FormValidation.ok() : FormValidation.error(problem);
         }
 
         @SuppressWarnings({"lgtm[jenkins/csrf]", "lgtm[jenkins/no-permission-check]"})

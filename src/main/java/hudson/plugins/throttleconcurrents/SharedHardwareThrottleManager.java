@@ -8,6 +8,7 @@ import hudson.model.Descriptor;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -158,6 +159,58 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
 
     public int getFallbackCapacityFactor() {
         return fallbackCapacityFactor;
+    }
+
+    /**
+     * Check the configuration values for consistency.
+     * Empty label keys are treated as the defaults, and machine names are compared after trimming.
+     *
+     * @param labelKey the node label key for machine assignment
+     * @param maxLabelKey the node label key for machine max capacity
+     * @param machineCapacities the configured machine capacity pairs, may be null
+     * @return a human-readable description of the first problem found, or null if the values are consistent
+     */
+    @CheckForNull
+    public static String validateConfiguration(
+            @CheckForNull String labelKey,
+            @CheckForNull String maxLabelKey,
+            @CheckForNull List<MachineCapacityPair> machineCapacities) {
+        String labelProblem = validateLabelKeys(labelKey, maxLabelKey);
+        if (labelProblem != null) {
+            return labelProblem;
+        }
+        if (machineCapacities != null) {
+            Set<String> seen = new HashSet<>();
+            for (MachineCapacityPair pair : machineCapacities) {
+                if (pair == null || pair.getMachineName() == null) {
+                    continue;
+                }
+                String name = pair.getMachineName().trim();
+                if (!name.isEmpty() && !seen.add(name)) {
+                    return "Machine name \"" + name + "\" is listed more than once in the machine capacities; "
+                            + "machine names must be unique.";
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check that the machine assignment label key and the max capacity label key differ.
+     *
+     * @param labelKey the node label key for machine assignment, empty means the default
+     * @param maxLabelKey the node label key for machine max capacity, empty means the default
+     * @return a description of the problem, or null if the keys differ
+     */
+    @CheckForNull
+    public static String validateLabelKeys(@CheckForNull String labelKey, @CheckForNull String maxLabelKey) {
+        String assignment = labelKey == null || labelKey.trim().isEmpty() ? DEFAULT_LABEL_KEY : labelKey.trim();
+        String max = maxLabelKey == null || maxLabelKey.trim().isEmpty() ? DEFAULT_MAX_LABEL_KEY : maxLabelKey.trim();
+        if (assignment.equals(max)) {
+            return "The node label key for machine assignment and the node label key for machine max capacity "
+                    + "must differ (both are \"" + assignment + "\").";
+        }
+        return null;
     }
 
     @Override
