@@ -608,8 +608,10 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
 
         LOGGER.log(
                 Level.FINE,
-                "Machine {0}: capacity {1}, current weight {2}, remaining {3}, node weight {4}",
-                new Object[] {info.machineName, maxCapacity, currentWeight, remaining, info.weight});
+                "Machine {0} on agent {1}: capacity {2}, current weight {3}, remaining {4}, node weight {5}",
+                new Object[] {
+                    info.machineName, node.getDisplayName(), maxCapacity, currentWeight, remaining, info.weight
+                });
 
         // Warn if capacity is insufficient for this node's weight -- node can never accept work
         if (maxCapacity < info.weight) {
@@ -626,8 +628,8 @@ public final class SharedHardwareThrottleManager extends AbstractDescribableImpl
         if (remaining < info.weight) {
             LOGGER.log(
                     Level.FINE,
-                    "Machine {0} at capacity: {1}/{2} weight used, need {3} more -- BLOCKING",
-                    new Object[] {info.machineName, currentWeight, maxCapacity, info.weight});
+                    "Machine {0} at capacity on agent {1}: {2}/{3} weight used, need {4} more -- BLOCKING",
+                    new Object[] {info.machineName, node.getDisplayName(), currentWeight, maxCapacity, info.weight});
             return hudson.model.queue.CauseOfBlockage.fromMessage(
                     Messages._ThrottleQueueTaskDispatcher_SharedHardwareCapacity(
                             info.machineName, currentWeight, maxCapacity));
